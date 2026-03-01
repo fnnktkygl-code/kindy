@@ -110,10 +110,11 @@ Deno.serve(async (req) => {
       return json({ error: 'Failed to create invite', details: error?.message }, 500);
     }
 
-    // Use web join URL as the canonical invite link.
-    // This avoids browser-specific behavior around custom-scheme redirects
-    // from edge-function HTML pages and keeps the UX consistent across devices.
-    const inviteUrl = new URL('https://pigio.app/join');
+    // Canonical invite link uses the Supabase edge function endpoint so
+    // invites work even when no public website is configured.
+    const supabaseProjectRef = (supabaseUrl ?? '').match(/https:\/\/([^.]+)\.supabase\.co/)?.[1] ?? '';
+    const inviteOpenBase = `https://${supabaseProjectRef}.supabase.co/functions/v1/invite-open`;
+    const inviteUrl = new URL(inviteOpenBase);
     inviteUrl.searchParams.set('token', token);
 
     return json({
