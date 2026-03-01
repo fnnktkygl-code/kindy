@@ -54,15 +54,15 @@ class AppColors {
 
   // Notion warm colors for avatar backgrounds (light mode)
   static const List<Color> notionWarmColors = [
-    Color(0xFFFDEBDE), // Orange background
-    Color(0xFFFDF3D8), // Yellow background
-    Color(0xFFF4EBE6), // Brown background
-    Color(0xFFFDE5E2), // Red background
-    Color(0xFFFCE8F3), // Pink background
-    Color(0xFFEFE5FD), // Purple background
-    Color(0xFFE5F4F4), // Blue background
-    Color(0xFFE7F3ED), // Green background
-    Color(0xFFF1F1EF), // Gray background
+    Color(0xFFFFBF96), // Orange
+    Color(0xFFFFE080), // Yellow
+    Color(0xFFD9B8A8), // Brown
+    Color(0xFFFFADA8), // Red
+    Color(0xFFF0A8DC), // Pink
+    Color(0xFFC9A8F5), // Purple
+    Color(0xFF96CCCC), // Blue
+    Color(0xFF96CCAF), // Green
+    Color(0xFFC0C0BC), // Gray
   ];
 
   // Richer, deeper avatar background colors for dark/OLED themes
