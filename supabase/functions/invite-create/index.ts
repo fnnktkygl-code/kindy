@@ -15,15 +15,33 @@ Deno.serve(async (req) => {
       return json({ error: 'Supabase env missing' }, 500);
     }
 
+    const admin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
     const body = await req.json();
 
-    // Validate inviterId: must be a non-empty string ≤ 128 chars.
-    // Spaces and accented characters are accepted; the DB stores it as-is.
-    const rawInviterId = String(body.inviterId ?? '').trim();
-    if (!rawInviterId || rawInviterId.length > 128) {
-      return json({ error: 'inviterId invalid format' }, 400);
+    // ── Optional authentication ───────────────────────────────────────
+    // If a valid JWT is present, inviterId is forced to user.id.
+    // If no/invalid JWT (guest mode), we accept a sanitized inviterId from body.
+    let inviterId: string;
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const userToken = authHeader.slice(7);
+      const { data: { user } } = await admin.auth.getUser(userToken);
+      inviterId = user?.id ?? '';
+    } else {
+      inviterId = '';
     }
-    const inviterId = rawInviterId;
+
+    if (!inviterId) {
+      const rawInviterId = String(body.inviterId ?? '').trim();
+      if (!rawInviterId || rawInviterId.length > 128) {
+        return json({ error: 'inviterId invalid format' }, 400);
+      }
+      inviterId = rawInviterId;
+    }
+    // ───────────────────────────────────────────────────────────────────
 
     // Validate contactId and groupId: UUIDs or null.
     const rawContactId = body.contactId ? String(body.contactId).trim() : null;
@@ -37,6 +55,11 @@ Deno.serve(async (req) => {
     const contactId = rawContactId;
     const groupId   = rawGroupId;
 
+    // Self-invite check
+    if (contactId === inviterId) {
+      return json({ error: 'Cannot invite yourself' }, 400);
+    }
+
     const allowedChannels = ['copyLink', 'share', 'qr'] as const;
     const rawChannel = String(body.channel ?? 'copyLink').trim();
     const channel = allowedChannels.includes(rawChannel as typeof allowedChannels[number])
@@ -45,8 +68,6 @@ Deno.serve(async (req) => {
     const ttlSeconds = Number(body.ttlSeconds ?? 172800);
 
     // Sender's profile used for initial contact bootstrap on the accepter side.
-    // Keep all relevant sync fields (not only name/avatar) so both sides can
-    // immediately see profile details before the first periodic pull.
     const inviterProfile = body.profile && typeof body.profile === 'object'
       ? {
           name: String(body.profile.name ?? '').substring(0, 100),
@@ -68,13 +89,7 @@ Deno.serve(async (req) => {
         }
       : null;
 
-    if (!inviterId) return json({ error: 'inviterId is required' }, 400);
-
-    const admin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-
-    // Rate limiting: max 20 invites per hour per inviterId
+    // Rate limiting: max 20 invites per hour per inviter identity
     const { count: inviterCount } = await admin
       .from('invites')
       .select('id', { count: 'exact', head: true })
