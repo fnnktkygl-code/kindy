@@ -32,6 +32,22 @@ class _OnboardingShellState extends State<OnboardingShell> {
   }
 
   void _nextPage() {
+    // Persist name + avatar as soon as we reach the circles (invite) step,
+    // so any invite generated there carries the real user identity.
+    if (_currentPage == 2) {
+      final name = _nameController.text.trim();
+      if (name.isNotEmpty) {
+        final state = context.read<PigioAppState>();
+        final handle = '@${name.toLowerCase().replaceAll(' ', '_')}';
+        state.updateProfile(
+          name: name,
+          handle: handle,
+          memberSince: DateTime.now().year,
+          avatarIcon: _selectedAvatarIcon,
+          avatarColor: _selectedAvatarColor,
+        );
+      }
+    }
     if (_currentPage < 4) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -463,6 +479,8 @@ class _StepCirclesScreenState extends State<_StepCirclesScreen> {
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _isLoading = true);
     try {
+      // Tapping share in onboarding is explicit consent.
+      state.setContactsConsentGiven(true);
       final link = await state.createContactListInviteLink(
         channel: copyOnly ? InviteChannel.copyLink : InviteChannel.whatsApp,
       );
@@ -572,7 +590,13 @@ class _StepDoneScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Spacer(),
-          const Text('', style: TextStyle(fontSize: 100), textAlign: TextAlign.center),
+          Center(
+            child: Image.asset(
+              'icon/app_icon.png',
+              width: 120,
+              height: 120,
+            ),
+          ),
           const SizedBox(height: 32),
           Text(
             "Pigio est prêt !",
