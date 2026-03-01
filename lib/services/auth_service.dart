@@ -34,7 +34,7 @@ class AuthService {
     final response = await _supabase.auth.verifyOTP(
       email: email,
       token: token,
-      type: OtpType.magiclink,
+      type: OtpType.email, // email = 6-digit code entered manually; magiclink = URL token
     );
     
     if (response.session != null) {
