@@ -147,17 +147,7 @@ class SettingsScreen extends StatelessWidget {
                     title: Text("Relancer l'onboarding", style: fw(size: 16, w: FontWeight.w700, color: theme.ink)),
                     subtitle: Text("Affiche à nouveau le parcours d'accueil au prochain lancement", style: fw(size: 12, color: theme.mid)),
                     trailing: Icon(Icons.replay_outlined, color: theme.primary),
-                    onTap: () async {
-                      await state.resetOnboardingForDebug();
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Onboarding réinitialisé")),
-                      );
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const SplashScreen()),
-                        (route) => false,
-                      );
-                    },
+                    onTap: () => _confirmOnboardingReset(context, state, theme),
                   ),
                   const Divider(height: 1),
                   ListTile(
@@ -408,6 +398,41 @@ class SettingsScreen extends StatelessWidget {
             ],
           );
         }
+      ),
+    );
+  }
+
+  void _confirmOnboardingReset(BuildContext context, PigioAppState state, PigioThemeData theme) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: theme.card,
+        title: Text("Relancer l'onboarding ?", style: fw(size: 20, w: FontWeight.w800, color: theme.ink)),
+        content: Text(
+          "Le parcours d'accueil sera affiché à nouveau au prochain écran.",
+          style: fw(size: 14, color: theme.mid),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text("Annuler", style: fw(size: 16, color: theme.mid)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await state.resetOnboardingForDebug();
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Onboarding réinitialisé")),
+              );
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const SplashScreen()),
+                (route) => false,
+              );
+            },
+            child: Text("Confirmer", style: fw(size: 16, w: FontWeight.w800, color: theme.primary)),
+          ),
+        ],
       ),
     );
   }
