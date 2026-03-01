@@ -1,0 +1,15 @@
+<svg width="100" height="130" viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+  <defs><filter id="s"><feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-opacity="0.18"/></filter></defs>
+  <path d="M 88 80 Q 85 65 82 55" stroke="#2A9D8F" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 88 80 Q 88 65 90 55" stroke="#2A9D8F" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M 88 80 Q 92 65 95 58" stroke="#2A9D8F" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <ellipse cx="84" cy="68" rx="4" ry="2" fill="#2A9D8F" opacity="0.6" transform="rotate(-40 84 68)"/>
+  <ellipse cx="92" cy="65" rx="3.5" ry="1.5" fill="#2A9D8F" opacity="0.5" transform="rotate(30 92 65)"/>
+  <circle cx="82" cy="52" r="5" fill="#E63946" filter="url(#s)"/>
+  <circle cx="82" cy="52" r="2" fill="#FFD166"/>
+  <circle cx="90" cy="52" r="4.5" fill="#F4A261" filter="url(#s)"/>
+  <circle cx="90" cy="52" r="1.8" fill="#FFD166"/>
+  <circle cx="95" cy="56" r="4" fill="#F9C74F" filter="url(#s)"/>
+  <circle cx="95" cy="56" r="1.5" fill="#E76F51"/>
+  <circle cx="86" cy="58" r="2.5" fill="#E76F51" opacity="0.7"/>
+</svg>

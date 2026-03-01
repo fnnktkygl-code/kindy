@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pigio — Connexion</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8f5f0;
+      color: #2d2a26;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #fff;
+      border-radius: 24px;
+      padding: 48px 32px;
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    .mascot { font-size: 64px; margin-bottom: 24px; }
+    h1 { font-size: 22px; margin-bottom: 24px; }
+    .success { color: #27ae60; }
+    .error { color: #c0392b; }
+    .spinner { animation: spin 1s linear infinite; display: inline-block; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="card" id="processing">
+    <div class="mascot"><span class="spinner">🐦</span></div>
+    <h1>Vérification en cours...</h1>
+  </div>
+
+  <div class="card hidden" id="success">
+    <div class="mascot">🐦🎉</div>
+    <h1 class="success">Connexion réussie !</h1>
+    <p>Vous pouvez retourner dans l'app Pigio.</p>
+  </div>
+
+  <div class="card hidden" id="error">
+    <div class="mascot">🐦😔</div>
+    <h1 class="error">Erreur de connexion</h1>
+    <p>Le lien est invalide ou a expiré. Veuillez réessayer.</p>
+  </div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>
+    const SUPABASE_URL = 'https://rlghoamehiqlqzjdyxcg.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsZ2hvYW1laGlxbHF6amR5eGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNzAxNTIsImV4cCI6MjA4Njk0NjE1Mn0.ET3FWND1kuKWytUzR2G8mXS230qssvO39R_JCef_IUw';
+
+    async function handleCallback() {
+      try {
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Supabase Auth handles the hash fragment automatically
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) throw error;
+        
+        if (data.session) {
+          show('success');
+          // Try to redirect to app
+          setTimeout(() => {
+            window.location.href = 'com.pigio.app://auth/callback';
+          }, 2000);
+        } else {
+          show('error');
+        }
+      } catch (e) {
+        console.error('Auth callback error:', e);
+        show('error');
+      }
+    }
+
+    function show(id) {
+      document.getElementById('processing').classList.add('hidden');
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    handleCallback();
+  </script>
+</body>
+</html>

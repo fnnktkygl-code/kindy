@@ -1,0 +1,17 @@
+<svg width="100" height="130" viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="hl" cx="0.3" cy="0.3" r="0.7">
+      <stop offset="0%" stop-color="#FF8FA3"/><stop offset="100%" stop-color="#E63950"/>
+    </radialGradient>
+    <filter id="s"><feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-opacity="0.18"/></filter>
+  </defs>
+  <path d="M 46 37 Q 50 40 54 37" stroke="#E63950" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 27 34 L 22 32" stroke="#E63950" stroke-width="2" stroke-linecap="round"/>
+  <path d="M 73 34 L 78 32" stroke="#E63950" stroke-width="2" stroke-linecap="round"/>
+  <path d="M 37 44 C 37 38 29 33 29 37 C 29 33 21 38 21 44 L 29 50 L 37 44 Z"
+        transform="translate(8, -6) scale(1.1)" fill="url(#hl)" filter="url(#s)"/>
+  <path d="M 37 44 C 37 38 29 33 29 37 C 29 33 21 38 21 44 L 29 50 L 37 44 Z"
+        transform="translate(34, -6) scale(1.1)" fill="url(#hl)" filter="url(#s)"/>
+  <circle cx="34" cy="35" r="1.5" fill="white" opacity="0.5"/>
+  <circle cx="60" cy="35" r="1.5" fill="white" opacity="0.5"/>
+</svg>

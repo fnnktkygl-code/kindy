@@ -1,0 +1,17 @@
+<svg width="100" height="130" viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="rc" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFE066"/><stop offset="100%" stop-color="#F0B429"/>
+    </linearGradient>
+    <filter id="s"><feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-opacity="0.18"/></filter>
+  </defs>
+  <path d="M 22 60 Q 18 65 17 80 Q 16 100 22 112 L 30 114 Q 26 100 27 80
+           L 50 80 L 73 80 Q 74 100 70 114 L 78 112 Q 84 100 83 80 Q 82 65 78 60
+           Q 60 55 50 55 Q 40 55 22 60 Z" fill="url(#rc)" filter="url(#s)"/>
+  <line x1="50" y1="58" x2="50" y2="110" stroke="#D9970A" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="50" cy="70" r="2.5" fill="#2B2D42" opacity="0.7"/>
+  <circle cx="50" cy="82" r="2.5" fill="#2B2D42" opacity="0.7"/>
+  <circle cx="50" cy="94" r="2.5" fill="#2B2D42" opacity="0.7"/>
+  <path d="M 30 58 Q 40 53 50 55 Q 60 53 70 58 L 68 62 Q 58 57 50 59 Q 42 57 32 62 Z" fill="#F7DC6F"/>
+  <path d="M 28 68 Q 32 65 35 70" stroke="white" stroke-width="1.2" opacity="0.25" fill="none" stroke-linecap="round"/>
+</svg>

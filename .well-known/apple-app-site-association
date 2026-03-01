@@ -1,0 +1,23 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "REPLACE_WITH_TEAM_ID.com.example.pigio.pigioApp"
+        ],
+        "components": [
+          {
+            "/": "/invite/*",
+            "comment": "Match invitation links"
+          },
+          {
+            "?": {
+              "t": "*"
+            },
+            "comment": "Allow tokenized invite links"
+          }
+        ]
+      }
+    ]
+  }
+}

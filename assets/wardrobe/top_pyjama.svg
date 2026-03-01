@@ -1,0 +1,21 @@
+<svg width="100" height="130" viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="pj" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5B7DB1"/><stop offset="100%" stop-color="#3D5A80"/>
+    </linearGradient>
+    <filter id="s"><feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-opacity="0.18"/></filter>
+  </defs>
+  <path d="M 22 58 Q 18 70 18 84 Q 18 100 25 112
+           Q 40 117 50 116 Q 60 117 75 112
+           Q 82 100 82 84 Q 82 70 78 58
+           Q 60 52 50 53 Q 40 52 22 58 Z" fill="url(#pj)" filter="url(#s)"/>
+  <path d="M 32 56 Q 42 52 50 53 Q 58 52 68 56 L 66 60 Q 56 56 50 57 Q 44 56 34 60 Z" fill="#4A6FA5"/>
+  <line x1="50" y1="57" x2="50" y2="112" stroke="#2D4A6F" stroke-width="1.2" opacity="0.4"/>
+  <circle cx="50" cy="68" r="2" fill="#FFB703" opacity="0.8"/>
+  <circle cx="50" cy="80" r="2" fill="#FFB703" opacity="0.8"/>
+  <circle cx="50" cy="92" r="2" fill="#FFB703" opacity="0.8"/>
+  <polygon points="30,72 31,75 34,75 32,77 33,80 30,78 27,80 28,77 26,75 29,75" fill="#FFB703" opacity="0.5"/>
+  <polygon points="70,82 71,84 73,84 72,86 72,88 70,87 68,88 68,86 67,84 69,84" fill="#FFB703" opacity="0.4"/>
+  <polygon points="35,96 36,98 38,98 37,100 37,102 35,101 33,102 33,100 32,98 34,98" fill="#FFB703" opacity="0.35"/>
+  <path d="M 65 70 A 4 4 0 1 1 65 78 A 3 3 0 1 0 65 70" fill="#FFB703" opacity="0.4"/>
+</svg>

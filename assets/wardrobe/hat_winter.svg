@@ -1,0 +1,19 @@
+<svg width="100" height="130" viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F28BA0"/><stop offset="100%" stop-color="#CE4257"/>
+    </linearGradient>
+    <radialGradient id="pom" cx="0.4" cy="0.3" r="0.6">
+      <stop offset="0%" stop-color="#FFFFFF"/><stop offset="100%" stop-color="#E0D9D2"/>
+    </radialGradient>
+    <filter id="s"><feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-opacity="0.18"/></filter>
+  </defs>
+  <path d="M 27 30 Q 27 10 50 7 Q 73 10 73 30 Q 60 33 50 34 Q 40 33 27 30 Z" fill="url(#bn)" filter="url(#s)"/>
+  <path d="M 26 28 Q 50 35 74 28 L 74 34 Q 50 41 26 34 Z" fill="#B8304F" opacity="0.7"/>
+  <line x1="36" y1="12" x2="37" y2="28" stroke="#D95570" stroke-width="1.2" opacity="0.4"/>
+  <line x1="50" y1="10" x2="50" y2="28" stroke="#D95570" stroke-width="1.2" opacity="0.4"/>
+  <line x1="63" y1="12" x2="62" y2="28" stroke="#D95570" stroke-width="1.2" opacity="0.4"/>
+  <path d="M 35 14 Q 45 11 50 12" stroke="white" stroke-width="1.5" opacity="0.3" fill="none" stroke-linecap="round"/>
+  <circle cx="50" cy="5" r="7" fill="url(#pom)" filter="url(#s)"/>
+  <circle cx="47" cy="3" r="1.5" fill="white" opacity="0.6"/>
+</svg>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pigio — Politique de Confidentialité</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8f5f0;
+      color: #2d2a26;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+    h1 { font-size: 28px; margin-bottom: 8px; }
+    h2 { font-size: 20px; margin-top: 32px; margin-bottom: 12px; color: #e8a063; }
+    p { margin-bottom: 16px; color: #4a4a4a; }
+    ul { margin-bottom: 16px; padding-left: 24px; }
+    li { margin-bottom: 8px; color: #4a4a4a; }
+    .date { color: #8a857e; font-size: 14px; margin-bottom: 32px; }
+    .mascot { font-size: 48px; margin-bottom: 16px; }
+    a { color: #e8a063; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="mascot">🐦</div>
+    <h1>Politique de Confidentialité</h1>
+    <p class="date">Dernière mise à jour : 23 février 2026</p>
+
+    <h2>1. Responsable du traitement</h2>
+    <p>Pigio est une application développée et opérée en France. Le responsable du traitement des données est l'éditeur de l'application Pigio.</p>
+
+    <h2>2. Données collectées</h2>
+    <p>Nous collectons uniquement les données nécessaires au fonctionnement du service :</p>
+    <ul>
+      <li><strong>Adresse email</strong> — pour l'authentification et la récupération de compte</li>
+      <li><strong>Prénom / pseudonyme</strong> — pour vous identifier auprès de vos cercles</li>
+      <li><strong>Avatar et couleur</strong> — personnalisation visuelle</li>
+      <li><strong>Date d'anniversaire</strong> (optionnel) — pour les rappels de cadeaux de vos proches</li>
+      <li><strong>Listes d'envies</strong> — les souhaits que vous créez</li>
+      <li><strong>Tailles vestimentaires</strong> (optionnel) — pour aider vos proches à choisir des cadeaux</li>
+    </ul>
+
+    <h2>3. Base légale du traitement</h2>
+    <p>Le traitement de vos données repose sur :</p>
+    <ul>
+      <li><strong>L'exécution du contrat</strong> (Article 6.1.b du RGPD) — pour fournir le service de gestion de souhaits</li>
+      <li><strong>Le consentement</strong> (Article 6.1.a) — pour les données optionnelles (tailles, anniversaire, accès aux contacts)</li>
+      <li><strong>L'intérêt légitime</strong> (Article 6.1.f) — pour la sécurité et les logs d'activité</li>
+    </ul>
+
+    <h2>4. Partage des données</h2>
+    <p>Vos données ne sont <strong>jamais vendues</strong>. Elles sont partagées uniquement :</p>
+    <ul>
+      <li>Avec les membres de vos cercles, selon vos paramètres de visibilité</li>
+      <li>Avec notre hébergeur (Supabase, serveurs EU — Francfort) pour le stockage</li>
+    </ul>
+
+    <h2>5. Durée de conservation</h2>
+    <p>Vos données sont conservées tant que votre compte est actif. En cas de suppression de compte, toutes les données sont effacées définitivement sous 30 jours.</p>
+
+    <h2>6. Vos droits (RGPD)</h2>
+    <p>Conformément au Règlement Général sur la Protection des Données, vous disposez des droits suivants :</p>
+    <ul>
+      <li><strong>Droit d'accès</strong> — consulter vos données</li>
+      <li><strong>Droit de rectification</strong> — modifier vos données</li>
+      <li><strong>Droit à l'effacement</strong> — supprimer votre compte et toutes vos données</li>
+      <li><strong>Droit à la portabilité</strong> — exporter vos données au format JSON</li>
+      <li><strong>Droit d'opposition</strong> — vous opposer à certains traitements</li>
+      <li><strong>Droit au retrait du consentement</strong> — à tout moment pour les données optionnelles</li>
+    </ul>
+    <p>Pour exercer ces droits, rendez-vous dans Paramètres → Données dans l'application, ou contactez-nous à <a href="mailto:privacy@pigio.app">privacy@pigio.app</a>.</p>
+
+    <h2>7. Sécurité</h2>
+    <p>Nous mettons en œuvre des mesures de sécurité conformes à l'état de l'art :</p>
+    <ul>
+      <li>Authentification par passkeys (WebAuthn) ou OTP — aucun mot de passe stocké</li>
+      <li>Chiffrement en transit (TLS 1.3) et au repos</li>
+      <li>Tokens JWT à durée de vie courte (15 minutes) avec rotation des tokens de rafraîchissement</li>
+      <li>Stockage sécurisé sur l'appareil (Keychain iOS / EncryptedSharedPreferences Android)</li>
+    </ul>
+
+    <h2>8. Cookies</h2>
+    <p>Le site web pigio.app utilise uniquement des cookies fonctionnels (session d'authentification). Aucun cookie de pistage ou publicitaire n'est utilisé.</p>
+
+    <h2>9. Contact</h2>
+    <p>Pour toute question concernant cette politique : <a href="mailto:privacy@pigio.app">privacy@pigio.app</a></p>
+
+    <h2>10. Autorité de contrôle</h2>
+    <p>Vous pouvez déposer une réclamation auprès de la <a href="https://www.cnil.fr" target="_blank">CNIL</a> (Commission Nationale de l'Informatique et des Libertés).</p>
+  </div>
+</body>
+</html>
