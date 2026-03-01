@@ -45,19 +45,19 @@ Deno.serve(async (req) => {
 </head>
 <body>
   <div class="card">
-    <div class="mascot">🐦</div>
-    <h1>Vous avez une invitation Pigio !</h1>
-    <p>Ouverture de l'app en cours…</p>
+    <div class="mascot">&#x1F426;</div>
+    <h1>Vous avez une invitation Pigio&nbsp;!</h1>
+    <p>Ouverture de l&rsquo;app en cours&hellip;</p>
     <a class="primary" id="open" href="${appScheme}">Ouvrir Pigio</a>
     ${isAndroid
-      ? `<a class="secondary" href="https://play.google.com/store/apps/details?id=com.example.pigio.pigio_app">📱 Télécharger sur le Play Store</a>`
-      : `<a class="secondary" href="https://apps.apple.com/app/pigio/id0000000000">📱 Télécharger sur l'App Store</a>`}
+      ? `<a class="secondary" href="https://play.google.com/store/apps/details?id=com.example.pigio.pigio_app">&#x1F4F1; T&eacute;l&eacute;charger sur le Play Store</a>`
+      : `<a class="secondary" href="https://apps.apple.com/app/pigio/id0000000000">&#x1F4F1; T&eacute;l&eacute;charger sur l&rsquo;App Store</a>`}
   </div>
   <script>
     // Attempt to open the app immediately; redirect to web landing after timeout.
     window.location.href = '${appScheme}';
     setTimeout(function() {
-      // If we're still here, the app wasn't installed — go to web landing page.
+      // If we're still here, the app was not installed -- go to web landing page.
       window.location.replace('${fallbackUrl}');
     }, 1500);
   </script>
