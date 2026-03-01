@@ -29,8 +29,9 @@ class DeeplinkCoordinator {
     // HTTPS: trusted hosts
     final host = uri.host.toLowerCase();
     const pigioHost = 'pigio.app';
+    const pigioWwwHost = 'www.pigio.app';
     const supabaseHost = 'rlghoamehiqlqzjdyxcg.supabase.co';
-    if (host != pigioHost && host != supabaseHost) return false;
+    if (host != pigioHost && host != pigioWwwHost && host != supabaseHost) return false;
 
     // Supabase invite-open edge function URL
     if (host == supabaseHost) {

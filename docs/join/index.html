@@ -75,6 +75,8 @@
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
       const path = window.location.pathname;
+      const ua = navigator.userAgent || '';
+      const isAndroid = /android/i.test(ua);
       
       // Extract token from path like /join/TOKEN
       let inviteToken = token;
@@ -105,8 +107,17 @@
         document.getElementById('invite-subtitle').textContent = `Rejoignez ${inviterName} pour partager vos envies de cadeaux.`;
         
         // Deep link to app
-        const deepLink = `pigio://invite?token=${encodeURIComponent(inviteToken)}`;
-        document.getElementById('open-app').href = deepLink;
+        const safeToken = encodeURIComponent(inviteToken);
+        const deepLink = `pigio://invite?token=${safeToken}`;
+        const androidIntent = `intent://invite?token=${safeToken}#Intent;scheme=pigio;package=com.example.pigio.pigio_app;end`;
+        const openHref = isAndroid ? androidIntent : deepLink;
+        const openBtn = document.getElementById('open-app');
+        openBtn.href = openHref;
+
+        // Attempt to open app automatically, keep visible fallback button.
+        setTimeout(() => {
+          window.location.href = openHref;
+        }, 100);
         
         show('valid');
       } catch (e) {
