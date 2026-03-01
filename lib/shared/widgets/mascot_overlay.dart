@@ -289,6 +289,15 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
   _Insight? _cachedInsight;
   int? _cachedTabIndex;
 
+  void _openMascotMenu() {
+    _resetIdleTimer();
+    setState(() {
+      bubble = false;
+      menu = true;
+    });
+    _triggerWiggle();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -492,7 +501,8 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
                 setState(() { _cachedInsight = null; _cachedTabIndex = null; _dynamicMsg = null; bubble = !bubble; });
               }
             },
-            onLongPress: () { _resetIdleTimer(); setState(() { bubble = false; menu = true; }); _triggerWiggle(); },
+            onLongPressStart: (_) => _openMascotMenu(),
+            onLongPress: _openMascotMenu,
             child: AnimatedScale(
               scale: isDragging ? 1.12 : 1.0,
               duration: const Duration(milliseconds: 200),

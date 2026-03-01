@@ -28,7 +28,10 @@ Deno.serve(async (req) => {
     });
 
     const isExchangeKey = (key: string) =>
-      key.startsWith('cprof_inv_') || key.startsWith('cprof_acc_');
+      key.startsWith('cprof_inv_') ||
+      key.startsWith('cprof_acc_') ||
+      key.startsWith('notif_cprof_inv_') ||
+      key.startsWith('notif_cprof_acc_');
 
     let userId: string | null = null;
 
