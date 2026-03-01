@@ -119,6 +119,12 @@ extension SettingsExtension on PigioAppState {
     _saveData();
   }
 
+  Future<void> resetOnboardingForDebug() async {
+    _onboardingCompleted = false;
+    notifyListeners();
+    await _saveData();
+  }
+
   void savePersonalityProfile(Map<String, List<String>> answers) {
     _personalityProfile = Map<String, List<String>>.from(answers);
     notifyListeners();

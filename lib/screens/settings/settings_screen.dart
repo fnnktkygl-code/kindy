@@ -144,6 +144,23 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   const Divider(height: 1),
                   ListTile(
+                    title: Text("Relancer l'onboarding", style: fw(size: 16, w: FontWeight.w700, color: theme.ink)),
+                    subtitle: Text("Affiche à nouveau le parcours d'accueil au prochain lancement", style: fw(size: 12, color: theme.mid)),
+                    trailing: Icon(Icons.replay_outlined, color: theme.primary),
+                    onTap: () async {
+                      await state.resetOnboardingForDebug();
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Onboarding réinitialisé")),
+                      );
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const SplashScreen()),
+                        (route) => false,
+                      );
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
                     title: Text("Exporter mes données", style: fw(size: 16, w: FontWeight.w700, color: theme.ink)),
                     subtitle: Text("Télécharger une copie de vos données (JSON)", style: fw(size: 12, color: theme.mid)),
                     trailing: Icon(Icons.download_outlined, color: theme.primary),
