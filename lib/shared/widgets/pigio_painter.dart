@@ -229,12 +229,19 @@ class PigioPainter extends CustomPainter {
     canvas.drawPath(tailPath, fill);
 
     final tickPaint = Paint()..color = const Color(0xFF2D3748)..strokeWidth = 1.8..strokeCap = StrokeCap.round;
+    // The scarf top edge is a quadratic bezier: moveTo(18,50) quadraticBezierTo(50,66,82,50)
+    // Parametric: x=18+64t, y_top=50+32t(1-t)  →  t=(x-18)/64
     for (double x = 25; x <= 75; x += 6) {
-      double yBase = 53 + (x - 50).abs() * 0.16;
-      canvas.drawLine(Offset(x, yBase), Offset(x, yBase + 4), tickPaint);
+      final t = (x - 18) / 64;
+      final yBase = 50 + 32 * t * (1 - t) + 1; // +1 padding so tick starts just inside scarf
+      canvas.drawLine(Offset(x, yBase), Offset(x, yBase + 5), tickPaint);
     }
-    for (double y = 68; y <= tailLength - 6; y += 6) {
-      canvas.drawLine(Offset(28, y), Offset(33, y), tickPaint);
+    // Tail ticks — horizontal lines spanning the tail width
+    for (double y = 70; y <= tailLength - 6; y += 6) {
+      final frac = (y - 60) / (tailLength - 60);
+      final xLeft = 24 + (21 - 24) * frac;
+      final xRight = 38 + (33 - 38) * ((y - 66).clamp(0, tailLength - 66) / (tailLength - 66));
+      canvas.drawLine(Offset(xLeft + 1, y), Offset(xRight - 1, y), tickPaint);
     }
 
     if (reservedCount >= 10) {
