@@ -10,7 +10,6 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const invitePublicBase = Deno.env.get('INVITE_PUBLIC_BASE') ?? 'https://pigio.app';
 
     if (!supabaseUrl || !serviceRoleKey) {
       return json({ error: 'Supabase env missing' }, 500);
@@ -111,7 +110,12 @@ Deno.serve(async (req) => {
       return json({ error: 'Failed to create invite', details: error?.message }, 500);
     }
 
-    const inviteUrl = new URL('/functions/v1/invite-open', invitePublicBase);
+    // Invite link points to the web landing page (pigio.app/join) which shows
+    // a friendly UI and redirects to the app via custom scheme.
+    // The Supabase edge function URL is NOT used here — pigio.app is a static
+    // site and cannot serve /functions/v1/... paths.
+    const landingBase = Deno.env.get('INVITE_PUBLIC_BASE') ?? 'https://pigio.app';
+    const inviteUrl = new URL('/join', landingBase);
     inviteUrl.searchParams.set('token', token);
 
     return json({

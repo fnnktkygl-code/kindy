@@ -18,22 +18,24 @@ class DeeplinkCoordinator {
   );
 
   bool isInviteLink(Uri uri) {
-    // Custom scheme: pigio://invite/<token>
+    // Custom scheme: pigio://invite?token=TOKEN  or  pigio://invite/<token>
     if (uri.scheme.toLowerCase() == 'pigio' &&
         uri.host.toLowerCase() == 'invite') {
-      final token = uri.pathSegments.firstOrNull ?? '';
+      final token = uri.queryParameters['token'] ??
+          (uri.pathSegments.firstOrNull ?? '');
       return _tokenPattern.hasMatch(token);
     }
 
-    // HTTPS: must be a trusted host AND the first path segment must be exactly "invite".
-    // Using pathSegments.first prevents substring matches like /user-invitedto/...
-    // or query-param tricks like ?foo=invite.
+    // HTTPS: must be a trusted host AND the first path segment must be exactly "invite" or "join".
     const trustedHosts = {'pigio.app'};
     if (!trustedHosts.contains(uri.host.toLowerCase())) return false;
-    if (uri.pathSegments.length < 2) return false;
-    if (uri.pathSegments.first.toLowerCase() != 'invite') return false;
-    // Validate the token segment format
-    final token = uri.pathSegments[1];
+    final firstSegment = uri.pathSegments.isNotEmpty
+        ? uri.pathSegments.first.toLowerCase()
+        : '';
+    if (firstSegment != 'invite' && firstSegment != 'join') return false;
+    // Token can be in query params or as the second path segment
+    final token = uri.queryParameters['token'] ??
+        (uri.pathSegments.length >= 2 ? uri.pathSegments[1] : '');
     return _tokenPattern.hasMatch(token);
   }
 
