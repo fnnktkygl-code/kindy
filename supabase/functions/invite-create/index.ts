@@ -16,11 +16,25 @@ Deno.serve(async (req) => {
       return json({ error: 'Supabase env missing' }, 500);
     }
 
+    // ── Require a valid Supabase user JWT ────────────────────────────────────
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return json({ error: 'Missing authorization' }, 401);
+    }
+    const userToken = authHeader.slice(7);
+    const authAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: { user }, error: authError } = await authAdmin.auth.getUser(userToken);
+    if (authError || !user) return json({ error: 'Invalid token' }, 401);
+    // ─────────────────────────────────────────────────────────────────────────
+
     const body = await req.json();
 
-    // Validate inviterId: must be a non-empty UUID-like identifier (hex + hyphens only).
+    // Validate inviterId: must be a non-empty string ≤ 128 chars.
+    // Spaces and accented characters are accepted; the DB stores it as-is.
     const rawInviterId = String(body.inviterId ?? '').trim();
-    if (!rawInviterId || !/^[0-9a-zA-Z\-_]{8,128}$/.test(rawInviterId)) {
+    if (!rawInviterId || rawInviterId.length > 128) {
       return json({ error: 'inviterId invalid format' }, 400);
     }
     const inviterId = rawInviterId;

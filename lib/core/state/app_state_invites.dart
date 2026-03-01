@@ -532,8 +532,11 @@ extension InvitesExtension on PigioAppState {
     required InviteChannel channel,
     ExchangeProfile? profile,
   }) async {
+    // Sanitize: the edge function accepts any non-empty string ≤ 128 chars.
+    // Ensure we never send an empty value.
+    final safeInviterId = inviterId.trim().isEmpty ? 'user' : inviterId.trim();
     return await _invitationService.createToken(
-      inviterId: inviterId,
+      inviterId: safeInviterId,
       contactId: contactId,
       groupId: groupId,
       channel: channel.name,
