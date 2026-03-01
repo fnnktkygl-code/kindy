@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 import 'auth_screen.dart';
 import '../../app_shell/main_shell.dart';
+import 'onboarding/onboarding_shell.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -134,8 +135,12 @@ class AuthWelcomeScreen extends StatelessWidget {
               // Guest mode
               TextButton(
                 onPressed: () {
+                  final state = context.read<PigioAppState>();
+                  final Widget next = state.needsOnboarding
+                      ? const OnboardingShell()
+                      : const MainShell();
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const MainShell()),
+                    MaterialPageRoute(builder: (_) => next),
                     (route) => false,
                   );
                 },

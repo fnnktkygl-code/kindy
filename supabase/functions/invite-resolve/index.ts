@@ -14,6 +14,22 @@ Deno.serve(async (req) => {
       return json({ error: 'Supabase env missing' }, 500);
     }
 
+    // ── Optional authentication ──────────────────────────────────────────
+    // Invite acceptance must also work for guest users (no Supabase session).
+    // If a valid bearer token is provided, we store accepter_user_id.
+    const authHeader = req.headers.get('Authorization');
+    const admin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    let accepterUserId: string | null = null;
+    if (authHeader?.startsWith('Bearer ')) {
+      const userToken = authHeader.slice(7);
+      const { data: { user } } = await admin.auth.getUser(userToken);
+      accepterUserId = user?.id ?? null;
+    }
+    // ───────────────────────────────────────────────────────────────────
+
     const body = await req.json();
     const incomingUrl = String(body.incomingUrl ?? '').trim();
     if (!incomingUrl) return json({ valid: false, error: 'incomingUrl required' }, 400);
@@ -55,10 +71,6 @@ Deno.serve(async (req) => {
 
     const tokenHash = await sha256Hex(token);
 
-    const admin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-
     const { data, error } = await admin
       .from('invites')
       .select('id, inviter_id, contact_id, group_id, expires_at, status, inviter_profile')
@@ -74,10 +86,11 @@ Deno.serve(async (req) => {
       return json({ valid: false, tokenId: token, expiresAt: expiresAt.toISOString(), reason: 'expired' });
     }
 
-    // Atomically accept + store accepter profile
+    // Atomically accept + store accepter profile + record accepter_user_id
     const updatePayload: Record<string, unknown> = {
       status: 'accepted',
       accepted_at: new Date().toISOString(),
+      accepter_user_id: accepterUserId,
     };
     if (accepterProfile) {
       updatePayload.accepter_profile = accepterProfile;
