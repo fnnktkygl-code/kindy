@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 import 'package:pigio_app/core/config/constants.dart';
+import 'package:pigio_app/shared/widgets/invite_bottom_sheet.dart';
 import '../../../app_shell/main_shell.dart';
 
 class OnboardingShell extends StatefulWidget {
@@ -472,38 +471,13 @@ class _StepCirclesScreen extends StatefulWidget {
 }
 
 class _StepCirclesScreenState extends State<_StepCirclesScreen> {
-  bool _isLoading = false;
-
-  Future<void> _shareLink({required bool copyOnly}) async {
-    final state = context.read<PigioAppState>();
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _isLoading = true);
-    try {
-      // Tapping share in onboarding is explicit consent.
-      state.setContactsConsentGiven(true);
-      final link = await state.createContactListInviteLink(
-        channel: copyOnly ? InviteChannel.copyLink : InviteChannel.whatsApp,
-      );
-      if (!mounted) return;
-      if (link == null || link.isEmpty) throw Exception('Lien indisponible');
-      if (copyOnly) {
-        await Clipboard.setData(ClipboardData(text: link));
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Lien copié dans le presse-papier !')),
-        );
-      } else {
-        await SharePlus.instance.share(
-          ShareParams(text: 'Rejoins-moi sur Pigio 🎁 $link', title: 'Invitation Pigio'),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Impossible de générer le lien d\'invitation. Réessayez.')),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+  void _openInviteSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const InviteBottomSheet(),
+    );
   }
 
   @override
@@ -530,23 +504,9 @@ class _StepCirclesScreenState extends State<_StepCirclesScreen> {
           ),
           const SizedBox(height: 32),
           ElevatedButton.icon(
-            onPressed: _isLoading ? null : () => _shareLink(copyOnly: false),
-            icon: _isLoading
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.share),
-            label: const Text('Partager le lien'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: pt.card,
-              foregroundColor: pt.ink,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: _isLoading ? null : () => _shareLink(copyOnly: true),
-            icon: const Icon(Icons.copy),
-            label: const Text('Copier le lien'),
+            onPressed: _openInviteSheet,
+            icon: const Icon(Icons.share),
+            label: const Text('Partager une invitation'),
             style: ElevatedButton.styleFrom(
               backgroundColor: pt.card,
               foregroundColor: pt.ink,
