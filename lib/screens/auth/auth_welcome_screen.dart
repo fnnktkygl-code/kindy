@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pigio_app/core/state/app_state.dart';
@@ -43,65 +45,69 @@ class AuthWelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 48),
               
-              // Apple Sign In
-              ElevatedButton.icon(
-                onPressed: () async {
-                  try {
-                    await Supabase.instance.client.auth.signInWithOAuth(
-                      OAuthProvider.apple,
-                      redirectTo: 'com.pigio.app://auth/callback',
-                    );
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Erreur: ${e.toString()}')),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.apple, color: Colors.white),
-                label: const Text('Continuer avec Apple'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              // Apple Sign In — iOS only
+              if (Platform.isIOS) ...[
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    try {
+                      await Supabase.instance.client.auth.signInWithOAuth(
+                        OAuthProvider.apple,
+                        redirectTo: 'com.pigio.app://auth/callback',
+                      );
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Erreur: ${e.toString()}')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.apple, color: Colors.white),
+                  label: const Text('Continuer avec Apple'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
+              ],
               
-              // Google Sign In
-              ElevatedButton.icon(
-                onPressed: () async {
-                  try {
-                    await Supabase.instance.client.auth.signInWithOAuth(
-                      OAuthProvider.google,
-                      redirectTo: 'com.pigio.app://auth/callback',
-                      queryParams: {
-                        'prompt': 'select_account',
-                      },
-                    );
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Erreur: ${e.toString()}')),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.g_mobiledata, color: Colors.black, size: 32),
-                label: const Text('Continuer avec Google'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.grey.shade300),
+              // Google Sign In — not yet configured for Android
+              if (!Platform.isAndroid) ...[
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    try {
+                      await Supabase.instance.client.auth.signInWithOAuth(
+                        OAuthProvider.google,
+                        redirectTo: 'com.pigio.app://auth/callback',
+                        queryParams: {
+                          'prompt': 'select_account',
+                        },
+                      );
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Erreur: ${e.toString()}')),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.g_mobiledata, color: Colors.black, size: 32),
+                  label: const Text('Continuer avec Google'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
+              ],
               
               // Email Sign In
               ElevatedButton.icon(

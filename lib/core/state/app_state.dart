@@ -123,9 +123,7 @@ class PigioAppState extends ChangeNotifier {
         notificationService: _notificationService,
       );
   static const Uuid _uuid = Uuid();
-  static const _secureStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  static const _secureStorage = FlutterSecureStorage();
 
   // Periodic sync timer
   async_lib.Timer? _syncTimer;

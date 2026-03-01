@@ -7,9 +7,7 @@ class AuthService {
   AuthService._internal();
 
   final SupabaseClient _supabase = Supabase.instance.client;
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   // Keys for secure storage
   static const String _refreshTokenKey = 'pigio_refresh_token';
