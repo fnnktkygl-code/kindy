@@ -3,6 +3,22 @@ import { getCorsHeaders } from '../_shared/cors.ts';
 import { json } from '../_shared/response.ts';
 import { sha256Hex } from '../_shared/crypto.ts';
 
+// Simple in-memory rate limiter: max 10 requests per minute per token hash.
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 10;
+const RATE_WINDOW_MS = 60_000;
+
+function isRateLimited(key: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now >= entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return false;
+  }
+  entry.count++;
+  return entry.count > RATE_LIMIT;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(req) });
   if (req.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
@@ -21,13 +37,18 @@ Deno.serve(async (req) => {
 
     const tokenHash = await sha256Hex(token);
 
+    // Rate limit per token hash
+    if (isRateLimited(tokenHash)) {
+      return json({ error: 'Rate limit exceeded' }, 429);
+    }
+
     const admin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
     const { data, error } = await admin
       .from('invites')
-      .select('id, inviter_id, contact_id, group_id, status, expires_at, accepted_at, accepter_profile')
+      .select('id, status, expires_at, accepted_at, inviter_id, contact_id, group_id, accepter_profile')
       .eq('token_hash', tokenHash)
       .maybeSingle();
 
@@ -35,11 +56,12 @@ Deno.serve(async (req) => {
 
     return json({
       found: true,
+      tokenId: token,
       invitationId: data.id,
+      status: data.status,
       inviterId: data.inviter_id,
       contactId: data.contact_id,
       groupId: data.group_id,
-      status: data.status,
       expiresAt: data.expires_at,
       acceptedAt: data.accepted_at,
       accepterProfile: data.accepter_profile ?? null,
