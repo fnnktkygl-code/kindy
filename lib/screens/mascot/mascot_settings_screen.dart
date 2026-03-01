@@ -11,18 +11,6 @@ import 'package:pigio_app/screens/mascot/know_thyself_screen.dart';
 class MascotSettingsScreen extends StatelessWidget {
   const MascotSettingsScreen({super.key});
 
-  static const List<Color> scarfColors = [
-    Color(0xFFFFD54F), // Yellow (default)
-    Color(0xFFFF7043), // Orange
-    Color(0xFFEF5350), // Red
-    Color(0xFFEC407A), // Pink
-    Color(0xFFAB47BC), // Purple
-    Color(0xFF42A5F5), // Blue
-    Color(0xFF26A69A), // Teal
-    Color(0xFF66BB6A), // Green
-    Color(0xFFBDBDBD), // Gray
-  ];
-
   @override
   Widget build(BuildContext context) {
     final theme = context.pt;
@@ -168,57 +156,6 @@ class MascotSettingsScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-
-              // ── APPEARANCE ──
-              _sectionTitle("APPARENCE", theme),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: theme.card,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Text("🎨", style: TextStyle(fontSize: 18)),
-                        const SizedBox(width: 10),
-                        Text("Couleur de l'écharpe", style: fw(size: 15, w: FontWeight.w800, color: theme.ink)),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: scarfColors.map((c) {
-                        final isSelected = state.mascotScarfColor.toARGB32() == c.toARGB32();
-                        return GestureDetector(
-                          onTap: () => state.setMascotScarfColor(c),
-                          child: Container(
-                            width: 42, height: 42,
-                            decoration: BoxDecoration(
-                              color: c,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected ? theme.primary : theme.divider,
-                                width: isSelected ? 3 : 1,
-                              ),
-                              boxShadow: isSelected
-                                  ? [BoxShadow(color: c.withValues(alpha: 0.4), blurRadius: 8)]
-                                  : null,
-                            ),
-                            child: isSelected
-                                ? Icon(Icons.check, color: c.computeLuminance() > 0.5 ? Colors.black87 : Colors.white, size: 20)
-                                : null,
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              ),
             ],
           ),
         ),

@@ -19,6 +19,18 @@ const _kSlotAccents = <ClothingSlot?, Color>{
   ClothingSlot.accessory: Color(0xFF9C6FE3),
 };
 
+const _kScarfColors = <Color>[
+  Color(0xFFFFD54F), // Yellow (default)
+  Color(0xFFFF7043), // Orange
+  Color(0xFFEF5350), // Red
+  Color(0xFFEC407A), // Pink
+  Color(0xFFAB47BC), // Purple
+  Color(0xFF42A5F5), // Blue
+  Color(0xFF26A69A), // Teal
+  Color(0xFF66BB6A), // Green
+  Color(0xFFBDBDBD), // Gray
+];
+
 const _kSlotFilters = <({String label, String emoji, ClothingSlot? slot})>[
   (label: 'Tout', emoji: '✨', slot: null),
   (label: 'Têtes', emoji: '🎩', slot: ClothingSlot.hat),
@@ -135,7 +147,12 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
             ),
           ),
 
-          // ── 3. Filter bar — pinned so it stays visible while scrolling ──
+          // ── 3. Scarf colour picker ──
+          SliverToBoxAdapter(
+            child: _ScarfColorPicker(state: state, theme: theme),
+          ),
+
+          // ── 4. Filter bar — pinned so it stays visible while scrolling ──
           SliverPersistentHeader(
             pinned: true,
             delegate: _FilterBarDelegate(
@@ -145,7 +162,7 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
             ),
           ),
 
-          // ── 4. 2-column item grid ──
+          // ── 5. 2-column item grid ──
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             sliver: items.isEmpty
@@ -171,6 +188,72 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
                       childAspectRatio: 0.82,
                     ),
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Scarf colour picker
+// ─────────────────────────────────────────────────────────────
+
+class _ScarfColorPicker extends StatelessWidget {
+  final PigioAppState state;
+  final PigioThemeData theme;
+  const _ScarfColorPicker({required this.state, required this.theme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: theme.card,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('🎨', style: TextStyle(fontSize: 18)),
+              const SizedBox(width: 10),
+              Text("Couleur de l'écharpe",
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: theme.ink)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: _kScarfColors.map((c) {
+              final isSelected = state.mascotScarfColor.toARGB32() == c.toARGB32();
+              return GestureDetector(
+                onTap: () => state.setMascotScarfColor(c),
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: c,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isSelected ? theme.primary : theme.divider,
+                      width: isSelected ? 3 : 1,
+                    ),
+                    boxShadow: isSelected
+                        ? [BoxShadow(color: c.withValues(alpha: 0.4), blurRadius: 8)]
+                        : null,
+                  ),
+                  child: isSelected
+                      ? Icon(Icons.check,
+                          color: c.computeLuminance() > 0.5 ? Colors.black87 : Colors.white,
+                          size: 18)
+                      : null,
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
