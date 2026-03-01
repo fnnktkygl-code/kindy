@@ -36,7 +36,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     if (session != null) {
-      if (!state.onboardingCompleted) {
+      if (state.needsOnboarding) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const OnboardingShell()),
         );

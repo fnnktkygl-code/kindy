@@ -63,9 +63,9 @@ class _PasskeySetupScreenState extends State<PasskeySetupScreen> {
 
   void _goToNextScreen() {
     final state = context.read<PigioAppState>();
-    final Widget next = state.onboardingCompleted
-        ? const MainShell()
-        : const OnboardingShell();
+    final Widget next = state.needsOnboarding
+        ? const OnboardingShell()
+        : const MainShell();
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => next),
       (route) => false,

@@ -19,6 +19,7 @@ import '../../features/notifications/state/notifications_coordinator.dart';
 import '../../services/invitation_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/fcm_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 export '../models/app_models.dart'; // re-export so existing imports of app_state.dart still get models
 
@@ -114,7 +115,11 @@ class PigioAppState extends ChangeNotifier {
 
   // Services
   final InvitationService _invitationService =
-      InvitationService(baseApiUrl: _inviteApiBaseUrl);
+      InvitationService(
+        baseApiUrl: _inviteApiBaseUrl,
+        authTokenProvider: () async =>
+            Supabase.instance.client.auth.currentSession?.accessToken,
+      );
   late final NotificationService _notificationService =
       NotificationService(baseApiUrl: _inviteApiBaseUrl);
   late final NotificationsCoordinator _notificationsCoordinator =
@@ -123,7 +128,9 @@ class PigioAppState extends ChangeNotifier {
         notificationService: _notificationService,
       );
   static const Uuid _uuid = Uuid();
-  static const _secureStorage = FlutterSecureStorage();
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
 
   // Periodic sync timer
   async_lib.Timer? _syncTimer;
@@ -200,6 +207,11 @@ class PigioAppState extends ChangeNotifier {
   String       get syncKey               => _syncKey;
   bool         get syncEnabled           => _syncEnabled;
   bool         get onboardingCompleted   => _onboardingCompleted;
+  bool         get needsOnboarding {
+    final trimmedName = _profile.name.trim();
+    final hasDefaultProfileName = trimmedName.isEmpty || trimmedName.toLowerCase() == 'you';
+    return !_onboardingCompleted || hasDefaultProfileName;
+  }
   Map<String, List<String>> get personalityProfile => _personalityProfile;
   WizzEffectMode get wizzEffectMode => _wizzEffectMode;
   int            get globalWizzNonce => _globalWizzNonce;

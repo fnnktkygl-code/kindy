@@ -28,9 +28,10 @@ class AuthWelcomeScreen extends StatelessWidget {
               const Spacer(),
               // Mascot
               const Center(
-                child: Text(
-                  '🎁',
-                  style: TextStyle(fontSize: 100),
+                child: Image(
+                  image: AssetImage('icon/app_icon.png'),
+                  width: 110,
+                  height: 110,
                 ),
               ),
               const SizedBox(height: 32),

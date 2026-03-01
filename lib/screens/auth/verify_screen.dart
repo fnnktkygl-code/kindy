@@ -87,9 +87,9 @@ class _VerifyScreenState extends State<VerifyScreen> {
       if (!mounted) return;
       
       final state = context.read<PigioAppState>();
-      final Widget next = state.onboardingCompleted
-          ? const MainShell()
-          : const PasskeySetupScreen();
+      final Widget next = state.needsOnboarding
+          ? const PasskeySetupScreen()
+          : const MainShell();
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => next),
         (route) => false,
