@@ -66,6 +66,10 @@ Deno.serve(async (req) => {
 
   return new Response(page, {
     status: 200,
-    headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+    },
   });
 });
