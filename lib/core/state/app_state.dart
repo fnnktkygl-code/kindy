@@ -287,6 +287,17 @@ class PigioAppState extends ChangeNotifier {
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
 
+    // Fetch all secure storage values in parallel — avoids up to 30s of
+    // sequential reads (6 keys × 5s timeout each).
+    final secureValues = await Future.wait([
+      _secureRead(_contactsKey),        // [0]
+      _secureRead(_profileKey),          // [1]
+      _secureRead(_activityLogsKey),     // [2]
+      _secureRead(_pendingInvitesKey),   // [3]
+      _secureRead(_notificationsKey),    // [4]
+      _secureRead(_syncKeyKey),          // [5]
+    ]);
+
     final localeCode = prefs.getString(_localeKey);
     if (localeCode != null && localeCode.isNotEmpty) {
       _locale = Locale(localeCode);
@@ -319,7 +330,7 @@ class PigioAppState extends ChangeNotifier {
 
     _wishes  ..clear()..addAll(_decodeList(_wishesKey,   prefs).map(Wish.fromMap));
     // Contacts stored in secure storage — migrate from SharedPreferences on first run
-    final secureContactsRaw = await _secureRead(_contactsKey);
+    final secureContactsRaw = secureValues[0];
     if (secureContactsRaw != null && secureContactsRaw.isNotEmpty) {
       _contacts.clear();
       _contacts.addAll(_decodeListFromString(secureContactsRaw).map(ContactProfile.fromMap));
@@ -354,7 +365,7 @@ class PigioAppState extends ChangeNotifier {
     _polls   ..clear()..addAll(_decodeList(_pollsKey, prefs).map(GroupPoll.fromMap));
 
     // Profile stored in secure storage — migrate from SharedPreferences on first run
-    final secureProfileRaw = await _secureRead(_profileKey);
+    final secureProfileRaw = secureValues[1];
     final profileRaw = secureProfileRaw ?? prefs.getString(_profileKey);
     if (profileRaw != null && profileRaw.isNotEmpty) {
       try {
@@ -372,7 +383,7 @@ class PigioAppState extends ChangeNotifier {
     _unseenLogsCount = prefs.getInt(_unseenLogsKey) ?? 0;
 
     // Activity logs — read from secure storage, migrate from SharedPreferences if needed
-    final secureLogsRaw = await _secureRead(_activityLogsKey);
+    final secureLogsRaw = secureValues[2];
     if (secureLogsRaw != null && secureLogsRaw.isNotEmpty) {
       _activityLogs.clear();
       _activityLogs.addAll(_decodeListFromString(secureLogsRaw).map(ActivityLog.fromMap));
@@ -389,7 +400,7 @@ class PigioAppState extends ChangeNotifier {
     _recentProfiles..clear()..addAll(prefs.getStringList(_recentProfilesKey) ?? []);
 
     // PendingInvites stored in secure storage — migrate from SharedPreferences on first run
-    final secureInvitesRaw = await _secureRead(_pendingInvitesKey);
+    final secureInvitesRaw = secureValues[3];
     if (secureInvitesRaw != null && secureInvitesRaw.isNotEmpty) {
       _pendingInvites.clear();
       _pendingInvites.addAll(_decodeListFromString(secureInvitesRaw).map(PendingInvite.fromMap));
@@ -406,7 +417,7 @@ class PigioAppState extends ChangeNotifier {
     }
 
     // Notifications — read from secure storage, migrate from SharedPreferences if needed
-    final secureNotifsRaw = await _secureRead(_notificationsKey);
+    final secureNotifsRaw = secureValues[4];
     if (secureNotifsRaw != null && secureNotifsRaw.isNotEmpty) {
       _notifications.clear();
       _notifications.addAll(_decodeListFromString(secureNotifsRaw).map(PigioNotification.fromMap));
@@ -433,7 +444,7 @@ class PigioAppState extends ChangeNotifier {
     _contactsConsentGiven = prefs.getBool(_contactsConsentGivenKey) ?? false;
 
     // Sync — read from secure storage; migrate from SharedPreferences if needed
-    final secureSyncKey = await _secureRead(_syncKeyKey);
+    final secureSyncKey = secureValues[5];
     if (secureSyncKey != null && secureSyncKey.isNotEmpty) {
       _syncKey = secureSyncKey;
     } else {

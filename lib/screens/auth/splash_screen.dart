@@ -23,7 +23,10 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _checkAuth() async {
     // Wait for state to load
     final state = context.read<PigioAppState>();
-    await state.ready;
+    await state.ready.timeout(
+      const Duration(seconds: 8),
+      onTimeout: () {},
+    );
     
     // Brief splash
     await Future.delayed(const Duration(milliseconds: 400));
