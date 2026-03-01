@@ -1,5 +1,4 @@
 import { corsHeaders } from '../_shared/cors.ts';
-import { redirect, html } from '../_shared/response.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -11,17 +10,61 @@ Deno.serve(async (req) => {
     url.searchParams.get('t');
 
   if (!token) {
-    return html('Lien invalide.', 400);
+    return new Response('Lien invalide.', { status: 400, headers: { 'Content-Type': 'text/plain' } });
   }
 
   const safeToken = encodeURIComponent(token);
-  const appScheme = 'pigio://invite?token=' + safeToken;
-  const intentUrl =
-    'intent://invite?token=' + safeToken +
-    '#Intent;scheme=pigio;package=com.example.pigio.pigio_app;end';
+  const appScheme = `pigio://invite?token=${safeToken}`;
+  const fallbackUrl = `https://pigio.app/join?token=${safeToken}`;
   const userAgent = req.headers.get('user-agent') ?? '';
   const isAndroid = /android/i.test(userAgent);
-  const deepLink  = isAndroid ? intentUrl : appScheme;
 
-  return redirect(deepLink);
+  // Serve a smart redirect page: immediately tries to open the app,
+  // then falls back to the web landing page after 1.5s if the app is not installed.
+  const page = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Invitation Pigio</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+           background: #f8f5f0; display: flex; align-items: center; justify-content: center;
+           min-height: 100vh; margin: 0; }
+    .card { background: #fff; border-radius: 24px; padding: 48px 32px; max-width: 380px;
+            width: 90%; text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,.08); }
+    .mascot { font-size: 72px; margin-bottom: 16px; }
+    h1 { font-size: 20px; margin: 0 0 8px; color: #2d2a26; }
+    p  { color: #8a857e; font-size: 14px; margin: 0 0 28px; }
+    a  { display: block; width: 100%; padding: 14px; border-radius: 12px; font-size: 15px;
+         font-weight: 700; text-decoration: none; margin-bottom: 10px; box-sizing: border-box; }
+    .primary { background: #e8a063; color: #fff; }
+    .secondary { background: #f0ece6; color: #2d2a26; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="mascot">🐦</div>
+    <h1>Vous avez une invitation Pigio !</h1>
+    <p>Ouverture de l'app en cours…</p>
+    <a class="primary" id="open" href="${appScheme}">Ouvrir Pigio</a>
+    ${isAndroid
+      ? `<a class="secondary" href="https://play.google.com/store/apps/details?id=com.example.pigio.pigio_app">📱 Télécharger sur le Play Store</a>`
+      : `<a class="secondary" href="https://apps.apple.com/app/pigio/id0000000000">📱 Télécharger sur l'App Store</a>`}
+  </div>
+  <script>
+    // Attempt to open the app immediately; redirect to web landing after timeout.
+    window.location.href = '${appScheme}';
+    setTimeout(function() {
+      // If we're still here, the app wasn't installed — go to web landing page.
+      window.location.replace('${fallbackUrl}');
+    }, 1500);
+  </script>
+</body>
+</html>`;
+
+  return new Response(page, {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+  });
 });

@@ -110,12 +110,13 @@ Deno.serve(async (req) => {
       return json({ error: 'Failed to create invite', details: error?.message }, 500);
     }
 
-    // Invite link points to the web landing page (pigio.app/join) which shows
-    // a friendly UI and redirects to the app via custom scheme.
-    // The Supabase edge function URL is NOT used here — pigio.app is a static
-    // site and cannot serve /functions/v1/... paths.
-    const landingBase = Deno.env.get('INVITE_PUBLIC_BASE') ?? 'https://pigio.app';
-    const inviteUrl = new URL('/join', landingBase);
+    // Invite link goes through the invite-open edge function which:
+    // - On Android: redirects via intent:// URL to open the app
+    // - On iOS/other: redirects via pigio:// custom scheme
+    // - If app not installed: browser stays on the Supabase URL (no pigio.app hosting needed)
+    const supabaseProjectRef = (supabaseUrl ?? '').match(/https:\/\/([^.]+)\.supabase\.co/)?.[1] ?? '';
+    const inviteOpenBase = `https://${supabaseProjectRef}.supabase.co/functions/v1/invite-open`;
+    const inviteUrl = new URL(inviteOpenBase);
     inviteUrl.searchParams.set('token', token);
 
     return json({

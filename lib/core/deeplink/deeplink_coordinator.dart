@@ -26,9 +26,21 @@ class DeeplinkCoordinator {
       return _tokenPattern.hasMatch(token);
     }
 
-    // HTTPS: must be a trusted host AND the first path segment must be exactly "invite" or "join".
-    const trustedHosts = {'pigio.app'};
-    if (!trustedHosts.contains(uri.host.toLowerCase())) return false;
+    // HTTPS: trusted hosts
+    final host = uri.host.toLowerCase();
+    const pigioHost = 'pigio.app';
+    const supabaseHost = 'rlghoamehiqlqzjdyxcg.supabase.co';
+    if (host != pigioHost && host != supabaseHost) return false;
+
+    // Supabase invite-open edge function URL
+    if (host == supabaseHost) {
+      final path = uri.path.toLowerCase();
+      if (!path.startsWith('/functions/v1/invite-open') && !path.startsWith('/invite')) return false;
+      final token = uri.queryParameters['token'] ?? uri.queryParameters['tokenId'] ?? '';
+      return _tokenPattern.hasMatch(token);
+    }
+
+    // pigio.app: first path segment must be "invite" or "join"
     final firstSegment = uri.pathSegments.isNotEmpty
         ? uri.pathSegments.first.toLowerCase()
         : '';

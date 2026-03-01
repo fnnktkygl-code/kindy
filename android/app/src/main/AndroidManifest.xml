@@ -42,6 +42,9 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https" android:host="rlghoamehiqlqzjdyxcg.supabase.co" android:pathPrefix="/functions/v1/invite-open"/>
             </intent-filter>
+            <!-- Custom scheme: pigio://invite?token=TOKEN —
+                 This is what invite-open redirects to on non-Android,
+                 and what the web landing page links to directly. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
