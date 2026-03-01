@@ -450,7 +450,6 @@ class _ContactProfileScreenState extends State<ContactProfileScreen>
       backgroundColor: Colors.transparent,
       builder: (ctx) => WizzSheet(
         contact: contact,
-        onSent: _triggerAvatarShake,
       ),
     );
   }

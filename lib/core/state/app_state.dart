@@ -121,7 +121,11 @@ class PigioAppState extends ChangeNotifier {
             Supabase.instance.client.auth.currentSession?.accessToken,
       );
   late final NotificationService _notificationService =
-      NotificationService(baseApiUrl: _inviteApiBaseUrl);
+      NotificationService(
+        baseApiUrl: _inviteApiBaseUrl,
+        authTokenProvider: () async =>
+            Supabase.instance.client.auth.currentSession?.accessToken,
+      );
   late final NotificationsCoordinator _notificationsCoordinator =
       NotificationsCoordinator(
         apiBaseUrl: _inviteApiBaseUrl,
@@ -513,7 +517,7 @@ class PigioAppState extends ChangeNotifier {
     Future.microtask(() => _pullNotifications());
 
     _syncTimer?.cancel();
-    _syncTimer = async_lib.Timer.periodic(const Duration(seconds: 30), (_) {
+    _syncTimer = async_lib.Timer.periodic(const Duration(seconds: 8), (_) {
       _syncPendingInvitesFromServer();
       _pullContactProfiles();
       _pushOwnContactProfile();

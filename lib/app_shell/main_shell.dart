@@ -42,6 +42,8 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
 
   // MSN Wizz — full-screen shake
   late final AnimationController _shakeCtrl;
+  late final AnimationController _flashCtrl;
+  late final Animation<double> _flashOpacity;
   int _lastWizzNonce = 0;
   double _shakeAmplitude = 16;
   double _shakeVerticalFactor = 0.35;
@@ -57,6 +59,14 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
       vsync: this,
       duration: const Duration(milliseconds: 760),
     );
+    _flashCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+    _flashOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.52), weight: 45),
+      TweenSequenceItem(tween: Tween(begin: 0.52, end: 0.0), weight: 55),
+    ]).animate(CurvedAnimation(parent: _flashCtrl, curve: Curves.easeOut));
   }
 
   void _playWizzShake(WizzEffectMode mode) {
@@ -72,6 +82,7 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
       _shakeCycles = 9;
       _shakeCtrl.duration = const Duration(milliseconds: 760);
     }
+    _flashCtrl.forward(from: 0);
     _shakeCtrl.forward(from: 0);
   }
 
@@ -208,6 +219,7 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
   @override
   void dispose() {
     _shakeCtrl.dispose();
+    _flashCtrl.dispose();
     _deeplinkCoordinator.dispose();
     super.dispose();
   }
@@ -235,12 +247,28 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
     final waveY = math.sin(shakeProgress * math.pi * 2 * (_shakeCycles + 1.7));
     final shakeX = waveX * _shakeAmplitude * envelope;
     final shakeY = waveY * _shakeAmplitude * _shakeVerticalFactor * envelope;
+    final shakeRotate = waveX * 0.036 * envelope;
 
     return AnimatedBuilder(
-      animation: _shakeCtrl,
+      animation: Listenable.merge([_shakeCtrl, _flashCtrl]),
       builder: (context, child) => Transform.translate(
         offset: Offset(shakeX, shakeY),
-        child: child,
+        child: Transform.rotate(
+          angle: shakeRotate,
+          child: Stack(
+            children: [
+              child!,
+              IgnorePointer(
+                child: Opacity(
+                  opacity: _flashOpacity.value,
+                  child: Container(
+                    color: Colors.orangeAccent.withValues(alpha: 0.28),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
       child: Scaffold(
       drawer: _buildDrawer(context, profile, theme),

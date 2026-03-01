@@ -612,7 +612,6 @@ class _ContactCardState extends State<_ContactCard>
       backgroundColor: Colors.transparent,
       builder: (ctx) => WizzSheet(
         contact: widget.data.contact,
-        onSent: _triggerShake,
       ),
     );
   }
