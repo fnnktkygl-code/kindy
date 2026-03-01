@@ -76,3 +76,9 @@ ios/Runner/GoogleService-Info.plist
 # Dart-define env files — contain secrets, inject via CI
 *.env
 .env.*
+
+# Binary archives and installers — too large for git
+*.tar.gz
+*.zip
+*.dmg
+*.pkg
