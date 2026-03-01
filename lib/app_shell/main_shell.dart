@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -41,8 +42,10 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
 
   // MSN Wizz — full-screen shake
   late final AnimationController _shakeCtrl;
-  late final Animation<double> _shakeAnim;
   int _lastWizzNonce = 0;
+  double _shakeAmplitude = 16;
+  double _shakeVerticalFactor = 0.35;
+  double _shakeCycles = 9;
 
   @override
   void initState() {
@@ -52,19 +55,24 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
 
     _shakeCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 650),
+      duration: const Duration(milliseconds: 760),
     );
-    _shakeAnim = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: 14.0), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: 14.0, end: -14.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -14.0, end: 12.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 12.0, end: -12.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -12.0, end: 9.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 9.0, end: -9.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -9.0, end: 5.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 5.0, end: -5.0), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -5.0, end: 0.0), weight: 1),
-    ]).animate(CurvedAnimation(parent: _shakeCtrl, curve: Curves.linear));
+  }
+
+  void _playWizzShake(WizzEffectMode mode) {
+    if (!mounted) return;
+    if (mode == WizzEffectMode.phase2) {
+      _shakeAmplitude = 28;
+      _shakeVerticalFactor = 0.55;
+      _shakeCycles = 16;
+      _shakeCtrl.duration = const Duration(milliseconds: 1150);
+    } else {
+      _shakeAmplitude = 16;
+      _shakeVerticalFactor = 0.35;
+      _shakeCycles = 9;
+      _shakeCtrl.duration = const Duration(milliseconds: 760);
+    }
+    _shakeCtrl.forward(from: 0);
   }
 
   Future<void> _initDeepLinkHandling() async {
@@ -217,14 +225,21 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
     if (wizzNonce != _lastWizzNonce) {
       _lastWizzNonce = wizzNonce;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _shakeCtrl.forward(from: 0);
+        _playWizzShake(state.wizzEffectMode);
       });
     }
 
+    final shakeProgress = _shakeCtrl.value;
+    final envelope = (1.0 - shakeProgress).clamp(0.0, 1.0);
+    final waveX = math.sin(shakeProgress * math.pi * 2 * _shakeCycles);
+    final waveY = math.sin(shakeProgress * math.pi * 2 * (_shakeCycles + 1.7));
+    final shakeX = waveX * _shakeAmplitude * envelope;
+    final shakeY = waveY * _shakeAmplitude * _shakeVerticalFactor * envelope;
+
     return AnimatedBuilder(
-      animation: _shakeAnim,
+      animation: _shakeCtrl,
       builder: (context, child) => Transform.translate(
-        offset: Offset(_shakeAnim.value, 0),
+        offset: Offset(shakeX, shakeY),
         child: child,
       ),
       child: Scaffold(

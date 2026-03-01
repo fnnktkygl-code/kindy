@@ -45,23 +45,27 @@ extension NotificationsExtension on PigioAppState {
 
     final fcmToken = contact.fcmToken;
     if (fcmToken != null && fcmToken.isNotEmpty) {
+      final userJwt = Supabase.instance.client.auth.currentSession?.accessToken;
       _notificationsCoordinator.sendPushToFcmToken(
         fcmToken: fcmToken,
         title: _profile.name,
         body: message,
         type: type,
+        userJwt: userJwt,
         sender: ({
           required String baseUrl,
           required String fcmToken,
           required String title,
           required String body,
           required String type,
+          required String? userJwt,
         }) => FcmService.sendPush(
           baseUrl: baseUrl,
           fcmToken: fcmToken,
           title: title,
           body: body,
           type: type,
+          userJwt: userJwt,
         ),
       );
     }
@@ -108,6 +112,7 @@ extension NotificationsExtension on PigioAppState {
       }
     }
     // Real FCM push notification to contacts that have an FCM token
+    final userJwt = Supabase.instance.client.auth.currentSession?.accessToken;
     for (final contact in joinedContacts) {
       final fcmToken = contact.fcmToken;
       if (fcmToken != null && fcmToken.isNotEmpty) {
@@ -116,18 +121,21 @@ extension NotificationsExtension on PigioAppState {
           title: _profile.name,
           body: message,
           type: type,
+          userJwt: userJwt,
           sender: ({
             required String baseUrl,
             required String fcmToken,
             required String title,
             required String body,
             required String type,
+            required String? userJwt,
           }) => FcmService.sendPush(
             baseUrl: baseUrl,
             fcmToken: fcmToken,
             title: title,
             body: body,
             type: type,
+            userJwt: userJwt,
           ),
         );
       }
@@ -146,9 +154,15 @@ extension NotificationsExtension on PigioAppState {
 
     final existingIds = _notifications.map((n) => n.id).toSet();
     bool changed = false;
+    bool hasIncomingWizz = false;
     for (final key in pullKeys) {
       try {
         final pulled = await _notificationsCoordinator.pullNotifications(key);
+        for (final notif in pulled) {
+          if (!existingIds.contains(notif.id) && notif.type == 'wizz') {
+            hasIncomingWizz = true;
+          }
+        }
         final inserted = _notificationsCoordinator.mergePulledNotifications(
           target: _notifications,
           pulled: pulled,
@@ -163,6 +177,9 @@ extension NotificationsExtension on PigioAppState {
       }
     }
     if (changed) {
+      if (hasIncomingWizz) {
+        triggerIncomingWizzHaptic();
+      }
       notifyListeners();
       _saveData();
     }
