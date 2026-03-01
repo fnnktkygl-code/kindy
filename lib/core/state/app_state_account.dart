@@ -109,6 +109,24 @@ extension AccountExtension on PigioAppState {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
 
+    // 6. Wipe FlutterSecureStorage — this is where all app data actually lives.
+    //    Without this the data reappears on next launch.
+    try {
+      await PigioAppState._secureStorage.deleteAll();
+    } catch (_) {
+      // Fallback: delete each known key individually
+      for (final key in [
+        PigioAppState._contactsKey,
+        PigioAppState._profileKey,
+        PigioAppState._activityLogsKey,
+        PigioAppState._pendingInvitesKey,
+        PigioAppState._notificationsKey,
+        PigioAppState._syncKeyKey,
+      ]) {
+        try { await PigioAppState._secureStorage.delete(key: key); } catch (_) {}
+      }
+    }
+
     notifyListeners();
     return true;
   }
