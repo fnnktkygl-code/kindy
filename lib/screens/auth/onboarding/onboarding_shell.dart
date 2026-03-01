@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:pigio_app/core/state/app_state.dart';
+import 'package:pigio_app/core/config/constants.dart';
 import '../../../app_shell/main_shell.dart';
 
 class OnboardingShell extends StatefulWidget {
@@ -143,7 +144,7 @@ class _StepNameScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('🎁', style: TextStyle(fontSize: 80), textAlign: TextAlign.center),
+          const Text('👋', style: TextStyle(fontSize: 80), textAlign: TextAlign.center),
           const SizedBox(height: 32),
           Text(
             "Comment vous appelez-vous ?",
@@ -189,107 +190,177 @@ class _StepNameScreen extends StatelessWidget {
 class _StepAvatarScreen extends StatefulWidget {
   final VoidCallback onNext;
   final void Function(String icon, Color color) onAvatarSelected;
-  
   const _StepAvatarScreen({required this.onNext, required this.onAvatarSelected});
-
   @override
   State<_StepAvatarScreen> createState() => _StepAvatarScreenState();
 }
 
 class _StepAvatarScreenState extends State<_StepAvatarScreen> {
   static const _defaultAvatars = [
-    'assets/avatars/defaults/default_boy.png',
-    'assets/avatars/defaults/default_girl.png',
-    'assets/avatars/defaults/default_man.png',
-    'assets/avatars/defaults/default_woman.png',
-    'assets/avatars/defaults/default_elder_man.png',
-    'assets/avatars/defaults/default_elder_woman.png',
+    'assets/defaults/default_man.png',
+    'assets/defaults/default_woman.png',
+    'assets/defaults/default_boy.png',
+    'assets/defaults/default_afro.png',
+    'assets/defaults/default_dreads.png',
+    'assets/defaults/default_hijabie.png',
+    'assets/defaults/default_old_man.png',
+    'assets/defaults/default_elder_man.png',
+    'assets/defaults/default_man_dreads.png',
+    'assets/defaults/default_elder_woman.png',
+    'assets/defaults/default_woman_dreads.png',
+  ];
+  static final List<String> _avatars = [
+    for (int i = 1; i <= 38; i++) 'assets/avatars/avatar_$i.png',
   ];
 
-  static const _colors = [
-    Color(0xFFFFB74D),
-    Color(0xFF81C784),
-    Color(0xFF64B5F6),
-    Color(0xFFE57373),
-    Color(0xFFBA68C8),
-    Color(0xFF4DD0E1),
-    Color(0xFFFFF176),
-    Color(0xFFA1887F),
-  ];
+  String _selectedAvatarIcon = 'assets/defaults/default_man.png';
+  Color _selectedColor = AppColors.notionWarmColors[0];
 
-  final int _selectedAvatar = 0;
-  int _selectedColor = 0;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onAvatarSelected(_selectedAvatarIcon, _selectedColor);
+    });
+  }
+
+  double _getCorrectiveScale(String path) {
+    if (path.contains('hijabie') ||
+        path.contains('old_man') ||
+        path.contains('elder')) {
+      return 1.35;
+    }
+    return 1.1;
+  }
+
+  void _select(String icon, Color color) {
+    setState(() {
+      _selectedAvatarIcon = icon;
+      _selectedColor = color;
+    });
+    widget.onAvatarSelected(icon, color);
+  }
+
+  Widget _avatarTile(String iconPath) {
+    final pt = context.watch<PigioAppState>().currentTheme;
+    final isSelected = _selectedAvatarIcon == iconPath;
+    final isDefault = !iconPath.contains('avatar_');
+    return GestureDetector(
+      onTap: () => _select(iconPath, _selectedColor),
+      child: Container(
+        width: 70,
+        height: 70,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? pt.primary.withValues(alpha: 0.15) : pt.surface,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected ? pt.primary : pt.divider,
+            width: isSelected ? 2.5 : 1.0,
+          ),
+        ),
+        child: ClipOval(
+          child: isDefault
+              ? Transform.scale(
+                  scale: _getCorrectiveScale(iconPath),
+                  child: Image.asset(iconPath, fit: BoxFit.cover),
+                )
+              : Image.asset(iconPath, fit: BoxFit.cover),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final pt = context.watch<PigioAppState>().currentTheme;
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('🎁✨', style: TextStyle(fontSize: 60), textAlign: TextAlign.center),
-          const SizedBox(height: 16),
           Text(
-            "Choisissez votre Avatar !",
+            "Choisissez votre Avatar",
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: pt.ink),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 24),
-          
-          // Avatar preview
+          const SizedBox(height: 20),
+
+          // Preview
           Center(
             child: Container(
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: _colors[_selectedColor],
+                color: _selectedColor,
                 shape: BoxShape.circle,
+                border: Border.all(color: pt.divider, width: 2),
               ),
-              child: const Center(child: Text('🎁', style: TextStyle(fontSize: 48))),
+              child: ClipOval(
+                child: Transform.scale(
+                  scale: _getCorrectiveScale(_selectedAvatarIcon),
+                  child: Image.asset(_selectedAvatarIcon, fit: BoxFit.cover),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 24),
-          
-          // Color picker
-          Text("Couleur", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: pt.ink)),
-          const SizedBox(height: 8),
+
+          // Silhouettes
+          Text("Silhouettes", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: pt.ink)),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 70,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _defaultAvatars.length,
+              itemBuilder: (_, i) => _avatarTile(_defaultAvatars[i]),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Avatars
+          Text("Avatars", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: pt.ink)),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 70,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _avatars.length,
+              itemBuilder: (_, i) => _avatarTile(_avatars[i]),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Background colour
+          Text("Fond coloré", style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: pt.ink)),
+          const SizedBox(height: 12),
           Wrap(
             spacing: 12,
             runSpacing: 12,
-            children: List.generate(_colors.length, (i) {
+            children: AppColors.notionWarmColors.map((color) {
+              final isSelected = _selectedColor == color;
               return GestureDetector(
-                onTap: () {
-                  setState(() => _selectedColor = i);
-                  widget.onAvatarSelected(
-                    _defaultAvatars[_selectedAvatar],
-                    _colors[i],
-                  );
-                },
+                onTap: () => _select(_selectedAvatarIcon, color),
                 child: Container(
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: _colors[i],
+                    color: color,
                     shape: BoxShape.circle,
-                    border: _selectedColor == i
-                        ? Border.all(color: pt.ink, width: 3)
-                        : null,
+                    border: Border.all(
+                      color: isSelected ? pt.ink : Colors.transparent,
+                      width: 3,
+                    ),
                   ),
                 ),
               );
-            }),
+            }).toList(),
           ),
-          
-          const Spacer(),
+          const SizedBox(height: 32),
+
           ElevatedButton(
-            onPressed: () {
-              widget.onAvatarSelected(
-                _defaultAvatars[_selectedAvatar],
-                _colors[_selectedColor],
-              );
-              widget.onNext();
-            },
+            onPressed: widget.onNext,
             style: ElevatedButton.styleFrom(
               backgroundColor: pt.primary,
               foregroundColor: Colors.white,
@@ -308,6 +379,7 @@ class _StepAvatarScreenState extends State<_StepAvatarScreen> {
   }
 }
 
+
 // --- Step 3: First Wish ---
 class _StepWishScreen extends StatelessWidget {
   final TextEditingController wishController;
@@ -324,7 +396,7 @@ class _StepWishScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('🎁🎁', style: TextStyle(fontSize: 80), textAlign: TextAlign.center),
+          const Text('✨', style: TextStyle(fontSize: 80), textAlign: TextAlign.center),
           const SizedBox(height: 32),
           Text(
             "Qu'est-ce qui vous ferait plaisir ?",
@@ -425,7 +497,7 @@ class _StepCirclesScreenState extends State<_StepCirclesScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('🎁👥', style: TextStyle(fontSize: 80), textAlign: TextAlign.center),
+          const Text('👥', style: TextStyle(fontSize: 80), textAlign: TextAlign.center),
           const SizedBox(height: 32),
           Text(
             "Invitez vos proches !",
@@ -500,7 +572,7 @@ class _StepDoneScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Spacer(),
-          const Text('🎁🎉', style: TextStyle(fontSize: 100), textAlign: TextAlign.center),
+          const Text('', style: TextStyle(fontSize: 100), textAlign: TextAlign.center),
           const SizedBox(height: 32),
           Text(
             "Pigio est prêt !",
