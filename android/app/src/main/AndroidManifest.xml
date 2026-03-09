@@ -38,13 +38,13 @@
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="rlghoamehiqlqzjdyxcg.supabase.co" android:pathPrefix="/invite"/>
+                <data android:scheme="https" android:host="vcnelfgziucsyukahhey.supabase.co" android:pathPrefix="/invite"/>
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="rlghoamehiqlqzjdyxcg.supabase.co" android:pathPrefix="/functions/v1/invite-open"/>
+                <data android:scheme="https" android:host="vcnelfgziucsyukahhey.supabase.co" android:pathPrefix="/functions/v1/invite-open"/>
             </intent-filter>
             <!-- Custom scheme: pigio://invite?token=TOKEN —
                  This is what invite-open redirects to on non-Android,

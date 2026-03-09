@@ -1,11 +1,17 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pigio — Connexion</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #f8f5f0;
@@ -15,6 +21,7 @@
       align-items: center;
       justify-content: center;
     }
+
     .card {
       background: #fff;
       border-radius: 24px;
@@ -22,17 +29,48 @@
       max-width: 400px;
       width: 90%;
       text-align: center;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
     }
-    .mascot { font-size: 64px; margin-bottom: 24px; }
-    h1 { font-size: 22px; margin-bottom: 24px; }
-    .success { color: #27ae60; }
-    .error { color: #c0392b; }
-    .spinner { animation: spin 1s linear infinite; display: inline-block; }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    .hidden { display: none; }
+
+    .mascot {
+      font-size: 64px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-size: 22px;
+      margin-bottom: 24px;
+    }
+
+    .success {
+      color: #27ae60;
+    }
+
+    .error {
+      color: #c0392b;
+    }
+
+    .spinner {
+      animation: spin 1s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
+
 <body>
   <div class="card" id="processing">
     <div class="mascot"><span class="spinner">🐦</span></div>
@@ -53,18 +91,18 @@
 
   <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script>
-    const SUPABASE_URL = 'https://rlghoamehiqlqzjdyxcg.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_aNsp_NzdpKG1dhbgPKBUTg_uE-67d13';
+    const SUPABASE_URL = 'https://vcnelfgziucsyukahhey.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_wzRubrYmP5G_hJFlW8BScg_pNeHzSiQ';
 
     async function handleCallback() {
       try {
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        
+
         // Supabase Auth handles the hash fragment automatically
         const { data, error } = await supabase.auth.getSession();
-        
+
         if (error) throw error;
-        
+
         if (data.session) {
           show('success');
           // Try to redirect to app
@@ -88,4 +126,5 @@
     handleCallback();
   </script>
 </body>
+
 </html>

@@ -1,11 +1,17 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Invitation Pigio</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: #f8f5f0;
@@ -15,6 +21,7 @@
       align-items: center;
       justify-content: center;
     }
+
     .card {
       background: #fff;
       border-radius: 24px;
@@ -22,11 +29,26 @@
       max-width: 400px;
       width: 90%;
       text-align: center;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
     }
-    .mascot { font-size: 80px; margin-bottom: 24px; }
-    h1 { font-size: 22px; margin-bottom: 8px; color: #2d2a26; }
-    .subtitle { color: #8a857e; font-size: 15px; margin-bottom: 32px; }
+
+    .mascot {
+      font-size: 80px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-size: 22px;
+      margin-bottom: 8px;
+      color: #2d2a26;
+    }
+
+    .subtitle {
+      color: #8a857e;
+      font-size: 15px;
+      margin-bottom: 32px;
+    }
+
     .btn {
       display: block;
       width: 100%;
@@ -39,14 +61,42 @@
       cursor: pointer;
       border: none;
     }
-    .btn-primary { background: #e8a063; color: #fff; }
-    .btn-secondary { background: #f0ece6; color: #2d2a26; }
-    .expired { color: #c0392b; }
-    .hidden { display: none; }
-    .spinner { animation: spin 1s linear infinite; display: inline-block; }
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    .btn-primary {
+      background: #e8a063;
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: #f0ece6;
+      color: #2d2a26;
+    }
+
+    .expired {
+      color: #c0392b;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .spinner {
+      animation: spin 1s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
   </style>
 </head>
+
 <body>
   <div class="card" id="loading">
     <div class="mascot"><span class="spinner">🐦</span></div>
@@ -58,8 +108,11 @@
     <h1 id="invite-title"></h1>
     <p class="subtitle" id="invite-subtitle"></p>
     <a class="btn btn-primary" id="open-app" href="#">J'ai déjà l'app → Ouvrir</a>
-    <a class="btn btn-secondary" id="download-ios" href="https://apps.apple.com/app/pigio/id0000000000" target="_blank">📱 Télécharger sur l'App Store</a>
-    <a class="btn btn-secondary" id="download-android" href="https://play.google.com/store/apps/details?id=app.pigio.android" target="_blank">📱 Télécharger sur le Play Store</a>
+    <a class="btn btn-secondary" id="download-ios" href="https://apps.apple.com/app/pigio/id0000000000"
+      target="_blank">📱 Télécharger sur l'App Store</a>
+    <a class="btn btn-secondary" id="download-android"
+      href="https://play.google.com/store/apps/details?id=app.pigio.android" target="_blank">📱 Télécharger sur le Play
+      Store</a>
   </div>
 
   <div class="card hidden" id="expired">
@@ -69,21 +122,21 @@
   </div>
 
   <script>
-    const API_BASE = 'https://rlghoamehiqlqzjdyxcg.supabase.co/functions/v1';
-    
+    const API_BASE = 'https://vcnelfgziucsyukahhey.supabase.co/functions/v1';
+
     async function init() {
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
       const path = window.location.pathname;
       const ua = navigator.userAgent || '';
       const isAndroid = /android/i.test(ua);
-      
+
       // Extract token from path like /join/TOKEN
       let inviteToken = token;
       if (!inviteToken && path.startsWith('/join/')) {
         inviteToken = path.split('/join/')[1];
       }
-      
+
       if (!inviteToken) {
         show('expired');
         return;
@@ -91,12 +144,12 @@
 
       // Strip token from URL bar immediately — prevents leakage via browser
       // history, referrer headers, and shoulder-surfing on rooted devices.
-      try { window.history.replaceState({}, '', '/join/'); } catch (_) {}
+      try { window.history.replaceState({}, '', '/join/'); } catch (_) { }
 
       try {
         const resp = await fetch(`${API_BASE}/invite-status?token=${encodeURIComponent(inviteToken)}`);
         const data = await resp.json();
-        
+
         if (!data.found || data.status === 'expired' || data.status === 'revoked') {
           show('expired');
           return;
@@ -105,7 +158,7 @@
         const inviterName = data.inviterProfile?.name || data.inviterId || 'Quelqu\'un';
         document.getElementById('invite-title').textContent = `${inviterName} vous invite sur Pigio !`;
         document.getElementById('invite-subtitle').textContent = `Rejoignez ${inviterName} pour partager vos envies de cadeaux.`;
-        
+
         // Deep link to app
         const safeToken = encodeURIComponent(inviteToken);
         const deepLink = `pigio://invite?token=${safeToken}`;
@@ -118,7 +171,7 @@
         setTimeout(() => {
           window.location.href = openHref;
         }, 100);
-        
+
         show('valid');
       } catch (e) {
         show('expired');
@@ -133,4 +186,5 @@
     init();
   </script>
 </body>
+
 </html>

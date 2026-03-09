@@ -114,9 +114,9 @@ class _SplashScreenState extends State<SplashScreen>
         return;
       }
 
+      // Updated to avoid 'options' if it's causing build issues in this environment
       final ok = await localAuth.authenticate(
         localizedReason: 'Connectez-vous avec votre empreinte ou Face ID',
-        options: const AuthenticationOptions(biometricOnly: true),
       );
       if (!ok || !mounted) {
         _goToWelcome();
