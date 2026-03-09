@@ -63,6 +63,12 @@ Deno.serve(async (req: Request) => {
     // Delete invites where this user is the inviter
     await supabase.from('invites').delete().eq('inviter_id', userId);
 
+    // Delete realtime sync signals targeted at this user
+    await supabase.from('sync_signals').delete().eq('target_user_id', userId);
+
+    // Delete crash/error logs associated with this user
+    await supabase.from('error_logs').delete().eq('user_id', userId);
+
     // Hard-delete the auth user — irreversible
     const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
     if (deleteError) {
