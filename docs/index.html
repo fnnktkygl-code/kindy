@@ -657,6 +657,90 @@
             line-height: 1.65;
         }
 
+        /* ─── Privacy & Security ──────────────────── */
+        .privacy {
+            padding: 100px 0;
+            background: var(--bg);
+            transition: background-color 0.3s;
+        }
+
+        .privacy .section-header {
+            text-align: center;
+            margin-bottom: 64px;
+        }
+
+        .privacy .section-header h2 {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+
+        .privacy .section-header p {
+            font-size: 17px;
+            color: var(--mid);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .privacy-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        .p-card {
+            background: var(--light);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .p-card {
+                background: var(--card);
+            }
+        }
+
+        .p-card:hover {
+            border-color: #22c55e;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(34, 197, 94, 0.1);
+        }
+
+        .p-card .p-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+
+        .p-card h4 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .p-card p {
+            font-size: 15px;
+            color: var(--mid);
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .privacy-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         /* ─── Download ──────────────────── */
         .download {
             padding: 100px 0;
@@ -999,9 +1083,10 @@
                             style="width:8px;height:8px;border-radius:50%;background:var(--primary);display:inline-block;animation:pulse 2s infinite;"></span>
                         ✨ Mascotte IA Vocale · Gratuit
                     </div>
-                    <h1>Prends soin de <br>tes proches, <span class="gradient-text">simplement</span></h1>
-                    <p>Pigio retient les tailles, les envies et les occasions de toute ta famille. L'IA te propose les
-                        bons cadeaux au bon moment, et Pigio la mascotte interactive vieille sur tes proches.</p>
+                    <h1>Mieux s'occuper de <br>sa famille, <span class="gradient-text">sans charge mentale</span></h1>
+                    <p>Pigio est l'application bienveillante qui retient tout pour vous : tailles, envies, et
+                        événements. Épaulée par une IA interactive, prenez soin de vos proches sans le moindre stress.
+                    </p>
                     <div class="hero-actions">
                         <a href="#download" class="btn btn-primary">
                             <i class="fa-brands fa-android"></i> Télécharger l'APK
@@ -1012,8 +1097,8 @@
                     </div>
                     <div class="hero-trust">
                         <span><i class="fa-solid fa-check"></i> 100% Gratuit</span>
-                        <span><i class="fa-solid fa-check"></i> RGPD</span>
-                        <span><i class="fa-solid fa-check"></i> IA Gemini</span>
+                        <span><i class="fa-solid fa-check"></i> Suppression Zéro Trace</span>
+                        <span><i class="fa-solid fa-check"></i> IA Vocale Interactive</span>
                     </div>
                 </div>
                 <div class="hero-visual reveal delay-1">
@@ -1040,31 +1125,23 @@
         </div>
         <div class="gallery-track">
             <div class="gallery-item">
-                <div class="placeholder-screen" style="background:linear-gradient(160deg,#1f1f38,#3d2f45);"><span
-                        class="p-emoji">🏠</span><span class="p-label">Accueil & Mascotte</span></div>
+                <div class="placeholder-screen" style="background:linear-gradient(160deg,#1f1f38,#3d2f45);">
+                    <span class="p-emoji">🤖</span><span class="p-label">Dashboard & IA Vocale</span>
+                </div>
             </div>
             <div class="gallery-item">
-                <div class="placeholder-screen"><span class="p-emoji">🎁</span><span class="p-label">Envies &
-                        Cadeaux</span></div>
+                <div class="placeholder-screen">
+                    <span class="p-emoji">🎁</span><span class="p-label">Suggestions par IA (Gemini)</span>
+                </div>
             </div>
             <div class="gallery-item">
-                <div class="placeholder-screen"><span class="p-emoji">👕</span><span class="p-label">Tailles
-                        Famille</span></div>
+                <div class="placeholder-screen">
+                    <span class="p-emoji">👥</span><span class="p-label">Cercles Familiaux Partagés</span>
+                </div>
             </div>
             <div class="gallery-item">
-                <div class="placeholder-screen"><span class="p-emoji">👥</span><span class="p-label">Profils
-                        Cercles</span></div>
-            </div>
-            <div class="gallery-item">
-                <div class="placeholder-screen"><span class="p-emoji">🎂</span><span class="p-label">Calendrier
-                        Événements</span></div>
-            </div>
-            <div class="gallery-item">
-                <div class="placeholder-screen"><span class="p-emoji">🧣</span><span class="p-label">Garde-Robe
-                        Pigio</span></div>
-            </div>
-            <div class="gallery-item">
-                <div class="placeholder-screen"><span class="p-emoji">✨</span><span class="p-label">Pigio Wrapped</span>
+                <div class="placeholder-screen">
+                    <span class="p-emoji">🌗</span><span class="p-label">Mode Sombre Dynamique</span>
                 </div>
             </div>
         </div>
@@ -1139,6 +1216,44 @@
                     <h4>Wizz & Rappels</h4>
                     <p>Recevez des rappels intelligents pour ne manquer aucun anniversaire et envoyez des Wizz sonores
                         ludiques en famille.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ────── PRIVACY & SECURITY ────── -->
+    <section class="privacy reveal">
+        <div class="container">
+            <div class="section-header">
+                <div class="eyebrow" style="color: #22c55e;">Vie Privée</div>
+                <h2>Votre vie privée est absolue</h2>
+                <p>Nous avons conçu Pigio avec les normes de confidentialité les plus strictes. Vos données familiales
+                    vous appartiennent, un point c'est tout.</p>
+            </div>
+            <div class="privacy-grid">
+                <div class="p-card reveal">
+                    <div class="p-icon"><i class="fa-solid fa-ban"></i></div>
+                    <h4>Zéro Revente de Données</h4>
+                    <p>Nous ne vendons ni ne partageons <strong>jamais</strong> vos données à des fins publicitaires.
+                        Pigio est conçu pour vous, pas pour les annonceurs.</p>
+                </div>
+                <div class="p-card reveal delay-1">
+                    <div class="p-icon"><i class="fa-solid fa-eraser"></i></div>
+                    <h4>Suppression "Zéro Trace"</h4>
+                    <p>Supprimez votre compte en un clic. Notre architecture efface instantanément 100% de vos données
+                        sur tous nos serveurs (logs, invites, données actives). Aucune donnée résiduelle.</p>
+                </div>
+                <div class="p-card reveal">
+                    <div class="p-icon"><i class="fa-solid fa-lock"></i></div>
+                    <h4>Contrôle de Bout en Bout</h4>
+                    <p>Vous gérez vos cercles. Vous décidez qui voit quoi. Si vous quittez un cercle, vos informations
+                        personnelles sont automatiquement anonymisées.</p>
+                </div>
+                <div class="p-card reveal delay-1">
+                    <div class="p-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                    <h4>Sécurité & IA Privée</h4>
+                    <p>Connexions chiffrées (TLS 1.3), protection biométrique locale, et l'IA (Vertex AI) n'utilise
+                        <strong>aucune</strong> de vos requêtes pour s'entraîner.</p>
                 </div>
             </div>
         </div>

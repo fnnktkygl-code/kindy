@@ -8,7 +8,7 @@
     <meta name="description" content="Politique de confidentialité de l'application Pigio.">
     <link rel="icon" href="../logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-        <style>
+    <style>
         :root {
             --bg: #ffffff;
             --text-main: #1a1a2e;
@@ -196,8 +196,9 @@
             <p>Vos données sont utilisées exclusivement pour :</p>
             <ul>
                 <li>Permettre la synchronisation entre appareils et entre membres d'un cercle.</li>
-                <li>Générer des suggestions de cadeaux personnalisées via l'IA (Gemini). Les requêtes IA sont
-                    contextuelles et ne sont pas stockées par Google au-delà du traitement.</li>
+                <li>Générer des suggestions personnalisées via l'IA (Vertex AI). Vos requêtes ne sont
+                    <strong>jamais</strong> utilisées pour entraîner les modèles d'IA, et aucune conversation n'est
+                    stockée dans notre base de données. L'IA fonctionne comme un traitement éphémère.</li>
                 <li>Envoyer des rappels d'événements et notifications que vous avez activées.</li>
             </ul>
 
@@ -219,15 +220,23 @@
             </ul>
 
             <h2>5. Sécurité</h2>
-            <p>Les mots de passe sont hashés côté serveur (bcrypt). Les communications sont chiffrées en TLS 1.3. Les
-                tokens de session sont stockés dans le stockage sécurisé de l'appareil (Keychain / Keystore).
+            <p>Les mots de passe sont hashés côté serveur (bcrypt). Les communications sont chiffrées de bout en bout en
+                TLS 1.3. Les
+                tokens de session sont stockés dans le stockage ultra-sécurisé de l'appareil (Keychain iOS / Keystore
+                Android).
                 L'authentification biométrique utilise les APIs natives de l'appareil — aucune empreinte n'est envoyée à
-                nos serveurs.</p>
+                nos serveurs. Notre architecture IA passe par un proxy serveur sécurisé garantissant la confidentialité
+                absolue de vos échanges.</p>
 
             <h2>6. Conservation</h2>
-            <p>Vos données sont conservées tant que votre compte est actif. Vous pouvez supprimer votre compte à tout
-                moment depuis <strong>Réglages → Supprimer mon compte</strong>, ce qui entraîne la suppression de toutes
-                vos données dans un délai de 30 jours.</p>
+            <p>Vos données sont conservées uniquement tant que votre compte est actif. Vous pouvez supprimer votre
+                compte à tout
+                moment depuis <strong>Réglages → Supprimer mon compte</strong>.</p>
+            <p><strong>Engagement Zéro Trace :</strong> Notre processus de suppression est instantané et complet. Il
+                détruit irréversiblement 100% de vos données sur tous nos serveurs (profil d'authentification, tables de
+                données utilisateur, invitations actives ou passées, logs d'erreurs système et signaux de
+                synchronisation en temps réel). Il ne reste absolument aucune trace résiduelle de votre passage sur
+                Pigio.</p>
 
             <h2>7. Vos droits (RGPD)</h2>
             <p>Conformément au Règlement Général sur la Protection des Données, vous disposez d'un droit :</p>
