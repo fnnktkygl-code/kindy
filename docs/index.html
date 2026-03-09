@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html lang="fr" class="scroll-smooth">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pigio — Prends soin de tes proches, simplement</title>
-    <meta name="description" content="L'app N°1 pour les cadeaux en famille. Pigio retient les tailles, les envies et les anniversaires. IA Gemini intégrée, Mode Surprise, 100% gratuit.">
+    <meta name="description"
+        content="L'app N°1 pour s'occuper de sa famille sans charge mentale. Pigio retient les tailles, événements et cercles avec une IA Gemini et une voix interactive. 100% gratuit.">
     <meta property="og:title" content="Pigio — Prends soin de tes proches, simplement">
-    <meta property="og:description" content="L'app qui retient tout pour ceux que vous aimez. Tailles, envies, occasions — avec une touche d'IA.">
+    <meta property="og:description"
+        content="L'app qui retient tout pour ceux que vous aimez. Tailles, événements, cadeaux — avec une mascotte IA interactive.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="logo.png">
     <link rel="icon" href="logo.png">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         :root {
@@ -22,76 +26,193 @@
             --mid: #6b7280;
             --light: #f7f7fb;
             --card: #ffffff;
+            --border: #f0f0f5;
+            --bg: #ffffff;
+            --nav-bg: rgba(255, 255, 255, 0.85);
             --radius: 20px;
-            --shadow: 0 8px 32px rgba(0,0,0,0.08);
-            --shadow-lg: 0 20px 60px rgba(0,0,0,0.12);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.12);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --ink: #f4f4f5;
+                --mid: #a1a1aa;
+                --light: #18181b;
+                --card: #27272a;
+                --bg: #121214;
+                --border: rgba(255, 255, 255, 0.05);
+                --nav-bg: rgba(18, 18, 20, 0.85);
+                --primary-light: rgba(232, 114, 92, 0.15);
+                --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+                --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.5);
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             color: var(--ink);
-            background: #fff;
+            background: var(--bg);
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
-        a { text-decoration: none; color: inherit; }
-        img { display: block; max-width: 100%; }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        img {
+            display: block;
+            max-width: 100%;
+            transition: transform 0.3s ease;
+        }
 
         /* ─── Utilities ──────────────────────── */
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
         .gradient-text {
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+
         .badge {
-            display: inline-flex; align-items: center; gap: 8px;
-            padding: 6px 16px; border-radius: 100px;
-            font-size: 13px; font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 600;
         }
+
         .btn {
-            display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-            padding: 16px 32px; border-radius: 14px;
-            font-size: 16px; font-weight: 700; border: none; cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 16px 32px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
             transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
+
         .btn-primary {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: #fff; box-shadow: 0 4px 20px rgba(232, 114, 92, 0.35);
+            color: #ffffff;
+            box-shadow: 0 4px 20px rgba(232, 114, 92, 0.35);
         }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(232, 114, 92, 0.45); }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(232, 114, 92, 0.45);
+        }
+
         .btn-outline {
-            background: #fff; color: var(--ink);
-            border: 2px solid #e5e7eb;
+            background: var(--card);
+            color: var(--ink);
+            border: 2px solid var(--border);
         }
-        .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
 
         /* ─── Nav ──────────────────────── */
         nav {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-            background: rgba(255,255,255,0.85);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(0,0,0,0.04);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: var(--nav-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
+
         .nav-inner {
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             height: 72px;
         }
-        .nav-logo { display: flex; align-items: center; gap: 10px; }
-        .nav-logo img { width: 40px; height: 40px; border-radius: 12px; }
-        .nav-logo span { font-size: 22px; font-weight: 800; }
-        .nav-links { display: flex; align-items: center; gap: 32px; }
-        .nav-links a { font-size: 15px; font-weight: 500; color: var(--mid); transition: color 0.2s; }
-        .nav-links a:hover { color: var(--primary); }
-        .nav-cta {
-            padding: 10px 24px; border-radius: 12px;
-            background: var(--ink); color: #fff;
-            font-size: 14px; font-weight: 600; transition: all 0.2s;
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .nav-cta:hover { background: #2d2d4e; }
-        .nav-hamburger { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+
+        .nav-logo img {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+        }
+
+        .nav-logo span {
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .nav-links a {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--mid);
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .nav-cta {
+            padding: 10px 24px;
+            border-radius: 12px;
+            background: var(--ink);
+            color: var(--bg);
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav-cta:hover {
+            background: var(--mid);
+            color: #ffffff;
+        }
+
+        .nav-hamburger {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            color: var(--ink);
+        }
 
         /* ─── Hero ──────────────────────── */
         .hero {
@@ -99,299 +220,754 @@
             position: relative;
             overflow: hidden;
         }
+
         .hero::before {
             content: '';
-            position: absolute; top: -200px; right: -200px;
-            width: 600px; height: 600px;
+            position: absolute;
+            top: -200px;
+            right: -200px;
+            width: 600px;
+            height: 600px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(232,114,92,0.08) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(232, 114, 92, 0.08) 0%, transparent 70%);
         }
+
         .hero::after {
             content: '';
-            position: absolute; bottom: -150px; left: -150px;
-            width: 500px; height: 500px;
+            position: absolute;
+            bottom: -150px;
+            left: -150px;
+            width: 500px;
+            height: 500px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.06) 0%, transparent 70%);
         }
-        .hero-grid {
-            display: grid; grid-template-columns: 1fr 1fr;
-            gap: 80px; align-items: center;
-            position: relative; z-index: 1;
-        }
-        .hero-content h1 {
-            font-size: 56px; font-weight: 800; line-height: 1.1;
-            letter-spacing: -0.03em; margin-bottom: 24px;
-        }
-        .hero-content p {
-            font-size: 18px; line-height: 1.7; color: var(--mid);
-            margin-bottom: 40px; max-width: 480px;
-        }
-        .hero-actions { display: flex; gap: 16px; margin-bottom: 40px; }
-        .hero-trust {
-            display: flex; gap: 24px; font-size: 13px; font-weight: 600; color: var(--mid);
-        }
-        .hero-trust span { display: flex; align-items: center; gap: 6px; }
-        .hero-trust i { color: #22c55e; font-size: 12px; }
 
-        .hero-visual { position: relative; display: flex; justify-content: center; }
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-content h1 {
+            font-size: 56px;
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            margin-bottom: 24px;
+        }
+
+        .hero-content p {
+            font-size: 18px;
+            line-height: 1.7;
+            color: var(--mid);
+            margin-bottom: 40px;
+            max-width: 480px;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        .hero-trust {
+            display: flex;
+            gap: 24px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--mid);
+        }
+
+        .hero-trust span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hero-trust i {
+            color: #22c55e;
+            font-size: 12px;
+        }
+
+        .hero-visual {
+            position: relative;
+            display: flex;
+            justify-content: center;
+        }
+
         .phone-mockup {
-            position: relative; width: 280px;
-            border-radius: 36px; overflow: hidden;
+            position: relative;
+            width: 280px;
+            border-radius: 36px;
+            overflow: hidden;
             border: 6px solid var(--ink);
             box-shadow: var(--shadow-lg);
             background: var(--ink);
             animation: float 6s ease-in-out infinite;
         }
+
         .phone-mockup::before {
             content: '';
-            position: absolute; top: 0; left: 50%; transform: translateX(-50%);
-            width: 120px; height: 28px;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 28px;
             background: var(--ink);
             border-radius: 0 0 16px 16px;
             z-index: 10;
         }
+
         .phone-mockup img {
-            width: 100%; aspect-ratio: 9/19.5;
-            object-fit: cover; border-radius: 30px;
+            width: 100%;
+            aspect-ratio: 9/19.5;
+            object-fit: cover;
+            border-radius: 30px;
         }
+
         .phone-mockup .placeholder-screen {
-            width: 100%; aspect-ratio: 9/19.5;
+            width: 100%;
+            aspect-ratio: 9/19.5;
             background: linear-gradient(160deg, #1f1f38 0%, #2d2a3e 50%, #3d2f45 100%);
             border-radius: 30px;
-            display: flex; align-items: center; justify-content: center;
-            flex-direction: column; gap: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 12px;
         }
-        .phone-mockup .placeholder-screen .p-icon { font-size: 48px; opacity: 0.6; }
-        .phone-mockup .placeholder-screen .p-text { font-size: 14px; color: rgba(255,255,255,0.4); font-weight: 500; }
+
+        .phone-mockup .placeholder-screen .p-icon {
+            font-size: 48px;
+            opacity: 0.6;
+        }
+
+        .phone-mockup .placeholder-screen .p-text {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 500;
+        }
+
         .hero-glow-1 {
-            position: absolute; top: 10%; left: -20%;
-            width: 200px; height: 200px;
-            border-radius: 50%; filter: blur(80px);
-            background: rgba(232,114,92,0.2);
+            position: absolute;
+            top: 10%;
+            left: -20%;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            filter: blur(80px);
+            background: rgba(232, 114, 92, 0.2);
         }
+
         .hero-glow-2 {
-            position: absolute; bottom: 10%; right: -15%;
-            width: 250px; height: 250px;
-            border-radius: 50%; filter: blur(80px);
-            background: rgba(139,92,246,0.15);
+            position: absolute;
+            bottom: 10%;
+            right: -15%;
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            filter: blur(80px);
+            background: rgba(139, 92, 246, 0.15);
         }
+
         @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-16px); }
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-16px);
+            }
         }
 
         /* ─── Screenshots gallery ──────── */
-        .screenshots { padding: 80px 0; background: var(--light); }
-        .screenshots .section-header { text-align: center; margin-bottom: 48px; }
-        .screenshots .section-header h2 { font-size: 36px; font-weight: 800; margin-bottom: 12px; }
-        .screenshots .section-header p { font-size: 17px; color: var(--mid); }
+        .screenshots {
+            padding: 80px 0;
+            background: var(--light);
+            transition: background-color 0.3s;
+        }
+
+        .screenshots .section-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .screenshots .section-header h2 {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+
+        .screenshots .section-header p {
+            font-size: 17px;
+            color: var(--mid);
+        }
+
         .gallery-track {
-            display: flex; gap: 24px;
+            display: flex;
+            gap: 24px;
             overflow-x: auto;
             scroll-snap-type: x mandatory;
             -webkit-overflow-scrolling: touch;
             padding: 16px 32px 32px;
             scrollbar-width: none;
         }
-        .gallery-track::-webkit-scrollbar { display: none; }
-        .gallery-track::before, .gallery-track::after {
-            content: ''; flex-shrink: 0; width: 1px;
+
+        .gallery-track::-webkit-scrollbar {
+            display: none;
         }
+
+        .gallery-track::before,
+        .gallery-track::after {
+            content: '';
+            flex-shrink: 0;
+            width: 1px;
+        }
+
         .gallery-item {
-            flex-shrink: 0; scroll-snap-align: center;
-            width: 240px; border-radius: 32px; overflow: hidden;
+            flex-shrink: 0;
+            scroll-snap-align: center;
+            width: 240px;
+            border-radius: 32px;
+            overflow: hidden;
             border: 5px solid var(--ink);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+            box-shadow: var(--shadow);
             background: var(--ink);
-            transition: transform 0.4s ease;
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
         }
-        .gallery-item:hover { transform: scale(1.03); }
+
+        .gallery-item:hover {
+            transform: scale(1.03);
+            box-shadow: var(--shadow-lg);
+        }
+
         .gallery-item img {
-            width: 100%; aspect-ratio: 9/19.5;
-            object-fit: cover; border-radius: 27px;
-        }
-        .gallery-item .placeholder-screen {
-            width: 100%; aspect-ratio: 9/19.5;
+            width: 100%;
+            aspect-ratio: 9/19.5;
+            object-fit: cover;
             border-radius: 27px;
-            display: flex; align-items: center; justify-content: center;
-            flex-direction: column; gap: 8px;
         }
-        .gallery-item:nth-child(2) .placeholder-screen { background: linear-gradient(160deg, #1f1f38, #3d2f45); }
-        .gallery-item:nth-child(3) .placeholder-screen { background: linear-gradient(160deg, #f7f3ee, #ede5d8); }
-        .gallery-item:nth-child(4) .placeholder-screen { background: linear-gradient(160deg, #1f1f38, #2f3545); }
-        .gallery-item:nth-child(5) .placeholder-screen { background: linear-gradient(160deg, #f7f3ee, #e8e0d2); }
-        .gallery-item:nth-child(6) .placeholder-screen { background: linear-gradient(160deg, #1f1f38, #352f3d); }
-        .gallery-item:nth-child(7) .placeholder-screen { background: linear-gradient(160deg, #f7f3ee, #e5dfd4); }
-        .gallery-item .placeholder-screen .p-emoji { font-size: 32px; opacity: 0.5; }
-        .gallery-item .placeholder-screen .p-label { font-size: 12px; color: rgba(0,0,0,0.25); font-weight: 600; }
+
+        .gallery-item .placeholder-screen {
+            width: 100%;
+            aspect-ratio: 9/19.5;
+            border-radius: 27px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .gallery-item:nth-child(2) .placeholder-screen {
+            background: linear-gradient(160deg, #1f1f38, #3d2f45);
+        }
+
+        .gallery-item:nth-child(3) .placeholder-screen {
+            background: linear-gradient(160deg, #f7f3ee, #ede5d8);
+        }
+
+        .gallery-item:nth-child(4) .placeholder-screen {
+            background: linear-gradient(160deg, #1f1f38, #2f3545);
+        }
+
+        .gallery-item:nth-child(5) .placeholder-screen {
+            background: linear-gradient(160deg, #f7f3ee, #e8e0d2);
+        }
+
+        .gallery-item:nth-child(6) .placeholder-screen {
+            background: linear-gradient(160deg, #1f1f38, #352f3d);
+        }
+
+        .gallery-item:nth-child(7) .placeholder-screen {
+            background: linear-gradient(160deg, #f7f3ee, #e5dfd4);
+        }
+
+        .gallery-item .placeholder-screen .p-emoji {
+            font-size: 32px;
+            opacity: 0.5;
+        }
+
+        .gallery-item .placeholder-screen .p-label {
+            font-size: 12px;
+            color: rgba(0, 0, 0, 0.25);
+            font-weight: 600;
+        }
+
         .gallery-item:nth-child(2) .placeholder-screen .p-label,
         .gallery-item:nth-child(4) .placeholder-screen .p-label,
-        .gallery-item:nth-child(6) .placeholder-screen .p-label { color: rgba(255,255,255,0.3); }
+        .gallery-item:nth-child(6) .placeholder-screen .p-label {
+            color: rgba(255, 255, 255, 0.3);
+        }
 
         /* ─── Features ──────────────────── */
-        .features { padding: 100px 0; }
-        .features .section-header { text-align: center; margin-bottom: 64px; }
-        .features .section-header .eyebrow {
-            font-size: 13px; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 1.5px;
-            color: var(--primary); margin-bottom: 12px;
+        .features {
+            padding: 100px 0;
         }
-        .features .section-header h2 { font-size: 36px; font-weight: 800; margin-bottom: 16px; }
-        .features .section-header p { font-size: 17px; color: var(--mid); max-width: 560px; margin: 0 auto; }
+
+        .features .section-header {
+            text-align: center;
+            margin-bottom: 64px;
+        }
+
+        .features .section-header .eyebrow {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+
+        .features .section-header h2 {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+
+        .features .section-header p {
+            font-size: 17px;
+            color: var(--mid);
+            max-width: 560px;
+            margin: 0 auto;
+        }
 
         .feature-hero-card {
             background: linear-gradient(135deg, #faf5ff 0%, #fef0ed 100%);
-            border-radius: 24px; overflow: hidden;
-            display: grid; grid-template-columns: 1fr 1fr;
+            border-radius: 24px;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             margin-bottom: 32px;
-            border: 1px solid rgba(0,0,0,0.04);
+            border: 1px solid var(--border);
+            transition: all 0.4s ease;
         }
-        .feature-hero-card .content { padding: 56px; display: flex; flex-direction: column; justify-content: center; }
-        .feature-hero-card .content h3 { font-size: 28px; font-weight: 800; margin-bottom: 16px; }
-        .feature-hero-card .content p { font-size: 16px; color: var(--mid); line-height: 1.7; }
+
+        @media (prefers-color-scheme: dark) {
+            .feature-hero-card {
+                background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(232, 114, 92, 0.1) 100%);
+            }
+        }
+
+        .feature-hero-card .content {
+            padding: 56px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .feature-hero-card .content h3 {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+
+        .feature-hero-card .content p {
+            font-size: 16px;
+            color: var(--mid);
+            line-height: 1.7;
+        }
+
         .feature-hero-card .visual {
-            display: flex; align-items: center; justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             padding: 40px;
         }
-        .feature-hero-card .visual .phone-mockup { width: 220px; animation: none; }
+
+        .feature-hero-card .visual .phone-mockup {
+            width: 220px;
+            animation: none;
+            border-color: var(--ink);
+            background: var(--ink);
+        }
 
         .features-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr);
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
             gap: 24px;
         }
+
         .f-card {
-            background: #fff; border-radius: var(--radius);
-            border: 1px solid #f0f0f5;
+            background: var(--card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
             padding: 32px 28px;
             transition: all 0.35s ease;
+            position: relative;
+            overflow: hidden;
         }
+
+        .f-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 0%, var(--primary-light) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.4s;
+            pointer-events: none;
+        }
+
         .f-card:hover {
-            box-shadow: 0 12px 40px rgba(0,0,0,0.06);
+            box-shadow: var(--shadow-lg);
             transform: translateY(-4px);
-            border-color: transparent;
+            border-color: var(--primary);
         }
+
+        .f-card:hover::before {
+            opacity: 0.5;
+        }
+
         .f-card .f-icon {
-            width: 52px; height: 52px;
+            width: 52px;
+            height: 52px;
             border-radius: 16px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 24px; margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+            background: var(--light);
+            transition: transform 0.3s;
         }
-        .f-card h4 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
-        .f-card p { font-size: 14px; color: var(--mid); line-height: 1.65; }
+
+        .f-card:hover .f-icon {
+            transform: scale(1.1) rotate(-5deg);
+        }
+
+        .f-card h4 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .f-card p {
+            font-size: 14px;
+            color: var(--mid);
+            line-height: 1.65;
+        }
 
         /* ─── Download ──────────────────── */
         .download {
             padding: 100px 0;
-            background: var(--ink);
-            position: relative; overflow: hidden;
+            background: #1a1a2e;
+            position: relative;
+            overflow: hidden;
+            transition: background-color 0.3s;
         }
+
+        @media (prefers-color-scheme: dark) {
+            .download {
+                background: #09090b;
+            }
+
+            .download::before {
+                background: linear-gradient(135deg, #09090b 0%, #1f101f 50%, #291223 100%);
+            }
+        }
+
         .download::before {
             content: '';
-            position: absolute; inset: 0;
-            background: linear-gradient(135deg, var(--ink) 0%, #2d1f3d 50%, #3d1f35 100%);
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #2d1f3d 50%, #3d1f35 100%);
             opacity: 0.9;
         }
+
         .download-content {
-            position: relative; z-index: 1;
-            text-align: center; max-width: 640px; margin: 0 auto;
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            max-width: 640px;
+            margin: 0 auto;
         }
+
         .download-content .logo-glow {
-            width: 80px; height: 80px;
-            border-radius: 24px; overflow: hidden;
+            width: 80px;
+            height: 80px;
+            border-radius: 24px;
+            overflow: hidden;
             margin: 0 auto 32px;
-            box-shadow: 0 0 60px rgba(232,114,92,0.3);
-            border: 2px solid rgba(255,255,255,0.1);
+            box-shadow: 0 0 60px rgba(232, 114, 92, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.1);
         }
-        .download-content .logo-glow img { width: 100%; height: 100%; object-fit: cover; }
+
+        .download-content .logo-glow img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
         .download-content h2 {
-            font-size: 40px; font-weight: 800; color: #fff;
+            font-size: 40px;
+            font-weight: 800;
+            color: #ffffff;
             margin-bottom: 16px;
         }
-        .download-content p { font-size: 18px; color: rgba(255,255,255,0.6); margin-bottom: 40px; line-height: 1.7; }
+
+        .download-content p {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 40px;
+            line-height: 1.7;
+        }
+
         .download-card {
-            background: rgba(255,255,255,0.06);
+            background: rgba(255, 255, 255, 0.06);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 24px;
-            padding: 40px; text-align: left;
+            padding: 40px;
+            text-align: left;
         }
+
         .download-card-top {
-            display: flex; justify-content: space-between; align-items: center;
-            flex-wrap: wrap; gap: 24px; margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 32px;
         }
-        .download-card-top h3 { font-size: 22px; font-weight: 700; color: #fff; }
-        .download-card-top .meta { font-size: 14px; color: rgba(255,255,255,0.4); }
-        .download-card-top .tags { display: flex; gap: 16px; margin-top: 8px; }
+
+        .download-card-top h3 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .download-card-top .meta {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .download-card-top .tags {
+            display: flex;
+            gap: 16px;
+            margin-top: 8px;
+        }
+
         .download-card-top .tags span {
-            font-size: 13px; color: rgba(255,255,255,0.5);
-            display: flex; align-items: center; gap: 6px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
+
         .btn-download {
-            display: flex; align-items: center; justify-content: center; gap: 12px;
-            padding: 18px 36px; border-radius: 16px;
-            background: var(--primary); color: #fff;
-            font-size: 17px; font-weight: 700;
-            border: none; cursor: pointer;
-            box-shadow: 0 4px 24px rgba(232,114,92,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 18px 36px;
+            border-radius: 16px;
+            background: var(--primary);
+            color: #ffffff;
+            font-size: 17px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 24px rgba(232, 114, 92, 0.4);
             transition: all 0.3s;
         }
-        .btn-download:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(232,114,92,0.5); }
-        .install-steps {
-            margin-top: 32px; padding-top: 32px;
-            border-top: 1px solid rgba(255,255,255,0.08);
+
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(232, 114, 92, 0.5);
         }
-        .install-steps h4 { color: #fff; font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+
+        .install-steps {
+            margin-top: 32px;
+            padding-top: 32px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .install-steps h4 {
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
         .install-steps ol {
-            color: rgba(255,255,255,0.5); font-size: 14px;
-            line-height: 2; padding-left: 20px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+            line-height: 2;
+            padding-left: 20px;
         }
 
         /* ─── Footer ──────────────────── */
         footer {
-            background: #fff; border-top: 1px solid #f0f0f5;
+            background: var(--bg);
+            border-top: 1px solid var(--border);
             padding: 48px 0;
+            transition: background-color 0.3s, border-color 0.3s;
         }
+
         .footer-inner {
-            display: flex; justify-content: space-between; align-items: center;
-            flex-wrap: wrap; gap: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 24px;
         }
-        .footer-logo { display: flex; align-items: center; gap: 10px; }
-        .footer-logo img { width: 32px; height: 32px; border-radius: 10px; }
-        .footer-logo span { font-weight: 700; font-size: 18px; }
-        .footer-links { display: flex; gap: 24px; }
-        .footer-links a { font-size: 14px; color: var(--mid); transition: color 0.2s; }
-        .footer-links a:hover { color: var(--primary); }
-        .footer-copy { font-size: 13px; color: var(--mid); }
-        .footer-social { display: flex; gap: 12px; }
+
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .footer-logo img {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+        }
+
+        .footer-logo span {
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .footer-links a {
+            font-size: 14px;
+            color: var(--mid);
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+
+        .footer-copy {
+            font-size: 13px;
+            color: var(--mid);
+        }
+
+        .footer-social {
+            display: flex;
+            gap: 12px;
+        }
+
         .footer-social a {
-            width: 40px; height: 40px; border-radius: 12px;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
             background: var(--light);
-            display: flex; align-items: center; justify-content: center;
-            color: var(--mid); transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--mid);
+            transition: all 0.2s;
         }
-        .footer-social a:hover { background: var(--primary-light); color: var(--primary); }
+
+        .footer-social a:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        /* ─── Reveal Animations ──────────────────────── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
 
         /* ─── Mobile ──────────────────── */
         @media (max-width: 768px) {
-            .nav-links { display: none; }
-            .nav-hamburger { display: block; }
-            .hero { padding: 120px 0 60px; }
-            .hero-grid { grid-template-columns: 1fr; gap: 48px; text-align: center; }
-            .hero-content h1 { font-size: 36px; }
-            .hero-content p { margin-left: auto; margin-right: auto; }
-            .hero-actions { justify-content: center; flex-wrap: wrap; }
-            .hero-trust { justify-content: center; }
-            .hero-visual { order: -1; }
-            .phone-mockup { width: 220px; }
-            .feature-hero-card { grid-template-columns: 1fr; }
-            .feature-hero-card .content { padding: 32px; }
-            .features-grid { grid-template-columns: 1fr; }
-            .download-content h2 { font-size: 28px; }
-            .download-card { padding: 28px; }
-            .footer-inner { flex-direction: column; text-align: center; }
+            .nav-links {
+                display: none;
+            }
+
+            .nav-hamburger {
+                display: block;
+            }
+
+            .hero {
+                padding: 120px 0 60px;
+            }
+
+            .hero-grid {
+                grid-template-columns: 1fr;
+                gap: 48px;
+                text-align: center;
+            }
+
+            .hero-content h1 {
+                font-size: 36px;
+            }
+
+            .hero-content p {
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .hero-actions {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            .hero-trust {
+                justify-content: center;
+            }
+
+            .hero-visual {
+                order: -1;
+            }
+
+            .phone-mockup {
+                width: 220px;
+            }
+
+            .feature-hero-card {
+                grid-template-columns: 1fr;
+            }
+
+            .feature-hero-card .content {
+                padding: 32px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .download-content h2 {
+                font-size: 28px;
+            }
+
+            .download-card {
+                padding: 28px;
+            }
+
+            .footer-inner {
+                flex-direction: column;
+                text-align: center;
+            }
         }
     </style>
 </head>
+
 <body>
 
     <!-- ────── NAVIGATION ────── -->
@@ -406,23 +982,26 @@
                 <a href="privacy/">Confidentialité</a>
                 <a href="#download" class="nav-cta"><i class="fa-brands fa-android"></i> Télécharger</a>
             </div>
-            <button class="nav-hamburger" onclick="document.querySelector('.nav-links').style.display = 'flex'" aria-label="Menu">
-                <i class="fa-solid fa-bars" style="font-size:20px;color:var(--ink)"></i>
+            <button class="nav-hamburger" onclick="document.querySelector('.nav-links').style.display = 'flex'"
+                aria-label="Menu">
+                <i class="fa-solid fa-bars" style="font-size: 20px;"></i>
             </button>
         </div>
     </nav>
 
     <!-- ────── HERO ────── -->
-    <section class="hero">
+    <section class="hero reveal">
         <div class="container">
             <div class="hero-grid">
                 <div class="hero-content">
                     <div class="badge" style="background:var(--primary-light);color:var(--primary);">
-                        <span style="width:8px;height:8px;border-radius:50%;background:var(--primary);display:inline-block;animation:pulse 2s infinite;"></span>
-                        ✨ IA Gemini intégrée · Gratuit
+                        <span
+                            style="width:8px;height:8px;border-radius:50%;background:var(--primary);display:inline-block;animation:pulse 2s infinite;"></span>
+                        ✨ Mascotte IA Vocale · Gratuit
                     </div>
                     <h1>Prends soin de <br>tes proches, <span class="gradient-text">simplement</span></h1>
-                    <p>Pigio retient les tailles, les envies et les occasions de toute ta famille. Son IA te propose les bons cadeaux au bon moment, sa mascotte t'accompagne et veille sur tes proches. 🤫</p>
+                    <p>Pigio retient les tailles, les envies et les occasions de toute ta famille. L'IA te propose les
+                        bons cadeaux au bon moment, et Pigio la mascotte interactive vieille sur tes proches.</p>
                     <div class="hero-actions">
                         <a href="#download" class="btn btn-primary">
                             <i class="fa-brands fa-android"></i> Télécharger l'APK
@@ -437,11 +1016,10 @@
                         <span><i class="fa-solid fa-check"></i> IA Gemini</span>
                     </div>
                 </div>
-                <div class="hero-visual">
+                <div class="hero-visual reveal delay-1">
                     <div class="hero-glow-1"></div>
                     <div class="hero-glow-2"></div>
                     <div class="phone-mockup">
-                        <!-- Replace div below with: <img src="landingpage/home_dark.jpeg" alt="Pigio App"> -->
                         <div class="placeholder-screen">
                             <img src="mascot.png" alt="Pigio mascot" style="width:80px;opacity:0.7;">
                             <span class="p-text">Pigio App</span>
@@ -453,7 +1031,7 @@
     </section>
 
     <!-- ────── SCREENSHOTS ────── -->
-    <section class="screenshots">
+    <section class="screenshots reveal">
         <div class="container">
             <div class="section-header">
                 <h2>Découvrez Pigio en images</h2>
@@ -461,40 +1039,64 @@
             </div>
         </div>
         <div class="gallery-track">
-            <!-- Replace placeholder-screen divs with <img src="landingpage/xxx.jpeg" alt="..."> -->
-            <div class="gallery-item"><div class="placeholder-screen" style="background:linear-gradient(160deg,#1f1f38,#3d2f45);"><span class="p-emoji">🏠</span><span class="p-label">Accueil</span></div></div>
-            <div class="gallery-item"><div class="placeholder-screen"><span class="p-emoji">🎁</span><span class="p-label">Envies</span></div></div>
-            <div class="gallery-item"><div class="placeholder-screen"><span class="p-emoji">👕</span><span class="p-label">Garde-robe</span></div></div>
-            <div class="gallery-item"><div class="placeholder-screen"><span class="p-emoji">👥</span><span class="p-label">Contacts</span></div></div>
-            <div class="gallery-item"><div class="placeholder-screen"><span class="p-emoji">🎂</span><span class="p-label">Événements</span></div></div>
-            <div class="gallery-item"><div class="placeholder-screen"><span class="p-emoji">🔔</span><span class="p-label">Notifications</span></div></div>
-            <div class="gallery-item"><div class="placeholder-screen"><span class="p-emoji">👤</span><span class="p-label">Profil</span></div></div>
+            <div class="gallery-item">
+                <div class="placeholder-screen" style="background:linear-gradient(160deg,#1f1f38,#3d2f45);"><span
+                        class="p-emoji">🏠</span><span class="p-label">Accueil & Mascotte</span></div>
+            </div>
+            <div class="gallery-item">
+                <div class="placeholder-screen"><span class="p-emoji">🎁</span><span class="p-label">Envies &
+                        Cadeaux</span></div>
+            </div>
+            <div class="gallery-item">
+                <div class="placeholder-screen"><span class="p-emoji">👕</span><span class="p-label">Tailles
+                        Famille</span></div>
+            </div>
+            <div class="gallery-item">
+                <div class="placeholder-screen"><span class="p-emoji">👥</span><span class="p-label">Profils
+                        Cercles</span></div>
+            </div>
+            <div class="gallery-item">
+                <div class="placeholder-screen"><span class="p-emoji">🎂</span><span class="p-label">Calendrier
+                        Événements</span></div>
+            </div>
+            <div class="gallery-item">
+                <div class="placeholder-screen"><span class="p-emoji">🧣</span><span class="p-label">Garde-Robe
+                        Pigio</span></div>
+            </div>
+            <div class="gallery-item">
+                <div class="placeholder-screen"><span class="p-emoji">✨</span><span class="p-label">Pigio Wrapped</span>
+                </div>
+            </div>
         </div>
     </section>
 
     <!-- ────── FEATURES ────── -->
     <section id="features" class="features">
         <div class="container">
-            <div class="section-header">
+            <div class="section-header reveal">
                 <div class="eyebrow">Fonctionnalités</div>
-                <h2>Tout ce qu'il faut pour des cadeaux parfaits</h2>
-                <p>Pigio élimine le stress des cadeaux en organisant tout dans une seule app intelligente et proactive.</p>
+                <h2>Tout ce qu'il faut pour des relations parfaites</h2>
+                <p>Pigio élimine le stress des cadeaux et des petites attentions en organisant tout dans une seule app
+                    intelligente, proactive et interactive.</p>
             </div>
 
             <!-- Hero feature: AI -->
-            <div class="feature-hero-card">
+            <div class="feature-hero-card reveal">
                 <div class="content">
-                    <div class="badge" style="background:linear-gradient(135deg,var(--secondary),var(--primary));color:#fff;font-weight:700;">
-                        IA Gemini ✨
+                    <div class="badge"
+                        style="background:linear-gradient(135deg,var(--secondary),var(--primary));color:#fff;font-weight:700;">
+                        IA Gemini Vocale ✨
                     </div>
-                    <h3>IA Contextuelle Familiale</h3>
-                    <p>L'IA comprend vos profils, tailles, envies, âges et occasions. Elle vous propose des idées pertinentes, adaptées à chaque personne de votre entourage — sans jamais stocker vos données sur des serveurs tiers.</p>
+                    <h3>Une Mascotte Familiale Interactive</h3>
+                    <p>L'IA Pigio n'est pas qu'un simple robot. Elle comprend vos profils, vous parle avec sa voix
+                        unique, suit la météo, vous donne des conseils (Insights) et vous pouvez même la customiser avec
+                        des vêtements débloqués au fil du temps.</p>
                 </div>
                 <div class="visual">
                     <div class="phone-mockup" style="width:200px;">
                         <div class="placeholder-screen">
                             <img src="mascot.png" alt="IA Pigio" style="width:60px;opacity:0.6;">
-                            <span class="p-text">IA en action</span>
+                            <span class="p-text">Mascotte en action</span>
                         </div>
                     </div>
                 </div>
@@ -502,47 +1104,54 @@
 
             <!-- Feature grid -->
             <div class="features-grid">
-                <div class="f-card">
-                    <div class="f-icon" style="background:#fce7f3;">🤫</div>
+                <div class="f-card reveal">
+                    <div class="f-icon">🤫</div>
                     <h4>Mode Surprise</h4>
-                    <p>Réservez un cadeau en secret. L'autre personne ne verra jamais que vous l'avez choisi.</p>
+                    <p>Réservez un cadeau en secret dans la liste d'envies. L'autre personne ne verra jamais que vous
+                        l'avez choisi.</p>
                 </div>
-                <div class="f-card">
-                    <div class="f-icon" style="background:#dbeafe;">👕</div>
-                    <h4>Tailles & Garde-Robe</h4>
-                    <p>Fini les mauvaises tailles ! Stockez vêtements, chaussures et accessoires de toute la famille.</p>
+                <div class="f-card reveal">
+                    <div class="f-icon">👕</div>
+                    <h4>Tailles & Mensurations</h4>
+                    <p>Fini les mauvaises tailles ! Stockez chaussures, vêtements, et tailles de bague de toute la
+                        famille.</p>
                 </div>
-                <div class="f-card">
-                    <div class="f-icon" style="background:#dcfce7;">🔗</div>
+                <div class="f-card reveal">
+                    <div class="f-icon">🔗</div>
                     <h4>Cercles de Confiance</h4>
-                    <p>Famille, Amis, Collègues. Partagez uniquement ce que vous voulez avec chaque groupe.</p>
+                    <p>Famille, Amis, Collègues. Partagez uniquement les envies que vous voulez avec chaque groupe de
+                        contacts.</p>
                 </div>
-                <div class="f-card">
-                    <div class="f-icon" style="background:#fef3c7;">👨‍👧</div>
+                <div class="f-card reveal">
+                    <div class="f-icon">👨‍👧</div>
                     <h4>Profils Administrés</h4>
-                    <p>Gérez les envies et tailles des enfants ou proches sans smartphone. Tout depuis votre compte.</p>
+                    <p>Gérez les envies et les tailles des enfants ou des seniors qui n'ont pas de smartphone, le tout
+                        depuis votre compte.</p>
                 </div>
-                <div class="f-card">
-                    <div class="f-icon" style="background:#ede9fe;">✉️</div>
-                    <h4>Invitations Simplifiées</h4>
-                    <p>Invitez vos proches en un tap. Ils reçoivent un lien, rejoignent votre cercle et synchronisent tout.</p>
+                <div class="f-card reveal">
+                    <div class="f-icon">✉️</div>
+                    <h4>Invitations Automatiques</h4>
+                    <p>Invitez vos proches en un clic. Ils rejoignent l'app, acceptent l'invitation et synchronisent
+                        automatiquement toutes leurs envies.</p>
                 </div>
-                <div class="f-card">
-                    <div class="f-icon" style="background:#ffe4e6;">🎂</div>
-                    <h4>Mascotte IA Personnalisée</h4>
-                    <p>Rappels intelligents, suggestions adaptées et Wizz amusants pour ne jamais oublier un anniversaire.</p>
+                <div class="f-card reveal">
+                    <div class="f-icon">🎂</div>
+                    <h4>Wizz & Rappels</h4>
+                    <p>Recevez des rappels intelligents pour ne manquer aucun anniversaire et envoyez des Wizz sonores
+                        ludiques en famille.</p>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- ────── DOWNLOAD ────── -->
-    <section id="download" class="download">
+    <section id="download" class="download reveal">
         <div class="container download-content">
             <div class="logo-glow"><img src="logo.png" alt="Pigio"></div>
-            <h2>Prêt à ne plus jamais rater un cadeau ?</h2>
-            <p>Téléchargez Pigio et commencez à organiser envies, tailles et cercles dès aujourd'hui. Gratuit, sans pub, vos données vous appartiennent.</p>
-            <div class="download-card">
+            <h2>Prêt à simplifier votre vie de famille ?</h2>
+            <p>Téléchargez Pigio et commencez à organiser envies, tailles et connexions dès aujourd'hui. C'est 100%
+                gratuit, sans publicité, et sécurisé.</p>
+            <div class="download-card reveal">
                 <div class="download-card-top">
                     <div>
                         <h3>Pigio pour Android</h3>
@@ -572,7 +1181,7 @@
 
     <!-- ────── FOOTER ────── -->
     <footer>
-        <div class="container footer-inner">
+        <div class="container footer-inner reveal">
             <div class="footer-logo">
                 <img src="logo.png" alt="Pigio">
                 <span>Pigio</span>
@@ -585,13 +1194,57 @@
             <div class="footer-copy">&copy; 2026 Pigio · Fait avec 💛 en France</div>
             <div class="footer-social">
                 <a href="#" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
-                <a href="https://github.com/fnnktkygl-code/pigio-app" aria-label="GitHub"><i class="fa-brands fa-github"></i></a>
+                <a href="https://github.com/fnnktkygl-code/pigio-app" aria-label="GitHub"><i
+                        class="fa-brands fa-github"></i></a>
             </div>
         </div>
     </footer>
 
     <style>
-        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .delay-1 {
+            transition-delay: 0.2s;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
     </style>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const observerOptions = {
+                root: null,
+                rootMargin: "0px",
+                threshold: 0.1
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add("active");
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll(".reveal").forEach(el => {
+                observer.observe(el);
+            });
+
+            // Trigger first section to display instantly
+            setTimeout(() => {
+                document.querySelectorAll(".hero.reveal").forEach(el => el.classList.add("active"));
+                document.querySelectorAll(".hero-visual.reveal").forEach(el => el.classList.add("active"));
+            }, 50);
+        });
+    </script>
 </body>
+
 </html>

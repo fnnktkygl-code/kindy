@@ -8,7 +8,29 @@
     <meta name="description" content="Conditions générales d'utilisation de l'application Pigio.">
     <link rel="icon" href="../logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
+        <style>
+        :root {
+            --bg: #ffffff;
+            --text-main: #1a1a2e;
+            --text-muted: #6b7280;
+            --text-p: #374151;
+            --border: #f0f0f5;
+            --header-bg: rgba(255, 255, 255, 0.9);
+            --primary: #e8725c;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #121214;
+                --text-main: #f4f4f5;
+                --text-muted: #a1a1aa;
+                --text-p: #d4d4d8;
+                --border: rgba(255, 255, 255, 0.05);
+                --header-bg: rgba(18, 18, 20, 0.9);
+                --primary: #e8725c;
+            }
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -17,9 +39,10 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            color: #1a1a2e;
-            background: #fff;
+            color: var(--text-main);
+            background: var(--bg);
             -webkit-font-smoothing: antialiased;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .container {
@@ -29,13 +52,14 @@
         }
 
         header {
-            background: rgba(255, 255, 255, 0.9);
+            background: var(--header-bg);
             backdrop-filter: blur(20px);
-            border-bottom: 1px solid #f0f0f5;
+            border-bottom: 1px solid var(--border);
             padding: 20px 0;
             position: sticky;
             top: 0;
             z-index: 10;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         header .inner {
@@ -65,12 +89,12 @@
 
         header .back {
             font-size: 14px;
-            color: #6b7280;
+            color: var(--text-muted);
             font-weight: 500;
         }
 
         header .back:hover {
-            color: #e8725c;
+            color: var(--primary);
         }
 
         main {
@@ -85,7 +109,7 @@
 
         .updated {
             font-size: 14px;
-            color: #6b7280;
+            color: var(--text-muted);
             margin-bottom: 40px;
         }
 
@@ -100,7 +124,7 @@
         li {
             font-size: 15px;
             line-height: 1.8;
-            color: #374151;
+            color: var(--text-p);
             margin-bottom: 12px;
         }
 
@@ -114,22 +138,23 @@
         }
 
         strong {
-            color: #1a1a2e;
+            color: var(--text-main);
         }
 
         a {
-            color: #e8725c;
+            color: var(--primary);
         }
 
         footer {
-            border-top: 1px solid #f0f0f5;
+            border-top: 1px solid var(--border);
             padding: 24px 0;
             text-align: center;
+            transition: border-color 0.3s ease;
         }
 
         footer p {
             font-size: 13px;
-            color: #9ca3af;
+            color: var(--text-muted);
         }
     </style>
 </head>
