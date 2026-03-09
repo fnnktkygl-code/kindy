@@ -85,7 +85,7 @@ flutter:
     - assets/avatars/
     - assets/defaults/
     - assets/sounds/
-    - msn-wizz-sound.mp3
+    - assets/sounds/msn-wizz-sound.mp3
 
   # To add assets to your application, add an assets section, like this:
   # assets:

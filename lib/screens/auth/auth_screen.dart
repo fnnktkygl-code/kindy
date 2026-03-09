@@ -13,7 +13,6 @@ import '../../shared/auth_navigator.dart';
 import 'onboarding/onboarding_shell.dart';
 import 'email_verification_screen.dart';
 import '../../app_shell/main_shell.dart';
-import 'verify_screen.dart';
 
 enum AuthScreenMode { signUp, signIn }
 
@@ -467,7 +466,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 const SizedBox(height: 8),
                 ValueListenableBuilder<TextEditingValue>(
                   valueListenable: _passwordController,
-                  builder: (_, value, __) {
+                  builder: (_, value, child) {
                     final pw = value.text;
                     return _PasswordStrengthIndicator(password: pw, theme: pt);
                   },

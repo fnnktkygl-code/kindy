@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 import 'auth_screen.dart';
@@ -57,7 +56,6 @@ class _AuthWelcomeScreenState extends State<AuthWelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     final pt = context.watch<PigioAppState>().currentTheme;
-    final isAuthenticated = Supabase.instance.client.auth.currentUser != null;
 
     return Scaffold(
       backgroundColor: pt.scaffold,

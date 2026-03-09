@@ -270,7 +270,7 @@ extension NotificationsExtension on PigioAppState {
           return;
         }
 
-        _wizzSoundBytes ??= (await rootBundle.load('msn-wizz-sound.mp3')).buffer.asUint8List();
+        _wizzSoundBytes ??= (await rootBundle.load('assets/sounds/msn-wizz-sound.mp3')).buffer.asUint8List();
         await _wizzAudioPlayer.stop();
         await _wizzAudioPlayer.play(
           BytesSource(_wizzSoundBytes!),
@@ -319,7 +319,7 @@ extension NotificationsExtension on PigioAppState {
       }
 
       _wizzSoundBytes ??=
-          (await rootBundle.load('msn-wizz-sound.mp3')).buffer.asUint8List();
+          (await rootBundle.load('assets/sounds/msn-wizz-sound.mp3')).buffer.asUint8List();
       final out = File('${Directory.systemTemp.path}/pigio_wizz_sound.mp3');
       await out.writeAsBytes(_wizzSoundBytes!, flush: true);
       _wizzSoundTempPath = out.path;

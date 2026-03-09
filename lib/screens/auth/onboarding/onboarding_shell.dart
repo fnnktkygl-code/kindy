@@ -227,7 +227,7 @@ class _StepNameScreen extends StatelessWidget {
           // Button disabled until name is entered
           ValueListenableBuilder<TextEditingValue>(
             valueListenable: nameController,
-            builder: (_, value, __) {
+            builder: (_, value, child) {
               final hasName = value.text.trim().isNotEmpty;
               return ElevatedButton(
                 onPressed: hasName ? onNext : null,
