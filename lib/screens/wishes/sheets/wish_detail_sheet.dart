@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:pigio_app/core/config/constants.dart';
 import 'package:pigio_app/core/models/app_models.dart';
 import 'package:pigio_app/core/theme/pigio_theme.dart';
@@ -25,7 +26,7 @@ class _WishDetailSheet extends StatelessWidget {
 
   ImageProvider? _getImageProvider(String path) {
     if (path.isEmpty || path == 'null') return null;
-    if (path.startsWith('http')) return NetworkImage(path);
+    if (path.startsWith('http')) return CachedNetworkImageProvider(path);
     final file = File(path);
     if (file.existsSync()) return FileImage(file);
     return null;
@@ -186,7 +187,7 @@ class _WishDetailSheet extends StatelessWidget {
                     fullWidth: true,
                     onTap: () async {
                       final uri = Uri.tryParse(wish.url!);
-                      if (uri != null) {
+                      if (uri != null && (uri.scheme == 'https' || uri.scheme == 'http')) {
                         await launchUrl(uri, mode: LaunchMode.externalApplication);
                       }
                     },

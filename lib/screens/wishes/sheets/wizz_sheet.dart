@@ -72,17 +72,26 @@ class _WizzSheetState extends State<WizzSheet> with SingleTickerProviderStateMix
 
   Future<void> _send(BuildContext ctx, PigioAppState state) async {
     if (_sent) return;
+    if (!state.canWizz(widget.contact.id)) return;
+    setState(() => _sent = true);
+    final selectedOption = kWizzOptions[_selected];
     final nav = Navigator.of(ctx); // capture before async gap
     HapticFeedback.mediumImpact();
     _sendCtrl.forward(from: 0);
     await Future.delayed(const Duration(milliseconds: 200));
-    state.sendWizz(widget.contact.id);
+    state.sendWizz(
+      widget.contact.id,
+      reasonLabel: selectedOption.label,
+      reasonSubtitle: selectedOption.subtitle,
+    );
     if (!mounted) return;
-    setState(() => _sent = true);
     widget.onSent?.call();
     HapticFeedback.heavyImpact();
     await Future.delayed(const Duration(milliseconds: 900));
-    if (mounted) nav.pop();
+    if (!mounted) return;
+    if (nav.canPop()) {
+      await nav.maybePop();
+    }
   }
 
   @override
@@ -202,46 +211,72 @@ class _WizzSheetState extends State<WizzSheet> with SingleTickerProviderStateMix
           const SizedBox(height: 24),
 
           // Send button (animated bounce on send)
-          AnimatedBuilder(
-            animation: _scaleAnim,
-            builder: (_, child) =>
-                Transform.scale(scale: _scaleAnim.value, child: child),
-            child: _sent
-                ? Container(
-                    width: double.infinity,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: theme.success,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    alignment: Alignment.center,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.check_circle_outline_rounded,
-                            color: theme.onAccent, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Wizz envoyé !',
-                          style: fw(
-                              size: 16, w: FontWeight.w900, color: theme.onAccent),
+          Builder(builder: (_) {
+            final remaining = state.wizzCooldownRemaining(widget.contact.id);
+            final onCooldown = remaining > Duration.zero;
+
+            return AnimatedBuilder(
+              animation: _scaleAnim,
+              builder: (_, child) =>
+                  Transform.scale(scale: _scaleAnim.value, child: child),
+              child: _sent
+                  ? Container(
+                      width: double.infinity,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: theme.success,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.check_circle_outline_rounded,
+                              color: theme.onAccent, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Wizz envoyé !',
+                            style: fw(
+                                size: 16, w: FontWeight.w900, color: theme.onAccent),
+                          ),
+                        ],
+                      ),
+                    )
+                  : onCooldown
+                      ? Container(
+                          width: double.infinity,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: theme.surface,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '⏱ ${_formatCooldown(remaining)}',
+                            style: fw(size: 14, w: FontWeight.w700, color: theme.mid),
+                          ),
+                        )
+                      : PigioButton(
+                          label: 'Envoyer le Wizz ⚡',
+                          color: theme.accent1,
+                          textColor: theme.onAccent,
+                          height: 52,
+                          fontSize: 15,
+                          hasShadow: true,
+                          onTap: () => _send(context, state),
+                          fullWidth: true,
                         ),
-                      ],
-                    ),
-                  )
-                : PigioButton(
-                    label: 'Envoyer le Wizz ⚡',
-                    color: theme.accent1,
-                    textColor: theme.onAccent,
-                    height: 52,
-                    fontSize: 15,
-                    hasShadow: true,
-                    onTap: () => _send(context, state),
-                    fullWidth: true,
-                  ),
-          ),
+            );
+          }),
         ],
       ),
     );
+  }
+
+  String _formatCooldown(Duration d) {
+    final m = d.inMinutes;
+    final s = d.inSeconds.remainder(60);
+    if (m > 0) return '${m}min${s.toString().padLeft(2, '0')}';
+    return '${s}s';
   }
 }

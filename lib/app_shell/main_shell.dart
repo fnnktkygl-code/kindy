@@ -1,7 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../shared/widgets/mascot_overlay.dart';
@@ -15,12 +15,14 @@ import 'package:pigio_app/features/home/presentation/home_screen.dart';
 import 'package:pigio_app/screens/profile/profile_screen.dart';
 import 'package:pigio_app/screens/settings/settings_screen.dart';
 import 'package:pigio_app/screens/auth/splash_screen.dart';
+import 'package:pigio_app/screens/mascot/wrapped_screen.dart';
 import 'package:pigio_app/screens/sizes/wardrobe_screen.dart';
 import 'package:pigio_app/screens/wishes/wishes_screen.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 import 'package:pigio_app/core/config/constants.dart';
 import 'package:pigio_app/core/i18n/i18n.dart';
 import 'package:pigio_app/core/theme/pigio_theme.dart';
+import 'package:pigio_app/services/notification_service.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -29,7 +31,7 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> with SingleTickerProviderStateMixin {
+class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
   final DeeplinkCoordinator _deeplinkCoordinator = DeeplinkCoordinator();
   final FcmCoordinator _fcmCoordinator = FcmCoordinator();
 
@@ -40,51 +42,23 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
     const ContactsScreen(),
   ];
 
-  // MSN Wizz — full-screen shake
-  late final AnimationController _shakeCtrl;
-  late final AnimationController _flashCtrl;
-  late final Animation<double> _flashOpacity;
-  int _lastWizzNonce = 0;
-  double _shakeAmplitude = 16;
-  double _shakeVerticalFactor = 0.35;
-  double _shakeCycles = 9;
+  final Set<String> _shownInAppWizzNotificationIds = <String>{};
+  PigioNotification? _activeWizzBanner;
+  Timer? _wizzBannerTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(_lifecycleObserver);
     _initDeepLinkHandling();
     _initFcm();
-
-    _shakeCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 760),
-    );
-    _flashCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 320),
-    );
-    _flashOpacity = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.52), weight: 45),
-      TweenSequenceItem(tween: Tween(begin: 0.52, end: 0.0), weight: 55),
-    ]).animate(CurvedAnimation(parent: _flashCtrl, curve: Curves.easeOut));
   }
 
-  void _playWizzShake(WizzEffectMode mode) {
-    if (!mounted) return;
-    if (mode == WizzEffectMode.phase2) {
-      _shakeAmplitude = 28;
-      _shakeVerticalFactor = 0.55;
-      _shakeCycles = 16;
-      _shakeCtrl.duration = const Duration(milliseconds: 1150);
-    } else {
-      _shakeAmplitude = 16;
-      _shakeVerticalFactor = 0.35;
-      _shakeCycles = 9;
-      _shakeCtrl.duration = const Duration(milliseconds: 760);
-    }
-    _flashCtrl.forward(from: 0);
-    _shakeCtrl.forward(from: 0);
-  }
+  late final WidgetsBindingObserver _lifecycleObserver =
+      _MainShellLifecycleObserver((state) {
+        if (!mounted) return;
+        context.read<PigioAppState>().setAppLifecycleState(state);
+      });
 
   Future<void> _initDeepLinkHandling() async {
     try {
@@ -107,13 +81,13 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
     if (!mounted) return;
     if (!resolution.valid) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invitation invalide ou expirée.')),
+        SnackBar(content: Text(t(context, 'invite_invalid'))),
       );
       return;
     }
 
     final inviterName =
-        resolution.inviterProfile?.name ?? resolution.inviterId ?? 'Quelqu\'un';
+        resolution.inviterProfile?.name ?? resolution.inviterId ?? t(context, 'invite_someone');
     final accepted = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -121,26 +95,25 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
         backgroundColor: theme.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
-          '📩  Invitation reçue',
+          t(context, 'invite_received_title'),
           style: TextStyle(fontWeight: FontWeight.w900, color: theme.ink),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            PigioAvatar(
-              name: inviterName,
-              size: 64,
-              avatarIcon: resolution.inviterProfile?.avatarIcon,
-              avatarColor: resolution.inviterProfile?.avatarColor != null
-                  ? Color(resolution.inviterProfile!.avatarColor!)
-                  : null,
-              ringColor: resolution.inviterProfile?.avatarColor != null
-                  ? Color(resolution.inviterProfile!.avatarColor!)
-                  : theme.primary,
-            ),
+            Builder(builder: (_) {
+              final color = resolution.inviterProfile?.avatarColor;
+              return PigioAvatar(
+                name: inviterName,
+                size: 64,
+                avatarIcon: resolution.inviterProfile?.avatarIcon,
+                avatarColor: color != null ? Color(color) : null,
+                ringColor: color != null ? Color(color) : theme.primary,
+              );
+            }),
             const SizedBox(height: 12),
             Text(
-              '$inviterName vous invite à rejoindre Pigio.',
+              '$inviterName ${t(context, 'invite_join_msg')}',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
@@ -150,7 +123,7 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
             ),
             const SizedBox(height: 8),
             Text(
-              'Voulez-vous accepter cette invitation et ajouter ce contact ?',
+              t(context, 'invite_confirm_msg'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
@@ -165,7 +138,7 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(
-              'Décliner',
+              t(context, 'invite_decline'),
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 color: theme.error,
@@ -181,9 +154,9 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
               ),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text(
-              'Accepter',
-              style: TextStyle(fontWeight: FontWeight.w800),
+            child: Text(
+              t(context, 'invite_accept'),
+              style: const TextStyle(fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -198,14 +171,14 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
         SnackBar(
           content: Text(
             result
-                ? 'Invitation acceptée : contact ajouté !'
-                : 'Erreur lors de l\'acceptation.',
+                ? t(context, 'invite_accepted')
+                : t(context, 'invite_accept_error'),
           ),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invitation déclinée.')),
+        SnackBar(content: Text(t(context, 'invite_declined'))),
       );
     }
   }
@@ -218,10 +191,36 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
 
   @override
   void dispose() {
-    _shakeCtrl.dispose();
-    _flashCtrl.dispose();
+    _wizzBannerTimer?.cancel();
+    _fcmCoordinator.dispose();
+    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
     _deeplinkCoordinator.dispose();
     super.dispose();
+  }
+
+  void _maybeShowInAppWizzBanner(PigioAppState state) {
+    final now = DateTime.now();
+    final latest = state.notifications
+        .where((n) =>
+            n.type == 'wizz' &&
+            now.difference(n.createdAt).inMinutes <= 10 &&
+            !_shownInAppWizzNotificationIds.contains(n.id))
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    if (latest.isEmpty) return;
+    final notif = latest.first;
+    _shownInAppWizzNotificationIds.add(notif.id);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _wizzBannerTimer?.cancel();
+      setState(() => _activeWizzBanner = notif);
+      _wizzBannerTimer = Timer(const Duration(seconds: 5), () {
+        if (!mounted) return;
+        setState(() => _activeWizzBanner = null);
+      });
+    });
   }
 
   @override
@@ -231,51 +230,15 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
         state.currentTabIndex >= _screens.length ? 0 : state.currentTabIndex;
     final profile = state.profile;
     final theme = context.pt;
+    _maybeShowInAppWizzBanner(state);
 
-    // Trigger full-screen shake when a new Wizz arrives
-    final wizzNonce = state.globalWizzNonce;
-    if (wizzNonce != _lastWizzNonce) {
-      _lastWizzNonce = wizzNonce;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _playWizzShake(state.wizzEffectMode);
-      });
-    }
-
-    final shakeProgress = _shakeCtrl.value;
-    final envelope = (1.0 - shakeProgress).clamp(0.0, 1.0);
-    final waveX = math.sin(shakeProgress * math.pi * 2 * _shakeCycles);
-    final waveY = math.sin(shakeProgress * math.pi * 2 * (_shakeCycles + 1.7));
-    final shakeX = waveX * _shakeAmplitude * envelope;
-    final shakeY = waveY * _shakeAmplitude * _shakeVerticalFactor * envelope;
-    final shakeRotate = waveX * 0.036 * envelope;
-
-    return AnimatedBuilder(
-      animation: Listenable.merge([_shakeCtrl, _flashCtrl]),
-      builder: (context, child) => Transform.translate(
-        offset: Offset(shakeX, shakeY),
-        child: Transform.rotate(
-          angle: shakeRotate,
-          child: Stack(
-            children: [
-              child!,
-              IgnorePointer(
-                child: Opacity(
-                  opacity: _flashOpacity.value,
-                  child: Container(
-                    color: Colors.orangeAccent.withValues(alpha: 0.28),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      child: Scaffold(
+    return Scaffold(
       drawer: _buildDrawer(context, profile, theme),
       body: Stack(
         children: [
           _screens[currentIndex],
           DraggableMascot(tabIndex: currentIndex),
+          _buildWizzBanner(theme),
         ],
       ),
       bottomNavigationBar: Container(
@@ -302,6 +265,90 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildWizzBanner(PigioThemeData theme) {
+    final notif = _activeWizzBanner;
+    final isVisible = notif != null;
+
+    return IgnorePointer(
+      ignoring: !isVisible,
+      child: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: AnimatedSlide(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+            offset: isVisible ? Offset.zero : const Offset(0, -1.2),
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 220),
+              opacity: isVisible ? 1 : 0,
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+                padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+                decoration: BoxDecoration(
+                  color: theme.card,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: theme.divider.withValues(alpha: 0.85)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.shadow,
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: theme.accent1.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        notif?.emoji ?? '⚡',
+                        style: const TextStyle(fontSize: 17),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Wizz reçu',
+                            style: fw(size: 13, w: FontWeight.w900, color: theme.ink),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            notif?.message ?? '',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: fw(size: 12, w: FontWeight.w700, color: theme.mid),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        _wizzBannerTimer?.cancel();
+                        setState(() => _activeWizzBanner = null);
+                      },
+                      icon: Icon(Icons.close_rounded, size: 18, color: theme.mid),
+                      splashRadius: 18,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -394,8 +441,15 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
                   );
                   state.clearUnseenLogs();
                 }, theme),
+                _drawerItem(Icons.auto_awesome_outlined, 'Pigio Wrapped', () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const WrappedScreen()),
+                  );
+                }, theme),
                 _drawerItem(Icons.security_outlined, 'Confidentialité', () {
-                  launchUrl(Uri.parse('https://pigio.app/privacy/'), mode: LaunchMode.externalApplication);
+                  launchUrl(Uri.parse('https://fnnktkygl-code.github.io/pigio-app/privacy/'), mode: LaunchMode.externalApplication);
                 }, theme),
                 _drawerItem(Icons.help_outline, 'Centre d\'aide', () {
                   launchUrl(Uri.parse('https://pigio.app/'), mode: LaunchMode.externalApplication);
@@ -406,7 +460,8 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
                   'Déconnexion',
                   () async {
                     Navigator.pop(context);
-                    await Supabase.instance.client.auth.signOut();
+                    final state = context.read<PigioAppState>();
+                    await state.signOutAndCleanupLocalState();
                     if (!context.mounted) return;
                     Navigator.of(context).pushAndRemoveUntil(
                       MaterialPageRoute(builder: (_) => const SplashScreen()),
@@ -489,5 +544,15 @@ class _MainShellState extends State<MainShell> with SingleTickerProviderStateMix
         ),
       ),
     );
+  }
+}
+
+class _MainShellLifecycleObserver extends WidgetsBindingObserver {
+  final void Function(AppLifecycleState state) onLifecycle;
+  _MainShellLifecycleObserver(this.onLifecycle);
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    onLifecycle(state);
   }
 }

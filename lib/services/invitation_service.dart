@@ -390,6 +390,7 @@ class InvitationService {
     required Map<String, dynamic> profile,
     required List<Map<String, dynamic>> sizes,
     List<Map<String, dynamic>>? wishes,
+    List<Map<String, dynamic>>? reservations,
   }) async {
     final payload = {
       'key': profileKey,
@@ -401,6 +402,8 @@ class InvitationService {
       'pendingInvites': <dynamic>[],
       'wishes': wishes ?? <dynamic>[],
       'events': <dynamic>[],
+      if (reservations != null && reservations.isNotEmpty)
+        'reservations': reservations,
     };
     final uri = Uri.parse(_buildUrl(syncPath));
     final response = await _httpClient

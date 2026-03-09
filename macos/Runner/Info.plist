@@ -41,5 +41,9 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to location to fetch local weather conditions for the mascot.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>This app needs access to location to fetch local weather conditions for the mascot.</string>
 </dict>
 </plist>

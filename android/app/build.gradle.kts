@@ -16,7 +16,7 @@ if (keyPropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.example.pigio.pigio_app"
+    namespace = "app.pigio.android"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -39,7 +39,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.pigio.pigio_app"
+        applicationId = "app.pigio.android"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

@@ -27,9 +27,21 @@ file_size_limit = "50MiB"
 [auth]
 enabled = true
 site_url = "https://pigio.app"
-additional_redirect_urls = ["pigio://invite", "com.pigio.app://auth/callback", "https://pigio.app/auth/callback"]
+additional_redirect_urls = ["pigio://invite", "pigio://auth/callback", "com.pigio.app://auth/callback", "https://pigio.app/auth/callback"]
 jwt_expiry = 900
 
 [edge_runtime]
 enabled = true
 policy = "per_worker"
+
+[functions.invite-open]
+verify_jwt = false
+
+[functions.invite-create]
+verify_jwt = false
+
+[functions.invite-resolve]
+verify_jwt = false
+
+[functions.invite-status]
+verify_jwt = false

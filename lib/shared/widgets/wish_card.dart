@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:pigio_app/core/theme/pigio_theme.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 
@@ -18,11 +19,13 @@ class SmartMasonryGrid extends StatelessWidget {
     double rightH = 0;
 
     for (int i = 0; i < children.length; i++) {
+      // RepaintBoundary isolates paint cost to individual cards
+      final child = RepaintBoundary(child: children[i]);
       if (leftH <= rightH) {
-        left.add(children[i]);
+        left.add(child);
         leftH += estimatedHeights[i];
       } else {
-        right.add(children[i]);
+        right.add(child);
         rightH += estimatedHeights[i];
       }
     }
@@ -122,7 +125,7 @@ class WishCard extends StatelessWidget {
 
   ImageProvider? _getImageProvider(String path) {
     if (path.isEmpty || path == 'null') return null;
-    if (path.startsWith('http')) return NetworkImage(path);
+    if (path.startsWith('http')) return CachedNetworkImageProvider(path);
     final file = File(path);
     if (file.existsSync()) return FileImage(file);
     return null;

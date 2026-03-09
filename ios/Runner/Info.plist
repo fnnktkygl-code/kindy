@@ -22,19 +22,6 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-			<key>CFBundleURLName</key>
-			<string>com.pigio.app</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>pigio</string>
-			</array>
-		</dict>
-	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -62,6 +49,26 @@
 	<array>
 		<string>fetch</string>
 		<string>remote-notification</string>
+	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Pigio needs camera access to take profile photos and capture gift ideas.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Pigio needs photo library access to choose profile pictures and gift images.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Pigio uses your location to find nearby relay points for gift delivery.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>pigio-auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>pigio</string>
+				<string>com.pigio.app</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

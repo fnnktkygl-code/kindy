@@ -22,6 +22,15 @@ extension ProfileSyncExtension on PigioAppState {
     return profileMap;
   }
 
+  /// Public entry point for a full sync cycle — pull contacts + push own profile.
+  /// Called on FCM push receive to keep UI fresh without waiting for the timer.
+  void refreshContactDataAll() {
+    Future.microtask(() {
+      _pullContactProfiles();
+      _pushOwnContactProfile();
+    });
+  }
+
   /// Push own profile + sizes to every push key registered on joined contacts.
   /// Call this whenever the user updates their own profile or sizes.
   Future<void> _pushOwnContactProfile() async {
@@ -37,26 +46,40 @@ extension ProfileSyncExtension on PigioAppState {
 
     final profileMap = _buildProfileSyncPayload();
 
+    // Collect reservations this user made on other contacts' wishes,
+    // grouped by the wish owner's contact ID.
+    final reservationsByContact = <String, List<Map<String, dynamic>>>{};
+    for (final w in _wishes) {
+      if (w.contactId != null && w.reservedById != null) {
+        reservationsByContact.putIfAbsent(w.contactId!, () => []);
+        reservationsByContact[w.contactId!]!
+            .add({'wishId': w.id, 'reservedById': w.reservedById});
+      }
+    }
+
     final pushKeys = _contacts
         .where((c) =>
     c.profilePushKey != null && c.status == ContactStatus.joined)
-        .map((c) => c.profilePushKey!)
-        .toSet();
-    for (final inv in _pendingInvites) {
-      if (inv.state == PendingInviteState.accepted) {
-        pushKeys.add('cprof_inv_${inv.tokenId}');
-      }
-    }
-    for (final key in pushKeys) {
+        .map((c) => MapEntry(c.id, c.profilePushKey!));
+    final inviteKeys = _pendingInvites
+        .where((i) => i.state == PendingInviteState.accepted)
+        .map((i) => MapEntry(i.contactId, 'cprof_inv_${i.tokenId}'));
+
+    final allKeys = {...Map.fromEntries(pushKeys), ...Map.fromEntries(inviteKeys)};
+
+    for (final entry in allKeys.entries) {
       try {
+        // Include reservations this user made on this contact's wishes
+        final reservationsForContact = reservationsByContact[entry.key];
         await _invitationService.pushProfileData(
-          profileKey: key,
+          profileKey: entry.value,
           profile: profileMap,
           sizes: ownSizes,
           wishes: ownWishes,
+          reservations: reservationsForContact,
         );
       } catch (e) {
-        if (kDebugMode) debugPrint('[Pigio] Profile push to $key failed: $e');
+        if (kDebugMode) debugPrint('[Pigio] Profile push to ${entry.value} failed: $e');
       }
     }
   }
@@ -89,41 +112,7 @@ extension ProfileSyncExtension on PigioAppState {
 
         final cIdx = _contacts.indexWhere((c) => c.id == contact.id);
         if (cIdx >= 0 && updatedProfile != null) {
-          final existing = _contacts[cIdx];
-          _contacts[cIdx] = existing.copyWith(
-            name: (updatedProfile['name'] as String?)?.isNotEmpty == true
-                ? updatedProfile['name'] as String
-                : existing.name,
-            avatarIcon: updatedProfile.containsKey('avatarIcon')
-                ? updatedProfile['avatarIcon'] as String?
-                : existing.avatarIcon,
-            avatarColor: updatedProfile.containsKey('avatarColor')
-                ? (updatedProfile['avatarColor'] != null
-                ? Color(updatedProfile['avatarColor'] as int)
-                : null)
-                : existing.avatarColor,
-            birthdate: updatedProfile.containsKey('birthdate')
-                ? updatedProfile['birthdate'] as String?
-                : existing.birthdate,
-            address: updatedProfile.containsKey('address')
-                ? updatedProfile['address'] as String?
-                : existing.address,
-            mondialRelayPoint: updatedProfile.containsKey('mondialRelayPoint')
-                ? updatedProfile['mondialRelayPoint'] as String?
-                : existing.mondialRelayPoint,
-            hideBirthdate: updatedProfile.containsKey('hideBirthdate')
-                ? updatedProfile['hideBirthdate'] as bool?
-                : existing.hideBirthdate,
-            hideAddress: updatedProfile.containsKey('hideAddress')
-                ? updatedProfile['hideAddress'] as bool?
-                : existing.hideAddress,
-            hideMondialRelay: updatedProfile.containsKey('hideMondialRelay')
-                ? updatedProfile['hideMondialRelay'] as bool?
-                : existing.hideMondialRelay,
-            fcmToken: updatedProfile.containsKey('fcmToken')
-                ? updatedProfile['fcmToken'] as String?
-                : existing.fcmToken,
-          );
+          _contacts[cIdx] = _mergeContactProfile(_contacts[cIdx], updatedProfile);
           changed = true;
         }
 
@@ -142,6 +131,38 @@ extension ProfileSyncExtension on PigioAppState {
           }
           _invalidateWishCache();
           changed = true;
+        }
+
+        // Apply incoming reservations — other contacts pushing reservations
+        // they made on our own wishes (contactId == null).
+        final rawReservations = data['reservations'];
+        if (rawReservations is List && rawReservations.isNotEmpty) {
+          for (final r in rawReservations) {
+            if (r is! Map) continue;
+            final wishId = r['wishId'] as String?;
+            final reservedById = r['reservedById'] as String?;
+            if (wishId == null) continue;
+            final idx = _wishes.indexWhere((w) => w.id == wishId && w.contactId == null);
+            if (idx >= 0) {
+              final current = _wishes[idx];
+              _wishes[idx] = Wish(
+                id: current.id,
+                title: current.title,
+                emoji: current.emoji,
+                url: current.url,
+                imageUrl: current.imageUrl,
+                addedAt: current.addedAt,
+                contactId: current.contactId,
+                reservedById: reservedById,
+                priority: current.priority,
+                priceRange: current.priceRange,
+                notes: current.notes,
+                giftPotId: current.giftPotId,
+              );
+              _invalidateWishCache();
+              changed = true;
+            }
+          }
         }
       } catch (e) {
         if (kDebugMode) debugPrint('[Pigio] Profile pull for ${contact.id} failed: $e');
@@ -175,41 +196,7 @@ extension ProfileSyncExtension on PigioAppState {
       final rawProf = data['profile'];
       final updatedProfile = rawProf is Map ? Map<String, dynamic>.from(rawProf) : null;
       if (updatedProfile != null) {
-        final existing = _contacts[contactIdx];
-        _contacts[contactIdx] = existing.copyWith(
-          name: (updatedProfile['name'] as String?)?.isNotEmpty == true
-              ? updatedProfile['name'] as String
-              : existing.name,
-          avatarIcon: updatedProfile.containsKey('avatarIcon')
-              ? updatedProfile['avatarIcon'] as String?
-              : existing.avatarIcon,
-          avatarColor: updatedProfile.containsKey('avatarColor')
-              ? (updatedProfile['avatarColor'] != null
-              ? Color(updatedProfile['avatarColor'] as int)
-              : null)
-              : existing.avatarColor,
-          birthdate: updatedProfile.containsKey('birthdate')
-              ? updatedProfile['birthdate'] as String?
-              : existing.birthdate,
-          address: updatedProfile.containsKey('address')
-              ? updatedProfile['address'] as String?
-              : existing.address,
-          mondialRelayPoint: updatedProfile.containsKey('mondialRelayPoint')
-              ? updatedProfile['mondialRelayPoint'] as String?
-              : existing.mondialRelayPoint,
-          hideBirthdate: updatedProfile.containsKey('hideBirthdate')
-              ? updatedProfile['hideBirthdate'] as bool?
-              : existing.hideBirthdate,
-          hideAddress: updatedProfile.containsKey('hideAddress')
-              ? updatedProfile['hideAddress'] as bool?
-              : existing.hideAddress,
-          hideMondialRelay: updatedProfile.containsKey('hideMondialRelay')
-              ? updatedProfile['hideMondialRelay'] as bool?
-              : existing.hideMondialRelay,
-          fcmToken: updatedProfile.containsKey('fcmToken')
-              ? updatedProfile['fcmToken'] as String?
-              : existing.fcmToken,
-        );
+        _contacts[contactIdx] = _mergeContactProfile(_contacts[contactIdx], updatedProfile);
         changed = true;
       }
 
@@ -238,6 +225,44 @@ extension ProfileSyncExtension on PigioAppState {
     } catch (e) {
       if (kDebugMode) debugPrint('[Pigio] refreshContactData error for $contactId: $e');
     }
+  }
+
+  /// Merge a remote profile map into an existing [ContactProfile], keeping
+  /// local values for any fields the remote payload does not include.
+  ContactProfile _mergeContactProfile(
+      ContactProfile existing, Map<String, dynamic> p) {
+    return existing.copyWith(
+      name: (p['name'] as String?)?.isNotEmpty == true
+          ? p['name'] as String
+          : existing.name,
+      avatarIcon: p.containsKey('avatarIcon')
+          ? p['avatarIcon'] as String?
+          : existing.avatarIcon,
+      avatarColor: p.containsKey('avatarColor')
+          ? (p['avatarColor'] != null ? Color(p['avatarColor'] as int) : null)
+          : existing.avatarColor,
+      birthdate: p.containsKey('birthdate')
+          ? p['birthdate'] as String?
+          : existing.birthdate,
+      address: p.containsKey('address')
+          ? p['address'] as String?
+          : existing.address,
+      mondialRelayPoint: p.containsKey('mondialRelayPoint')
+          ? p['mondialRelayPoint'] as String?
+          : existing.mondialRelayPoint,
+      hideBirthdate: p.containsKey('hideBirthdate')
+          ? p['hideBirthdate'] as bool?
+          : existing.hideBirthdate,
+      hideAddress: p.containsKey('hideAddress')
+          ? p['hideAddress'] as bool?
+          : existing.hideAddress,
+      hideMondialRelay: p.containsKey('hideMondialRelay')
+          ? p['hideMondialRelay'] as bool?
+          : existing.hideMondialRelay,
+      fcmToken: p.containsKey('fcmToken')
+          ? p['fcmToken'] as String?
+          : existing.fcmToken,
+    );
   }
 
   /// Apply a list of size maps received via profile exchange to a contact.

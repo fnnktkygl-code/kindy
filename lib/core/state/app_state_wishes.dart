@@ -14,6 +14,7 @@ extension WishesExtension on PigioAppState {
     WishPriceRange? priceRange,
     String? notes,
   }) {
+    final isFirstOwnWish = contactId == null && getWishesFor(null).isEmpty;
     _wishes.add(Wish(
       id: _newId(),
       title: title,
@@ -29,8 +30,15 @@ extension WishesExtension on PigioAppState {
     notifyListeners();
     _saveData();
     logActivity('Envie ajoutée : $title', emoji, contactId: contactId);
-    // Notify contacts about new wish (only for own wishes)
     if (contactId == null) {
+      awardMascotProgress(
+        isFirstOwnWish ? 12 : 6,
+        emoji: isFirstOwnWish ? '🎁' : null,
+        titleFr: isFirstOwnWish ? 'Premiere envie ajoutee' : null,
+        titleEn: isFirstOwnWish ? 'First wish added' : null,
+      );
+
+      // Notify contacts about new wish (only for own wishes)
       Future.microtask(() => _sendNotificationToContacts(
             'wish_added',
             '${_profile.name} a ajouté une envie : $title',
@@ -91,15 +99,16 @@ extension WishesExtension on PigioAppState {
     final idx = _wishes.indexWhere((w) => w.id == wishId);
     if (idx >= 0) {
       final current = _wishes[idx];
+      final nextReservedById = current.reservedById == reserveeId ? null : reserveeId;
       _wishes[idx] = Wish(
         id: current.id,
         title: current.title,
         emoji: current.emoji,
         url: current.url,
+        imageUrl: current.imageUrl,
         addedAt: current.addedAt,
         contactId: current.contactId,
-        reservedById:
-            current.reservedById == reserveeId ? null : reserveeId, // Toggle
+        reservedById: nextReservedById,
         priority: current.priority,
         priceRange: current.priceRange,
         notes: current.notes,
@@ -108,6 +117,15 @@ extension WishesExtension on PigioAppState {
       _invalidateWishCache();
       notifyListeners();
       _saveData();
+      if (nextReservedById != null) {
+        setMascotMoment(MascotMoment.wishReserved);
+        awardMascotProgress(
+          8,
+          emoji: '🤫',
+          titleFr: 'Cadeau reserve sans doublon',
+          titleEn: 'Gift reserved without duplicates',
+        );
+      }
     }
   }
 

@@ -80,7 +80,7 @@
     <h2>7. Sécurité</h2>
     <p>Nous mettons en œuvre des mesures de sécurité conformes à l'état de l'art :</p>
     <ul>
-      <li>Authentification par passkeys (WebAuthn) ou OTP — aucun mot de passe stocké</li>
+      <li>Authentification par e-mail/mot de passe, lien magique (OTP), passkeys (WebAuthn), ou connexion Apple/Google — les mots de passe sont hachés côté serveur et ne sont jamais stockés en clair</li>
       <li>Chiffrement en transit (TLS 1.3) et au repos</li>
       <li>Tokens JWT à durée de vie courte (15 minutes) avec rotation des tokens de rafraîchissement</li>
       <li>Stockage sécurisé sur l'appareil (Keychain iOS / EncryptedSharedPreferences Android)</li>

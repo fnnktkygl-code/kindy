@@ -1,10 +1,12 @@
 import 'package:pigio_app/core/theme/pigio_theme.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:pigio_app/core/config/constants.dart';
 import 'package:pigio_app/shared/widgets/ui_widgets.dart';
+import 'package:pigio_app/core/i18n/i18n.dart';
 
 class MondialRelayScreen extends StatefulWidget {
   const MondialRelayScreen({super.key});
@@ -27,7 +29,7 @@ class _MondialRelayScreenState extends State<MondialRelayScreen> {
     _timeoutTimer = Timer(const Duration(seconds: 5), () {
       if (mounted && _isLoading) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Le chargement du réseau est plus lent que prévu.")));
+            SnackBar(content: Text(t(context, 'loading_slow'))));
         setState(() => _hasError = true);
       }
     });
@@ -145,9 +147,16 @@ class _MondialRelayScreenState extends State<MondialRelayScreen> {
         onMessageReceived: (JavaScriptMessage message) {
           try {
             final data = jsonDecode(message.message);
-            Navigator.of(context).pop(data);
+            // Validate expected Mondial Relay structure before passing to caller.
+            if (data is Map<String, dynamic> &&
+                data.containsKey('ID') &&
+                data.containsKey('Nom')) {
+              Navigator.of(context).pop(data);
+            } else {
+              if (kDebugMode) debugPrint('Mondial Relay: unexpected data structure');
+            }
           } catch (e) {
-            debugPrint('Error parsing Mondial Relay data: \$e');
+            if (kDebugMode) debugPrint('Error parsing Mondial Relay data: \$e');
           }
         },
       );
@@ -159,7 +168,7 @@ class _MondialRelayScreenState extends State<MondialRelayScreen> {
     final theme = context.pt;
     return Scaffold(
       backgroundColor: theme.scaffold,
-      appBar: const PigioAppBar(title: "Sélectionner un point", showBack: true),
+      appBar: const PigioAppBar(title: "Mondial Relay", showBack: true),
       body: SafeArea(
         child: _hasError
             ? Center(

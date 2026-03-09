@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import 'package:pigio_app/core/state/app_state.dart';
 import '../../services/auth_service.dart';
 
-import 'passkey_setup_screen.dart';
+import 'onboarding/onboarding_shell.dart';
 import '../../app_shell/main_shell.dart';
+import 'reset_password_screen.dart';
+
+enum VerifyPurpose { login, passwordReset }
 
 class VerifyScreen extends StatefulWidget {
   final String email;
+  final VerifyPurpose purpose;
 
-  const VerifyScreen({super.key, required this.email});
+  const VerifyScreen({
+    super.key,
+    required this.email,
+    this.purpose = VerifyPurpose.login,
+  });
 
   @override
   State<VerifyScreen> createState() => _VerifyScreenState();
@@ -85,10 +94,18 @@ class _VerifyScreenState extends State<VerifyScreen> {
     try {
       await AuthService().verifyOTP(widget.email, code);
       if (!mounted) return;
+
+      if (widget.purpose == VerifyPurpose.passwordReset) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
+          (route) => false,
+        );
+        return;
+      }
       
       final state = context.read<PigioAppState>();
       final Widget next = state.needsOnboarding
-          ? const PasskeySetupScreen()
+          ? const OnboardingShell()
           : const MainShell();
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => next),
@@ -112,11 +129,28 @@ class _VerifyScreenState extends State<VerifyScreen> {
   }
 
   void _onChanged(String value, int index) {
+    // Handle paste: if user pastes a full code into one field
+    if (value.length > 1) {
+      final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+      if (digits.length >= 6) {
+        for (int i = 0; i < 6; i++) {
+          _controllers[i].text = digits[i];
+        }
+        _focusNodes.last.unfocus();
+        HapticFeedback.lightImpact();
+        _verifyCode();
+        return;
+      }
+      // Keep only last digit for this field
+      _controllers[index].text = value[value.length - 1];
+    }
+
     if (value.isNotEmpty) {
       if (index < 5) {
         _focusNodes[index + 1].requestFocus();
       } else {
         _focusNodes[index].unfocus();
+        HapticFeedback.lightImpact();
         _verifyCode();
       }
     } else if (value.isEmpty && index > 0) {

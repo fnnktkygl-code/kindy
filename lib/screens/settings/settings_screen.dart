@@ -40,7 +40,12 @@ class SettingsScreen extends StatelessWidget {
               padding: const EdgeInsets.all(8),
               child: _ThemePicker(
                 currentVariant: state.themeVariant,
-                onSelect: state.setTheme,
+                autoTheme: state.autoTheme,
+                onSelect: (v) {
+                  state.setAutoTheme(false);
+                  state.setTheme(v);
+                },
+                onAutoTheme: () => state.setAutoTheme(true),
               ),
             ),
 
@@ -124,6 +129,26 @@ class SettingsScreen extends StatelessWidget {
                       state.setWizzEffectMode(mode);
                     },
                   ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        state.triggerIncomingWizzTest();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Test Wizz reçu déclenché ⚡')),
+                        );
+                      },
+                      icon: const Text('🧪'),
+                      label: const Text('Tester un Wizz reçu maintenant'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: theme.accent1,
+                        side: BorderSide(color: theme.accent1.withValues(alpha: 0.45)),
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -202,7 +227,7 @@ class SettingsScreen extends StatelessWidget {
                     title: Text("Politique de confidentialité", style: fw(size: 16, w: FontWeight.w700, color: theme.ink)),
                     trailing: Icon(Icons.open_in_new, color: theme.mid),
                     onTap: () {
-                      launchUrl(Uri.parse('https://pigio.app/privacy/'));
+                      launchUrl(Uri.parse('https://fnnktkygl-code.github.io/pigio-app/privacy/'));
                     },
                   ),
                   const Divider(height: 1),
@@ -210,7 +235,7 @@ class SettingsScreen extends StatelessWidget {
                     title: Text("Conditions générales d'utilisation", style: fw(size: 16, w: FontWeight.w700, color: theme.ink)),
                     trailing: Icon(Icons.open_in_new, color: theme.mid),
                     onTap: () {
-                      launchUrl(Uri.parse('https://pigio.app/privacy/'));
+                      launchUrl(Uri.parse('https://fnnktkygl-code.github.io/pigio-app/cgu/'));
                     },
                   ),
                 ],
@@ -239,7 +264,7 @@ class SettingsScreen extends StatelessWidget {
                     title: Text("Se déconnecter", style: fw(size: 16, w: FontWeight.w700, color: theme.error)),
                     trailing: Icon(Icons.logout, color: theme.error),
                     onTap: () async {
-                      await Supabase.instance.client.auth.signOut();
+                      await state.signOutAndCleanupLocalState();
                       if (!context.mounted) return;
                       Navigator.of(context).pushAndRemoveUntil(
                         MaterialPageRoute(builder: (_) => const SplashScreen()),
@@ -441,20 +466,51 @@ class SettingsScreen extends StatelessWidget {
 // ── THEME PICKER ──
 class _ThemePicker extends StatelessWidget {
   final PigioThemeVariant currentVariant;
+  final bool autoTheme;
   final ValueChanged<PigioThemeVariant> onSelect;
-  const _ThemePicker({required this.currentVariant, required this.onSelect});
+  final VoidCallback onAutoTheme;
+  const _ThemePicker({required this.currentVariant, required this.autoTheme, required this.onSelect, required this.onAutoTheme});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final theme = context.pt;
+    return Column(
       children: [
-        _ThemeChip(variant: PigioThemeVariant.light, label: 'Clair', icon: Icons.wb_sunny_outlined, current: currentVariant, onTap: onSelect),
-        const SizedBox(width: 8),
-        _ThemeChip(variant: PigioThemeVariant.sepia, label: 'Sépia', icon: Icons.coffee_outlined, current: currentVariant, onTap: onSelect),
-        const SizedBox(width: 8),
-        _ThemeChip(variant: PigioThemeVariant.dark, label: 'Sombre', icon: Icons.nights_stay_outlined, current: currentVariant, onTap: onSelect),
-        const SizedBox(width: 8),
-        _ThemeChip(variant: PigioThemeVariant.oled, label: 'OLED', icon: Icons.circle, current: currentVariant, onTap: onSelect),
+        Row(
+          children: [
+            _ThemeChip(variant: PigioThemeVariant.light, label: 'Clair', icon: Icons.wb_sunny_outlined, current: currentVariant, onTap: onSelect, dimmed: autoTheme),
+            const SizedBox(width: 8),
+            _ThemeChip(variant: PigioThemeVariant.sepia, label: 'Sépia', icon: Icons.coffee_outlined, current: currentVariant, onTap: onSelect, dimmed: autoTheme),
+            const SizedBox(width: 8),
+            _ThemeChip(variant: PigioThemeVariant.dark, label: 'Sombre', icon: Icons.nights_stay_outlined, current: currentVariant, onTap: onSelect, dimmed: autoTheme),
+            const SizedBox(width: 8),
+            _ThemeChip(variant: PigioThemeVariant.oled, label: 'OLED', icon: Icons.circle, current: currentVariant, onTap: onSelect, dimmed: autoTheme),
+          ],
+        ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: autoTheme ? null : onAutoTheme,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              gradient: autoTheme
+                  ? LinearGradient(colors: [theme.primary.withValues(alpha: 0.12), theme.accent2.withValues(alpha: 0.12)])
+                  : null,
+              color: autoTheme ? null : theme.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: autoTheme ? theme.primary : Colors.transparent, width: 1.5),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.auto_awesome, size: 16, color: autoTheme ? theme.primary : theme.mid),
+                const SizedBox(width: 6),
+                Text('Auto', style: fw(size: 12, w: FontWeight.w800, color: autoTheme ? theme.primary : theme.mid)),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -466,6 +522,7 @@ class _ThemeChip extends StatelessWidget {
   final IconData icon;
   final PigioThemeVariant current;
   final ValueChanged<PigioThemeVariant> onTap;
+  final bool dimmed;
 
   const _ThemeChip({
     required this.variant,
@@ -473,11 +530,12 @@ class _ThemeChip extends StatelessWidget {
     required this.icon,
     required this.current,
     required this.onTap,
+    this.dimmed = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isActive = variant == current;
+    final isActive = variant == current && !dimmed;
     final preview = PigioThemes.fromVariant(variant);
 
     return Expanded(

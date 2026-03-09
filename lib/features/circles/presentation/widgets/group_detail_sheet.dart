@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 import 'package:pigio_app/core/config/constants.dart';
 import 'package:pigio_app/core/theme/pigio_theme.dart';
+import 'package:pigio_app/core/i18n/i18n.dart';
 import 'group_members_section.dart';
 import 'group_wish_feed_section.dart';
 import 'group_polls_section.dart';
@@ -37,7 +38,7 @@ class _GroupDetailSheetState extends State<GroupDetailSheet> {
   void _saveChanges(PigioAppState state) {
     if (_nameCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Le nom du cercle ne peut pas être vide.")),
+        SnackBar(content: Text(t(context, 'circle_name_empty'))),
       );
       return;
     }

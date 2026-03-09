@@ -1,7 +1,9 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -35,11 +37,27 @@ Deno.serve(async (req: Request) => {
     const userId = user.id;
     const email = user.email;
 
-    // Fetch user_data
-    const { data: userData } = await supabase
+    // Fetch user_data — prefer user_id lookup, fallback to syncKey from body
+    let userData: unknown[] = [];
+    const { data: byUserId } = await supabase
       .from('user_data')
       .select('*')
       .eq('user_id', userId);
+
+    if (byUserId && byUserId.length > 0) {
+      userData = byUserId;
+    } else {
+      // Fallback for legacy rows without user_id column populated
+      const body = await req.json().catch(() => ({})) as Record<string, unknown>;
+      const syncKey = typeof body.syncKey === 'string' ? (body.syncKey as string).trim() : '';
+      if (syncKey && syncKey.length >= 16) {
+        const { data: byKey } = await supabase
+          .from('user_data')
+          .select('*')
+          .eq('sync_key', syncKey);
+        if (byKey) userData = byKey;
+      }
+    }
 
     // Fetch invites where user is inviter
     const { data: sentInvites } = await supabase
@@ -66,8 +84,8 @@ Deno.serve(async (req: Request) => {
         'Content-Disposition': `attachment; filename="pigio-export-${userId}.json"`,
       },
     });
-  } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), {
+  } catch {
+    return new Response(JSON.stringify({ error: 'Internal error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

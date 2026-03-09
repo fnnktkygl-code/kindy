@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:async' as async_lib show Timer;
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:uuid/uuid.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../config/constants.dart';
 import 'package:pigio_app/core/theme/pigio_theme.dart';
 import '../models/app_models.dart';
@@ -19,6 +21,8 @@ import '../../features/notifications/state/notifications_coordinator.dart';
 import '../../services/invitation_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/fcm_service.dart';
+import '../../services/pigio_voice.dart';
+import '../../services/weather_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 export '../models/app_models.dart'; // re-export so existing imports of app_state.dart still get models
@@ -39,6 +43,9 @@ part 'app_state_polls.dart';
 
 // Sentinel used by updateWish to distinguish "clear field" from "leave unchanged".
 const String clearUrlSentinel = '__CLEAR__';
+
+/// Part of the day — drives auto-theme, mascot behavior, and greetings.
+enum Daypart { night, earlyMorning, morning, midday, afternoon, evening }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Core State Host
@@ -62,14 +69,21 @@ class PigioAppState extends ChangeNotifier {
   static const String _pendingInvitesKey       = 'pigio_invites';
   static const String _legacyPendingInvitesKey = 'pigio_pending_invites';
   static const String _mascotSilentKey         = 'pigio_mascot_silent';
+  static const String _mascotVisibleKey        = 'pigio_mascot_visible';
+  static const String _mascotSoundEnabledKey   = 'pigio_mascot_sound_enabled';
+  static const String _mascotReducedMotionKey  = 'pigio_mascot_reduced_motion';
   static const String _mascotChattinessKey     = 'pigio_mascot_chattiness';
   static const String _mascotScarfColorKey     = 'pigio_mascot_scarf_color';
   static const String _mascotCornerKey         = 'pigio_mascot_corner';
   static const String _mascotPrivacyKey        = 'pigio_mascot_privacy';
+  static const String _mascotBondXpKey         = 'pigio_mascot_bond_xp';
+  static const String _mascotLastOpenKey        = 'pigio_mascot_last_open';
   static const String _surpriseModeKey         = 'pigio_surprise_mode';
   static const String _contactsConsentGivenKey = 'pigio_contacts_consent_given';
   static const String _activeOutfitKey         = 'pigio_active_outfit';
   static const String _unlockedClothingKey     = 'pigio_unlocked_clothing';
+  static const String _favoriteClothingKey    = 'pigio_favorite_clothing';
+  static const String _outfitPresetsKey       = 'pigio_outfit_presets';
   static const String _syncKeyKey              = 'pigio_sync_key';
   static const String _onboardingCompletedKey  = 'pigio_onboarding_completed';
   static const String _personalityProfileKey   = 'pigio_personality_profile';
@@ -78,6 +92,15 @@ class PigioAppState extends ChangeNotifier {
   static const String _notificationsKey        = 'pigio_notifications';
   static const String _giftPotsKey             = 'pigio_gift_pots';
   static const String _pollsKey               = 'pigio_polls';
+  static const String _lastAuthUserIdKey       = 'pigio_last_auth_user_id';
+  static const String _mascotMemoriesKey        = 'pigio_mascot_memories';
+  static const String _mascotLastDailyBonusKey  = 'pigio_mascot_last_daily_bonus';
+  static const String _lastOutfitDismissKey     = 'pigio_last_outfit_dismiss';
+  static const String _lastReengagePushKey      = 'pigio_last_reengage_push';
+  static const String _lastStaleCircleNudgeKey  = 'pigio_last_stale_circle_nudge';
+  static const String _outfitColorsKey          = 'pigio_outfit_colors';
+  static const String _weatherEffectsKey         = 'pigio_weather_effects';
+  static const String _autoThemeKey              = 'pigio_auto_theme';
 
   // ── Fields ────────────────────────────────────────────────────────────────
   Locale _locale = const Locale('fr');
@@ -91,6 +114,11 @@ class PigioAppState extends ChangeNotifier {
   Map<ClothingSlot, String?> _activeOutfit = {};
   List<String> _unlockedClothing = [];
   ClothingRequest? _currentClothingRequest;
+  final List<Map<ClothingSlot, String?>> _outfitHistory = [];
+  List<String> _favoriteClothing = [];
+  List<OutfitPreset> _outfitPresets = [];
+  Map<String, int> _outfitColors = {}; // itemId → color ARGB32
+  async_lib.Timer? _saveDebounce;
 
   // Data
   final List<Wish>              _wishes               = [];
@@ -112,6 +140,8 @@ class PigioAppState extends ChangeNotifier {
   final Set<String>             _consumedWizzNotificationIds = <String>{};
   final Set<String>             _consumedWizzHapticNotificationIds = <String>{};
   int                           _globalWizzNonce = 0;
+  bool                          _appIsForeground = true;
+  bool                          _pendingWizzShakeOnForeground = false;
 
   // Services
   final InvitationService _invitationService =
@@ -131,24 +161,46 @@ class PigioAppState extends ChangeNotifier {
         apiBaseUrl: _inviteApiBaseUrl,
         notificationService: _notificationService,
       );
+  final AudioPlayer _wizzAudioPlayer = AudioPlayer();
+  Uint8List? _wizzSoundBytes;
+  String? _wizzSoundTempPath;
   static const Uuid _uuid = Uuid();
-  static const _secureStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  static const _secureStorage = FlutterSecureStorage();
 
-  // Periodic sync timer
+  // Periodic fallback sync timer (5 min; primary sync is via Realtime WebSocket)
   async_lib.Timer? _syncTimer;
+  // Weather refresh timer — separate cadence (20 min, best-practice for weather APIs)
+  async_lib.Timer? _weatherTimer;
+  Daypart? _lastAppliedDaypart;
+
+  // Supabase Realtime subscription for instant sync signals
+  RealtimeChannel? _realtimeChannel;
 
   // Mascot / UX flags
+  bool         _mascotVisible        = true;
   bool         _mascotSilent         = false;
+  bool         _mascotSoundEnabled   = true;
   int          _mascotChattiness     = 1;
   Color        _mascotScarfColor     = const Color(0xFFFFD54F);
   String       _mascotDefaultCorner  = 'left';
+  bool         _mascotReducedMotion  = false;
   bool         _mascotPrivacyMode    = false;
   bool         _surpriseMode         = true;
   bool         _contactsConsentGiven = false;
   MascotMoment _mascotMoment         = MascotMoment.none;
   bool         _busyMonthInsightShown = false;
+  int          _mascotBondXp         = 0;
+  DateTime     _mascotLastOpen       = DateTime.now();
+  int          _mascotAbsenceDays    = 0;
+  WeatherData? _currentWeather;
+  WeatherData? _weatherTestOverride;
+  bool         _weatherEffectsEnabled = true;
+  bool         _autoTheme            = false;
+  List<MascotMemory> _mascotMemories = [];
+  DateTime? _mascotLastDailyBonus;
+  DateTime? _lastOutfitDismiss;
+  DateTime? _lastReengagePush;
+  DateTime? _lastStaleCircleNudge;
 
   // Sync / onboarding
   String _syncKey            = '';
@@ -171,7 +223,12 @@ class PigioAppState extends ChangeNotifier {
 
   @override
   void dispose() {
+    _saveDebounce?.cancel();
     _syncTimer?.cancel();
+    _weatherTimer?.cancel();
+    _realtimeChannel?.unsubscribe();
+    _realtimeChannel = null;
+    _wizzAudioPlayer.dispose();
     _invitationService.dispose();
     super.dispose();
   }
@@ -184,38 +241,109 @@ class PigioAppState extends ChangeNotifier {
   int               get currentTabIndex   => _currentTabIndex;
   int               get contactsSubIndex  => _contactsSubIndex;
 
-  List<Wish>              get wishes                  => _wishes;
-  List<ContactProfile>    get contacts                => _contacts;
-  List<CircleGroup>       get groups                  => _groups;
-  List<Event>             get events                  => _events;
-  List<SizeProfile>       get sizes                   => _sizes;
-  List<GiftPot>           get giftPots                => _giftPots;
-  List<GroupPoll>         get polls                   => _polls;
+  List<Wish>              get wishes                  => List.unmodifiable(_wishes);
+  List<ContactProfile>    get contacts                => List.unmodifiable(_contacts);
+  List<CircleGroup>       get groups                  => List.unmodifiable(_groups);
+  List<Event>             get events                  => List.unmodifiable(_events);
+  List<SizeProfile>       get sizes                   => List.unmodifiable(_sizes);
+  List<GiftPot>           get giftPots                => List.unmodifiable(_giftPots);
+  List<GroupPoll>         get polls                   => List.unmodifiable(_polls);
   UserProfile             get profile                 => _profile;
-  List<ActivityLog>       get activityLogs            => _activityLogs;
+  List<ActivityLog>       get activityLogs            => List.unmodifiable(_activityLogs);
   int                     get unseenLogsCount         => _unseenLogsCount;
-  List<String>            get recentProfiles          => _recentProfiles;
-  List<PendingInvite>     get pendingInvites          => _pendingInvites;
+  List<String>            get recentProfiles          => List.unmodifiable(_recentProfiles);
+  List<PendingInvite>     get pendingInvites          => List.unmodifiable(_pendingInvites);
   String?                 get inviteFocusContactId    => _inviteFocusContactId;
-  List<PigioNotification> get notifications           => _notifications;
+  List<PigioNotification> get notifications           => List.unmodifiable(_notifications);
   int                     get unseenNotificationsCount => _unseenNotificationsCount;
 
+  bool         get mascotVisible         => _mascotVisible;
   bool         get mascotSilent          => _mascotSilent;
+  bool         get mascotSoundEnabled    => _mascotSoundEnabled;
   int          get mascotChattiness      => _mascotChattiness;
   Color        get mascotScarfColor      => _mascotScarfColor;
+  Map<String, int> get outfitColors       => Map.unmodifiable(_outfitColors);
   String       get mascotDefaultCorner   => _mascotDefaultCorner;
+  bool         get mascotReducedMotion   => _mascotReducedMotion;
   bool         get mascotPrivacyMode     => _mascotPrivacyMode;
+  List<MascotMemory> get mascotMemories  => _mascotMemories;
+  DateTime?    get mascotLastDailyBonus  => _mascotLastDailyBonus;
+  DateTime?    get lastOutfitDismiss     => _lastOutfitDismiss;
+  DateTime?    get lastReengagePush      => _lastReengagePush;
   bool         get surpriseMode          => _surpriseMode;
   bool         get contactsConsentGiven  => _contactsConsentGiven;
   MascotMoment get mascotMoment          => _mascotMoment;
+  int          get mascotBondXp          => _mascotBondXp;
+  WeatherData? get currentWeather        => _weatherTestOverride ?? _currentWeather;
+  WeatherData? get weatherTestOverride   => _weatherTestOverride;
+  bool         get weatherTestMode       => _weatherTestOverride != null;
+  bool         get weatherEffectsEnabled => _weatherEffectsEnabled;
+  bool         get autoTheme             => _autoTheme;
+
+  /// Current part of the day based on the local hour.
+  Daypart get currentDaypart {
+    final h = DateTime.now().hour;
+    if (h < 6)  return Daypart.night;
+    if (h < 9)  return Daypart.earlyMorning;
+    if (h < 12) return Daypart.morning;
+    if (h < 14) return Daypart.midday;
+    if (h < 18) return Daypart.afternoon;
+    if (h < 21) return Daypart.evening;
+    return Daypart.night;
+  }
+
+  /// Bond level: 0-4 based on XP thresholds.
+  /// 0 = Stranger, 1 = Acquaintance, 2 = Friend, 3 = Best Friend, 4 = Soulmate
+  int get mascotBondLevel {
+    if (_mascotBondXp >= 500) return 4;
+    if (_mascotBondXp >= 200) return 3;
+    if (_mascotBondXp >= 50)  return 2;
+    if (_mascotBondXp >= 10)  return 1;
+    return 0;
+  }
+
+  String get mascotBondTitle {
+    switch (mascotBondLevel) {
+      case 0: return 'Stranger';
+      case 1: return 'Acquaintance';
+      case 2: return 'Friend';
+      case 3: return 'Best Friend';
+      case 4: return 'Soulmate';
+      default: return 'Stranger';
+    }
+  }
+
+  String get mascotBondEmoji {
+    switch (mascotBondLevel) {
+      case 0: return '🤝';
+      case 1: return '👋';
+      case 2: return '🤗';
+      case 3: return '💛';
+      case 4: return '💎';
+      default: return '🤝';
+    }
+  }
+
+  void incrementMascotBond([int xp = 1]) {
+    _mascotBondXp += xp;
+    notifyListeners();
+    _saveData();
+  }
+
+  /// How many days since the user last opened the app.
+  int get mascotAbsenceDays => _mascotAbsenceDays;
+
+  /// Mood Pigio should show on return:
+  /// >3 days absent = sad/lonely, >1 day = excited to see you, same day = normal
+  String get mascotReturnMood {
+    if (_mascotAbsenceDays >= 3) return 'sad';
+    if (_mascotAbsenceDays >= 1) return 'excited';
+    return 'normal';
+  }
   String       get syncKey               => _syncKey;
   bool         get syncEnabled           => _syncEnabled;
   bool         get onboardingCompleted   => _onboardingCompleted;
-  bool         get needsOnboarding {
-    final trimmedName = _profile.name.trim();
-    final hasDefaultProfileName = trimmedName.isEmpty || trimmedName.toLowerCase() == 'you';
-    return !_onboardingCompleted || hasDefaultProfileName;
-  }
+  bool         get needsOnboarding => !_onboardingCompleted;
   Map<String, List<String>> get personalityProfile => _personalityProfile;
   WizzEffectMode get wizzEffectMode => _wizzEffectMode;
   int            get globalWizzNonce => _globalWizzNonce;
@@ -238,6 +366,9 @@ class PigioAppState extends ChangeNotifier {
   Map<ClothingSlot, String?> get activeOutfit => _activeOutfit;
   List<String> get unlockedClothing => _unlockedClothing;
   ClothingRequest? get currentClothingRequest => _currentClothingRequest;
+  List<String> get favoriteClothing => _favoriteClothing;
+  List<OutfitPreset> get outfitPresets => _outfitPresets;
+  bool get canUndoOutfit => _outfitHistory.isNotEmpty;
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   String _newId() => _uuid.v4();
@@ -248,46 +379,82 @@ class PigioAppState extends ChangeNotifier {
   String get _apiBaseUrl => _inviteApiBaseUrl;
 
   // ── Persistence ───────────────────────────────────────────────────────────
-  Future<void> _saveData() async {
+
+  /// Debounced save — coalesces rapid mutations into a single write after 500ms.
+  void _saveData() {
+    _saveDebounce?.cancel();
+    _saveDebounce = async_lib.Timer(const Duration(milliseconds: 500), _saveDataNow);
+  }
+
+  /// Immediate persistence — use only when the caller needs a guaranteed write
+  /// (e.g. enableSync, account wipe, signOut).
+  Future<void> _saveDataNow() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_localeKey,   _locale.languageCode);
     await prefs.setString(_themeKey,    _themeVariant.name);
-    await prefs.setString(_wishesKey,    jsonEncode(_wishes.map((w) => w.toMap()).toList()));
-    // PII — contacts, profile, invites stored encrypted in secure storage
-    await _secureStorage.write(key: _contactsKey,  value: jsonEncode(_contacts.map((m) => m.toMap()).toList()));
-    await prefs.setString(_groupsKey,    jsonEncode(_groups.map((g) => g.toMap()).toList()));
-    await prefs.setString(_eventsKey,    jsonEncode(_events.map((e) => e.toMap()).toList()));
-    await prefs.setString(_sizesKey,     jsonEncode(_sizes.map((s) => s.toMap()).toList()));
-    await prefs.setString(_giftPotsKey,  jsonEncode(_giftPots.map((p) => p.toMap()).toList()));
-    await prefs.setString(_pollsKey,    jsonEncode(_polls.map((p) => p.toMap()).toList()));
-    await _secureStorage.write(key: _profileKey, value: jsonEncode(_profile.toMap()));
+    // All personal / financial data stored encrypted via FlutterSecureStorage.
+    await _secureWrite(key: _wishesKey,    value: jsonEncode(_wishes.map((w) => w.toMap()).toList()));
+    await _secureWrite(key: _contactsKey,  value: jsonEncode(_contacts.map((m) => m.toMap()).toList()));
+    await _secureWrite(key: _groupsKey,    value: jsonEncode(_groups.map((g) => g.toMap()).toList()));
+    await _secureWrite(key: _eventsKey,    value: jsonEncode(_events.map((e) => e.toMap()).toList()));
+    await _secureWrite(key: _sizesKey,     value: jsonEncode(_sizes.map((s) => s.toMap()).toList()));
+    await _secureWrite(key: _giftPotsKey,  value: jsonEncode(_giftPots.map((p) => p.toMap()).toList()));
+    await _secureWrite(key: _pollsKey,    value: jsonEncode(_polls.map((p) => p.toMap()).toList()));
+    await _secureWrite(key: _profileKey, value: jsonEncode(_profile.toMap()));
     await prefs.setInt(_unseenLogsKey,   _unseenLogsCount);
-    await _secureStorage.write(key: _activityLogsKey, value: jsonEncode(_activityLogs.map((a) => a.toMap()).toList()));
+    await _secureWrite(key: _activityLogsKey, value: jsonEncode(_activityLogs.map((a) => a.toMap()).toList()));
     await prefs.setStringList(_recentProfilesKey, _recentProfiles);
-    await _secureStorage.write(key: _pendingInvitesKey, value: jsonEncode(_pendingInvites.map((i) => i.toMap()).toList()));
+    await _secureWrite(key: _pendingInvitesKey, value: jsonEncode(_pendingInvites.map((i) => i.toMap()).toList()));
     // Notifications — stored in secure storage to protect message content
-    await _secureStorage.write(key: _notificationsKey, value: jsonEncode(_notifications.map((n) => n.toMap()).toList()));
+    await _secureWrite(key: _notificationsKey, value: jsonEncode(_notifications.map((n) => n.toMap()).toList()));
     await prefs.setInt('pigio_unseen_notifications', _unseenNotificationsCount);
     // Mascot
+    await prefs.setBool(_mascotVisibleKey,       _mascotVisible);
     await prefs.setBool(_mascotSilentKey,        _mascotSilent);
+    await prefs.setBool(_mascotSoundEnabledKey,  _mascotSoundEnabled);
     await prefs.setInt(_mascotChattinessKey,     _mascotChattiness);
     await prefs.setInt(_mascotScarfColorKey,     _mascotScarfColor.toARGB32());
+    await prefs.setString(_mascotCornerKey,      _mascotDefaultCorner);
+    await prefs.setBool(_mascotReducedMotionKey, _mascotReducedMotion);
     await prefs.setBool(_mascotPrivacyKey,       _mascotPrivacyMode);
+    await prefs.setBool(_weatherEffectsKey,      _weatherEffectsEnabled);
+    await prefs.setBool(_autoThemeKey,           _autoTheme);
+    await prefs.setInt(_mascotBondXpKey,          _mascotBondXp);
+    await prefs.setString(_mascotLastOpenKey,      DateTime.now().toIso8601String());
     await prefs.setBool(_surpriseModeKey,        _surpriseMode);
     await prefs.setBool(_contactsConsentGivenKey, _contactsConsentGiven);
+    // Mascot memories & daily bonus
+    if (_mascotMemories.isNotEmpty) {
+      await prefs.setString(_mascotMemoriesKey, jsonEncode(_mascotMemories.map((m) => m.toMap()).toList()));
+    }
+    if (_mascotLastDailyBonus != null) {
+      await prefs.setString(_mascotLastDailyBonusKey, _mascotLastDailyBonus!.toIso8601String());
+    }
+    if (_lastOutfitDismiss != null) {
+      await prefs.setString(_lastOutfitDismissKey, _lastOutfitDismiss!.toIso8601String());
+    }
+    if (_lastReengagePush != null) {
+      await prefs.setString(_lastReengagePushKey, _lastReengagePush!.toIso8601String());
+    }
+    if (_lastStaleCircleNudge != null) {
+      await prefs.setString(_lastStaleCircleNudgeKey, _lastStaleCircleNudge!.toIso8601String());
+    }
     // Outfit
     final outfitMap = _activeOutfit.map((k, v) => MapEntry(k.name, v));
     await prefs.setString(_activeOutfitKey,      jsonEncode(outfitMap));
     await prefs.setStringList(_unlockedClothingKey, _unlockedClothing);
+    await prefs.setStringList(_favoriteClothingKey, _favoriteClothing);
+    await prefs.setString(_outfitColorsKey, jsonEncode(_outfitColors));
+    await prefs.setString(_outfitPresetsKey, jsonEncode(_outfitPresets.map((p) => p.toMap()).toList()));
     // Sync / onboarding — sync key stored in secure storage (not SharedPreferences)
     if (_syncKey.isNotEmpty) {
-      await _secureStorage.write(key: _syncKeyKey, value: _syncKey);
+      await _secureWrite(key: _syncKeyKey, value: _syncKey);
     }
     await prefs.setBool('pigio_sync_enabled', _syncEnabled);
     await prefs.setBool(_onboardingCompletedKey, _onboardingCompleted);
-    // Personality
+    // Personality — encrypted (behavioural PII)
     if (_personalityProfile.isNotEmpty) {
-      await prefs.setString(_personalityProfileKey, jsonEncode(_personalityProfile));
+      await _secureWrite(key: _personalityProfileKey, value: jsonEncode(_personalityProfile));
     }
     // Wizz
     if (_wizzHistory.isNotEmpty) {
@@ -304,7 +471,7 @@ class PigioAppState extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
 
     // Fetch all secure storage values in parallel — avoids up to 30s of
-    // sequential reads (6 keys × 5s timeout each).
+    // sequential reads (12 keys × 5s timeout each).
     final secureValues = await Future.wait([
       _secureRead(_contactsKey),        // [0]
       _secureRead(_profileKey),          // [1]
@@ -312,6 +479,13 @@ class PigioAppState extends ChangeNotifier {
       _secureRead(_pendingInvitesKey),   // [3]
       _secureRead(_notificationsKey),    // [4]
       _secureRead(_syncKeyKey),          // [5]
+      _secureRead(_wishesKey),           // [6]
+      _secureRead(_groupsKey),           // [7]
+      _secureRead(_eventsKey),           // [8]
+      _secureRead(_sizesKey),            // [9]
+      _secureRead(_giftPotsKey),         // [10]
+      _secureRead(_pollsKey),            // [11]
+      _secureRead(_personalityProfileKey), // [12]
     ]);
 
     final localeCode = prefs.getString(_localeKey);
@@ -343,8 +517,27 @@ class PigioAppState extends ChangeNotifier {
     }
 
     _unlockedClothing = prefs.getStringList(_unlockedClothingKey) ?? [];
+    _favoriteClothing = prefs.getStringList(_favoriteClothingKey) ?? [];
+    final presetsRaw = prefs.getString(_outfitPresetsKey);
+    if (presetsRaw != null && presetsRaw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(presetsRaw) as List;
+        _outfitPresets = decoded.map((e) => OutfitPreset.fromMap(e as Map<String, dynamic>)).toList();
+      } catch (_) {}
+    }
 
-    _wishes  ..clear()..addAll(_decodeList(_wishesKey,   prefs).map(Wish.fromMap));
+    // Wishes — read from secure storage; migrate from SharedPreferences on first run
+    final secureWishesRaw = secureValues[6];
+    if (secureWishesRaw != null && secureWishesRaw.isNotEmpty) {
+      _wishes..clear()..addAll(_decodeListFromString(secureWishesRaw).map(Wish.fromMap));
+    } else {
+      final legacyWishes = prefs.getString(_wishesKey);
+      if (legacyWishes != null && legacyWishes.isNotEmpty) {
+        _wishes..clear()..addAll(_decodeListFromString(legacyWishes).map(Wish.fromMap));
+        await _secureWrite(key: _wishesKey, value: legacyWishes);
+        await prefs.remove(_wishesKey);
+      }
+    }
     // Contacts stored in secure storage — migrate from SharedPreferences on first run
     final secureContactsRaw = secureValues[0];
     if (secureContactsRaw != null && secureContactsRaw.isNotEmpty) {
@@ -355,11 +548,22 @@ class PigioAppState extends ChangeNotifier {
       if (legacyContacts != null && legacyContacts.isNotEmpty) {
         _contacts.clear();
         _contacts.addAll(_decodeListFromString(legacyContacts).map(ContactProfile.fromMap));
-        await _secureStorage.write(key: _contactsKey, value: legacyContacts);
+        await _secureWrite(key: _contactsKey, value: legacyContacts);
         await prefs.remove(_contactsKey);
       }
     }
-    _groups  ..clear()..addAll(_decodeList(_groupsKey,   prefs).map(CircleGroup.fromMap));
+    // Groups — read from secure storage; migrate from SharedPreferences on first run
+    final secureGroupsRaw = secureValues[7];
+    if (secureGroupsRaw != null && secureGroupsRaw.isNotEmpty) {
+      _groups..clear()..addAll(_decodeListFromString(secureGroupsRaw).map(CircleGroup.fromMap));
+    } else {
+      final legacyGroups = prefs.getString(_groupsKey);
+      if (legacyGroups != null && legacyGroups.isNotEmpty) {
+        _groups..clear()..addAll(_decodeListFromString(legacyGroups).map(CircleGroup.fromMap));
+        await _secureWrite(key: _groupsKey, value: legacyGroups);
+        await prefs.remove(_groupsKey);
+      }
+    }
 
     // Ensure Famille group always exists
     if (!_groups.any((g) => g.isSystem &&
@@ -375,10 +579,54 @@ class PigioAppState extends ChangeNotifier {
       ));
     }
 
-    _events  ..clear()..addAll(_decodeList(_eventsKey, prefs).map(Event.fromMap));
-    _sizes   ..clear()..addAll(_decodeList(_sizesKey,  prefs).map(SizeProfile.fromMap));
-    _giftPots..clear()..addAll(_decodeList(_giftPotsKey, prefs).map(GiftPot.fromMap));
-    _polls   ..clear()..addAll(_decodeList(_pollsKey, prefs).map(GroupPoll.fromMap));
+    // Events — read from secure storage; migrate from SharedPreferences on first run
+    final secureEventsRaw = secureValues[8];
+    if (secureEventsRaw != null && secureEventsRaw.isNotEmpty) {
+      _events..clear()..addAll(_decodeListFromString(secureEventsRaw).map(Event.fromMap));
+    } else {
+      final legacyEvents = prefs.getString(_eventsKey);
+      if (legacyEvents != null && legacyEvents.isNotEmpty) {
+        _events..clear()..addAll(_decodeListFromString(legacyEvents).map(Event.fromMap));
+        await _secureWrite(key: _eventsKey, value: legacyEvents);
+        await prefs.remove(_eventsKey);
+      }
+    }
+    // Sizes — read from secure storage; migrate from SharedPreferences on first run
+    final secureSizesRaw = secureValues[9];
+    if (secureSizesRaw != null && secureSizesRaw.isNotEmpty) {
+      _sizes..clear()..addAll(_decodeListFromString(secureSizesRaw).map(SizeProfile.fromMap));
+    } else {
+      final legacySizes = prefs.getString(_sizesKey);
+      if (legacySizes != null && legacySizes.isNotEmpty) {
+        _sizes..clear()..addAll(_decodeListFromString(legacySizes).map(SizeProfile.fromMap));
+        await _secureWrite(key: _sizesKey, value: legacySizes);
+        await prefs.remove(_sizesKey);
+      }
+    }
+    // Gift Pots — read from secure storage; migrate from SharedPreferences on first run
+    final secureGiftPotsRaw = secureValues[10];
+    if (secureGiftPotsRaw != null && secureGiftPotsRaw.isNotEmpty) {
+      _giftPots..clear()..addAll(_decodeListFromString(secureGiftPotsRaw).map(GiftPot.fromMap));
+    } else {
+      final legacyGiftPots = prefs.getString(_giftPotsKey);
+      if (legacyGiftPots != null && legacyGiftPots.isNotEmpty) {
+        _giftPots..clear()..addAll(_decodeListFromString(legacyGiftPots).map(GiftPot.fromMap));
+        await _secureWrite(key: _giftPotsKey, value: legacyGiftPots);
+        await prefs.remove(_giftPotsKey);
+      }
+    }
+    // Polls — read from secure storage; migrate from SharedPreferences on first run
+    final securePollsRaw = secureValues[11];
+    if (securePollsRaw != null && securePollsRaw.isNotEmpty) {
+      _polls..clear()..addAll(_decodeListFromString(securePollsRaw).map(GroupPoll.fromMap));
+    } else {
+      final legacyPolls = prefs.getString(_pollsKey);
+      if (legacyPolls != null && legacyPolls.isNotEmpty) {
+        _polls..clear()..addAll(_decodeListFromString(legacyPolls).map(GroupPoll.fromMap));
+        await _secureWrite(key: _pollsKey, value: legacyPolls);
+        await prefs.remove(_pollsKey);
+      }
+    }
 
     // Profile stored in secure storage — migrate from SharedPreferences on first run
     final secureProfileRaw = secureValues[1];
@@ -390,7 +638,7 @@ class PigioAppState extends ChangeNotifier {
           _profile = UserProfile.fromMap(decoded);
         }
         if (secureProfileRaw == null) {
-          await _secureStorage.write(key: _profileKey, value: profileRaw);
+          await _secureWrite(key: _profileKey, value: profileRaw);
           await prefs.remove(_profileKey);
         }
       } catch (_) {}
@@ -408,7 +656,7 @@ class PigioAppState extends ChangeNotifier {
       if (legacyLogs != null && legacyLogs.isNotEmpty) {
         _activityLogs.clear();
         _activityLogs.addAll(_decodeListFromString(legacyLogs).map(ActivityLog.fromMap));
-        await _secureStorage.write(key: _activityLogsKey, value: legacyLogs);
+        await _secureWrite(key: _activityLogsKey, value: legacyLogs);
         await prefs.remove(_activityLogsKey);
       }
     }
@@ -426,7 +674,7 @@ class PigioAppState extends ChangeNotifier {
       if (legacyInvites != null && legacyInvites.isNotEmpty) {
         _pendingInvites.clear();
         _pendingInvites.addAll(_decodeListFromString(legacyInvites).map(PendingInvite.fromMap));
-        await _secureStorage.write(key: _pendingInvitesKey, value: legacyInvites);
+        await _secureWrite(key: _pendingInvitesKey, value: legacyInvites);
         await prefs.remove(_pendingInvitesKey);
         await prefs.remove(_legacyPendingInvitesKey);
       }
@@ -442,7 +690,7 @@ class PigioAppState extends ChangeNotifier {
       if (legacyNotifs != null && legacyNotifs.isNotEmpty) {
         _notifications.clear();
         _notifications.addAll(_decodeListFromString(legacyNotifs).map(PigioNotification.fromMap));
-        await _secureStorage.write(key: _notificationsKey, value: legacyNotifs);
+        await _secureWrite(key: _notificationsKey, value: legacyNotifs);
         await prefs.remove(_notificationsKey);
       }
     }
@@ -450,12 +698,69 @@ class PigioAppState extends ChangeNotifier {
         prefs.getInt('pigio_unseen_notifications') ?? 0;
 
     // Mascot
+    _mascotVisible      = prefs.getBool(_mascotVisibleKey) ?? true;
     _mascotSilent       = prefs.getBool(_mascotSilentKey) ?? false;
+    _mascotSoundEnabled = prefs.getBool(_mascotSoundEnabledKey) ?? true;
     _mascotChattiness   = prefs.getInt(_mascotChattinessKey) ?? 1;
     final scarfVal = prefs.getInt(_mascotScarfColorKey);
     if (scarfVal != null) _mascotScarfColor = Color(scarfVal);
+    final colorsRaw = prefs.getString(_outfitColorsKey);
+    if (colorsRaw != null && colorsRaw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(colorsRaw);
+        if (decoded is Map<String, dynamic>) {
+          _outfitColors = decoded.map((k, v) => MapEntry(k, v as int));
+        }
+      } catch (_) {}
+    }
+    
+    // Fetch current weather continuously in background without blocking init
+    fetchWeather();
     _mascotDefaultCorner = prefs.getString(_mascotCornerKey) ?? 'left';
+    _mascotReducedMotion = prefs.getBool(_mascotReducedMotionKey) ?? false;
     _mascotPrivacyMode  = prefs.getBool(_mascotPrivacyKey) ?? false;
+    _weatherEffectsEnabled = prefs.getBool(_weatherEffectsKey) ?? true;
+    _autoTheme           = prefs.getBool(_autoThemeKey) ?? false;
+    // Apply auto-theme on init if enabled
+    _checkDaypartAutoTheme();
+    _mascotBondXp       = prefs.getInt(_mascotBondXpKey) ?? 0;
+    final lastOpenRaw   = prefs.getString(_mascotLastOpenKey);
+    if (lastOpenRaw != null) {
+      _mascotLastOpen = DateTime.tryParse(lastOpenRaw) ?? DateTime.now();
+      _mascotAbsenceDays = DateTime.now().difference(_mascotLastOpen).inDays;
+
+      // Bond XP decay — subtract 5 XP per full week of inactivity (floor 0).
+      // Encourages regular engagement without punishing short breaks.
+      if (_mascotAbsenceDays >= 7) {
+        final weeksAway = _mascotAbsenceDays ~/ 7;
+        final decay = weeksAway * 5;
+        if (decay > 0 && _mascotBondXp > 0) {
+          _mascotBondXp = (_mascotBondXp - decay).clamp(0, _mascotBondXp);
+        }
+      }
+    }
+    // Load mascot memories
+    final memoriesRaw = prefs.getString(_mascotMemoriesKey);
+    if (memoriesRaw != null && memoriesRaw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(memoriesRaw) as List;
+        _mascotMemories = decoded.map((e) => MascotMemory.fromMap(e as Map<String, dynamic>)).toList();
+      } catch (_) {}
+    }
+    // Load daily bonus timestamp
+    final dailyBonusRaw = prefs.getString(_mascotLastDailyBonusKey);
+    if (dailyBonusRaw != null) _mascotLastDailyBonus = DateTime.tryParse(dailyBonusRaw);
+    // Load outfit dismiss timestamp
+    final outfitDismissRaw = prefs.getString(_lastOutfitDismissKey);
+    if (outfitDismissRaw != null) _lastOutfitDismiss = DateTime.tryParse(outfitDismissRaw);
+    // Load re-engagement push timestamp
+    final reengageRaw = prefs.getString(_lastReengagePushKey);
+    if (reengageRaw != null) _lastReengagePush = DateTime.tryParse(reengageRaw);
+    // Load stale circle nudge timestamp
+    final staleCircleRaw = prefs.getString(_lastStaleCircleNudgeKey);
+    if (staleCircleRaw != null) _lastStaleCircleNudge = DateTime.tryParse(staleCircleRaw);
+    // Update last open to now
+    await prefs.setString(_mascotLastOpenKey, DateTime.now().toIso8601String());
     _surpriseMode       = prefs.getBool(_surpriseModeKey) ?? true;
     _contactsConsentGiven = prefs.getBool(_contactsConsentGivenKey) ?? false;
 
@@ -468,21 +773,26 @@ class PigioAppState extends ChangeNotifier {
       final legacySyncKey = prefs.getString(_syncKeyKey) ?? '';
       if (legacySyncKey.isNotEmpty) {
         _syncKey = legacySyncKey;
-        await _secureStorage.write(key: _syncKeyKey, value: legacySyncKey);
+        await _secureWrite(key: _syncKeyKey, value: legacySyncKey);
         await prefs.remove(_syncKeyKey);
       }
     }
     _syncEnabled       = prefs.getBool('pigio_sync_enabled') ?? false;
     _onboardingCompleted = prefs.getBool(_onboardingCompletedKey) ?? false;
 
-    // Personality profile
-    final personalityRaw = prefs.getString(_personalityProfileKey);
+    // Personality profile — read from secure storage; migrate from SharedPreferences on first run
+    final securePersonalityRaw = secureValues[12];
+    final personalityRaw = securePersonalityRaw ?? prefs.getString(_personalityProfileKey);
     if (personalityRaw != null && personalityRaw.isNotEmpty) {
       try {
         final decoded = jsonDecode(personalityRaw);
         if (decoded is Map<String, dynamic>) {
           _personalityProfile = decoded.map(
               (k, v) => MapEntry(k, v is List ? v.cast<String>() : <String>[]));  
+        }
+        if (securePersonalityRaw == null) {
+          await _secureWrite(key: _personalityProfileKey, value: personalityRaw);
+          await prefs.remove(_personalityProfileKey);
         }
       } catch (_) {}
     }
@@ -516,13 +826,109 @@ class PigioAppState extends ChangeNotifier {
     Future.microtask(() => _pullContactProfiles());
     Future.microtask(() => _pullNotifications());
 
+    // ── Realtime WebSocket subscription ──────────────────────────────
+    // Subscribe to sync_signals via Supabase Realtime Postgres Changes.
+    // When any edge function inserts a signal for our user_id, we
+    // immediately pull the relevant data instead of waiting for a timer.
+    _subscribeToRealtimeSignals();
+
+    // Fallback timer: 5 minutes — only fires if WebSocket disconnects or
+    // a signal is missed. Primary sync is now driven by Realtime + FCM.
     _syncTimer?.cancel();
-    _syncTimer = async_lib.Timer.periodic(const Duration(seconds: 8), (_) {
+    _syncTimer = async_lib.Timer.periodic(const Duration(minutes: 5), (_) {
       _syncPendingInvitesFromServer();
       _pullContactProfiles();
       _pushOwnContactProfile();
       _pullNotifications();
+      _checkDaypartAutoTheme();
     });
+
+    // Weather refresh: 20-min cadence (Open-Meteo updates hourly; 15-min cache
+    // inside WeatherService means real fetches happen every ~20 min).
+    _weatherTimer?.cancel();
+    _weatherTimer = async_lib.Timer.periodic(const Duration(minutes: 20), (_) {
+      fetchWeather();
+    });
+  }
+
+  /// Subscribe to Supabase Realtime Postgres Changes on the sync_signals
+  /// table. Filtered server-side by RLS (target_user_id = auth.uid()).
+  void _subscribeToRealtimeSignals() {
+    _realtimeChannel?.unsubscribe();
+    _realtimeChannel = null;
+
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) return; // Not authenticated — skip Realtime.
+
+    _realtimeChannel = Supabase.instance.client
+        .channel('sync_signals')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'sync_signals',
+          callback: (payload) {
+            final signalType =
+                payload.newRecord['signal_type'] as String? ?? 'data_changed';
+            if (kDebugMode) {
+              debugPrint('[Pigio] Realtime signal received: $signalType');
+            }
+            _handleRealtimeSignal(signalType);
+          },
+        )
+        .subscribe();
+  }
+
+  /// React to an incoming Realtime sync signal by pulling the relevant data.
+  void _handleRealtimeSignal(String signalType) {
+    Future.microtask(() {
+      switch (signalType) {
+        case 'notification':
+          _pullNotifications();
+        case 'profile':
+          _pullContactProfiles();
+        default:
+          // Generic data_changed — pull everything.
+          _syncPendingInvitesFromServer();
+          _pullContactProfiles();
+          _pullNotifications();
+      }
+    });
+  }
+
+  /// Refreshes the current weather and holds it in state.
+  /// Retries once after 30 s if the first attempt fails (e.g. cold start, no network).
+  Future<void> fetchWeather() async {
+    var wData = await WeatherService.fetchCurrent();
+    if (wData == null) {
+      // Retry after a short delay — network may not be ready at cold start.
+      await Future<void>.delayed(const Duration(seconds: 30));
+      wData = await WeatherService.fetchCurrent();
+    }
+    if (wData != null && wData != _currentWeather) {
+      _currentWeather = wData;
+      notifyListeners();
+    }
+  }
+
+  /// Auto-switch theme based on daypart when [autoTheme] is enabled.
+  /// Only triggers a change when the daypart actually transitions.
+  void _checkDaypartAutoTheme() {
+    if (!_autoTheme) return;
+    final dp = currentDaypart;
+    if (dp == _lastAppliedDaypart) return;
+    _lastAppliedDaypart = dp;
+    final wantDark = dp == Daypart.night || dp == Daypart.evening;
+    final alreadyDark = _themeVariant == PigioThemeVariant.dark ||
+        _themeVariant == PigioThemeVariant.oled;
+    if (wantDark && !alreadyDark) {
+      _themeVariant = PigioThemeVariant.dark;
+      notifyListeners();
+      _saveData();
+    } else if (!wantDark && alreadyDark) {
+      _themeVariant = PigioThemeVariant.light;
+      notifyListeners();
+      _saveData();
+    }
   }
 
   void _pruneOrphanedIds() {
@@ -550,17 +956,6 @@ class PigioAppState extends ChangeNotifier {
     if (changed) _saveData();
   }
 
-  List<Map<String, dynamic>> _decodeList(
-      String key, SharedPreferences prefs) {
-    final raw = prefs.getString(key);
-    if (raw == null || raw.isEmpty) return const [];
-    try {
-      return (jsonDecode(raw) as List<dynamic>).cast<Map<String, dynamic>>();
-    } catch (_) {
-      return const [];
-    }
-  }
-
   List<Map<String, dynamic>> _decodeListFromString(String raw) {
     if (raw.isEmpty) return const [];
     try {
@@ -580,6 +975,22 @@ class PigioAppState extends ChangeNotifier {
           .timeout(const Duration(seconds: 5));
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Best-effort secure write: on macOS debug without keychain entitlement,
+  /// flutter_secure_storage can throw -34018. We log failures rather than
+  /// silently swallowing them.
+  Future<void> _secureWrite({required String key, required String value}) async {
+    try {
+      await _secureStorage
+          .write(key: key, value: value)
+          .timeout(const Duration(seconds: 5));
+    } catch (e) {
+      // Log the failure so it's visible during development and in crash reports.
+      if (kDebugMode) {
+        debugPrint('[SecureStorage] WRITE FAILED key=$key error=$e');
+      }
     }
   }
 }

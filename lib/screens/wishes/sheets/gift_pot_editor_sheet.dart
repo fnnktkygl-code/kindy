@@ -434,7 +434,7 @@ class _GiftPotEditorSheetState extends State<GiftPotEditorSheet> {
           ),
           Switch(
             value: _isSurprise,
-            activeColor: theme.accent2,
+            activeTrackColor: theme.accent2,
             onChanged: (v) => setState(() => _isSurprise = v),
           ),
         ],

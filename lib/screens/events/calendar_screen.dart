@@ -336,8 +336,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
             children: [
               Text(weekdayName, style: fw(size: 10, w: FontWeight.w800, color: theme.light)),
               const SizedBox(height: 6),
-              SizedBox(
-                height: 48,
+              AspectRatio(
+                aspectRatio: 1,
                 child: _calendarCell(
                   date.day, isToday, hasEvent, firstEventEmoji, theme,
                   isCompact: true,

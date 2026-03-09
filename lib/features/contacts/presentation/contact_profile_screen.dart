@@ -95,10 +95,6 @@ class _ContactProfileScreenState extends State<ContactProfileScreen>
     super.dispose();
   }
 
-  void _triggerAvatarShake() {
-    _avatarShakeCtrl.forward(from: 0);
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = context.pt;

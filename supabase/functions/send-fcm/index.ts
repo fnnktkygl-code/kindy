@@ -13,7 +13,7 @@
 //   4. FCM_SERVICE_ACCOUNT_EMAIL = "client_email" field
 //   5. FCM_PRIVATE_KEY   = "private_key" field (include the full PEM string)
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { getCorsHeaders } from '../_shared/cors.ts';
 
@@ -83,6 +83,23 @@ async function getAccessToken(email: string, privateKey: CryptoKey): Promise<str
   return json.access_token as string;
 }
 
+// ---- Per-user rate limiter: max 50 pushes per hour ----------------------
+
+const userRateMap = new Map<string, { count: number; resetAt: number }>();
+const USER_RATE_LIMIT = 50;
+const USER_RATE_WINDOW_MS = 3_600_000;
+
+function isUserRateLimited(userId: string): boolean {
+  const now = Date.now();
+  const entry = userRateMap.get(userId);
+  if (!entry || now >= entry.resetAt) {
+    userRateMap.set(userId, { count: 1, resetAt: now + USER_RATE_WINDOW_MS });
+    return false;
+  }
+  entry.count++;
+  return entry.count > USER_RATE_LIMIT;
+}
+
 // -------------------------------------------------------------------------
 
 serve(async (req: Request) => {
@@ -117,6 +134,14 @@ serve(async (req: Request) => {
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Rate limit per authenticated user
+    if (isUserRateLimited(user.id)) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+        status: 429,
         headers: { "Content-Type": "application/json" },
       });
     }

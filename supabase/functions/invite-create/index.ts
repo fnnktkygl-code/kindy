@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { json } from '../_shared/response.ts';
 import { sha256Hex } from '../_shared/crypto.ts';
@@ -35,11 +35,9 @@ Deno.serve(async (req) => {
     }
 
     if (!inviterId) {
-      const rawInviterId = String(body.inviterId ?? '').trim();
-      if (!rawInviterId || rawInviterId.length > 128) {
-        return json({ error: 'inviterId invalid format' }, 400);
-      }
-      inviterId = rawInviterId;
+      // Guest mode: generate an ephemeral server-side ID instead of
+      // accepting an untrusted value from the client.
+      inviterId = `guest_${crypto.randomUUID()}`;
     }
     // ───────────────────────────────────────────────────────────────────
 

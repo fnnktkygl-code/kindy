@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { getCorsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req: Request) => {
@@ -39,17 +39,28 @@ Deno.serve(async (req: Request) => {
 
     const userId = user.id;
 
-    // The client must supply its sync_key so we can delete user_data.
-    // user_data table uses sync_key as primary key — there is no user_id column.
-    // Without the sync_key the row cannot be identified server-side.
-    const body = await req.json().catch(() => ({}));
-    const syncKey = typeof body.syncKey === 'string' ? body.syncKey.trim() : '';
+    // Delete user_data — prefer user_id, fallback to client-supplied syncKey
+    const { count: deletedByUid } = await supabase
+      .from('user_data')
+      .delete({ count: 'exact' })
+      .eq('user_id', userId);
 
-    if (syncKey && syncKey.length >= 16) {
-      await supabase.from('user_data').delete().eq('sync_key', syncKey);
+    if (!deletedByUid || deletedByUid === 0) {
+      // Fallback for legacy rows without user_id column populated
+      const body = await req.json().catch(() => ({}));
+      const syncKey = typeof body.syncKey === 'string' ? body.syncKey.trim() : '';
+      if (syncKey && syncKey.length >= 16) {
+        await supabase.from('user_data').delete().eq('sync_key', syncKey);
+      }
     }
 
-    // Delete invites where this user is the inviter (identified by userId)
+    // Nullify accepter_profile in invites where this user accepted (GDPR erasure)
+    await supabase
+      .from('invites')
+      .update({ accepter_profile: null })
+      .eq('accepter_user_id', userId);
+
+    // Delete invites where this user is the inviter
     await supabase.from('invites').delete().eq('inviter_id', userId);
 
     // Hard-delete the auth user — irreversible

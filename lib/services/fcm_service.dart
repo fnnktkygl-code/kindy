@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'pigio_voice.dart';
 
 /// Sends real FCM push notifications via the Supabase Edge Function `send-fcm`.
 ///
@@ -28,8 +29,18 @@ class FcmService {
     required String title,
     required String body,
     required String type,
+    required String? userJwt,
   }) async {
+    final jwt = userJwt?.isNotEmpty == true ? userJwt! : _supabaseAnonKey;
     final uri = Uri.parse('$baseUrl$_path');
+
+    final useMascotVoice = switch (type) {
+      'mascot_reengage' || 'circle_stale' => true,
+      _ => false,
+    };
+    final pushTitle = useMascotVoice ? PigioVoice.title(title) : title;
+    final pushBody = useMascotVoice ? PigioVoice.body(body) : body;
+
     try {
       final response = await http
           .post(
@@ -37,12 +48,12 @@ class FcmService {
             headers: {
               'Content-Type': 'application/json',
               'apikey': _supabaseAnonKey,
-              'Authorization': 'Bearer $_supabaseAnonKey',
+              'Authorization': 'Bearer $jwt',
             },
             body: jsonEncode({
               'token': fcmToken,
-              'title': title,
-              'body': body,
+              'title': pushTitle,
+              'body': pushBody,
               'type': type,
             }),
           )

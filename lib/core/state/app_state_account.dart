@@ -4,6 +4,136 @@ part of 'app_state.dart';
 // ─── Account Management ───────────────────────────────────────────────────────
 
 extension AccountExtension on PigioAppState {
+  Future<void> reconcileAuthenticatedUser(String? userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final previousUserId = prefs.getString(PigioAppState._lastAuthUserIdKey);
+
+    if (userId == null || userId.isEmpty) {
+      await prefs.remove(PigioAppState._lastAuthUserIdKey);
+      return;
+    }
+
+    if (previousUserId != null && previousUserId.isNotEmpty && previousUserId != userId) {
+      await _wipeLocalUserDataForSessionSwitch();
+    }
+
+    await prefs.setString(PigioAppState._lastAuthUserIdKey, userId);
+
+    // Restore per-user onboarding flag so returning users skip onboarding.
+    final perUserKey = '${PigioAppState._onboardingCompletedKey}_$userId';
+    final wasCompleted = prefs.getBool(perUserKey) ?? false;
+    if (wasCompleted && !_onboardingCompleted) {
+      _onboardingCompleted = true;
+    }
+
+    // Restore per-user profile (name, avatar, etc.)
+    final perUserProfileKey = '${PigioAppState._profileKey}_$userId';
+    final savedProfile = prefs.getString(perUserProfileKey);
+    if (savedProfile != null && savedProfile.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(savedProfile) as Map<String, dynamic>;
+        _profile = UserProfile.fromMap(decoded);
+      } catch (_) {}
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> signOutAndCleanupLocalState() async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+    } catch (_) {
+      // Continue cleanup even if remote sign-out fails.
+    }
+
+    // Clear biometric credentials so the next user can't re-auth as this user.
+    try {
+      await const FlutterSecureStorage().deleteAll();
+    } catch (_) {}
+
+    await _wipeLocalUserDataForSessionSwitch();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(PigioAppState._lastAuthUserIdKey);
+  }
+
+  Future<void> _wipeLocalUserDataForSessionSwitch() async {
+    _wishes.clear();
+    _contacts.clear();
+    _groups.clear();
+    _events.clear();
+    _sizes.clear();
+    _giftPots.clear();
+    _polls.clear();
+    _activityLogs.clear();
+    _recentProfiles.clear();
+    _pendingInvites.clear();
+    _notifications.clear();
+
+    _unseenLogsCount = 0;
+    _unseenNotificationsCount = 0;
+    _inviteFocusContactId = null;
+    _personalityProfile.clear();
+    _wizzHistory.clear();
+    _consumedWizzNotificationIds.clear();
+    _consumedWizzHapticNotificationIds.clear();
+    _globalWizzNonce = 0;
+
+    _activeOutfit.clear();
+    _unlockedClothing.clear();
+    _syncEnabled = false;
+    _syncKey = '';
+    _onboardingCompleted = false;
+    _profile = const UserProfile(name: 'You', handle: '@you', memberSince: 2024);
+
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in [
+      PigioAppState._wishesKey,
+      PigioAppState._contactsKey,
+      PigioAppState._groupsKey,
+      PigioAppState._eventsKey,
+      PigioAppState._sizesKey,
+      PigioAppState._profileKey,
+      PigioAppState._unseenLogsKey,
+      PigioAppState._activityLogsKey,
+      PigioAppState._recentProfilesKey,
+      PigioAppState._pendingInvitesKey,
+      PigioAppState._legacyPendingInvitesKey,
+      PigioAppState._syncKeyKey,
+      PigioAppState._onboardingCompletedKey,
+      PigioAppState._personalityProfileKey,
+      PigioAppState._wizzKey,
+      PigioAppState._notificationsKey,
+      PigioAppState._giftPotsKey,
+      PigioAppState._pollsKey,
+    ]) {
+      await prefs.remove(key);
+    }
+
+    for (final key in [
+      PigioAppState._contactsKey,
+      PigioAppState._profileKey,
+      PigioAppState._activityLogsKey,
+      PigioAppState._pendingInvitesKey,
+      PigioAppState._notificationsKey,
+      PigioAppState._syncKeyKey,
+      PigioAppState._wishesKey,
+      PigioAppState._groupsKey,
+      PigioAppState._eventsKey,
+      PigioAppState._sizesKey,
+      PigioAppState._giftPotsKey,
+      PigioAppState._pollsKey,
+      PigioAppState._personalityProfileKey,
+    ]) {
+      try {
+        await PigioAppState._secureStorage.delete(key: key);
+      } catch (_) {}
+    }
+
+    notifyListeners();
+    await _saveDataNow();
+  }
+
   /// Clear all local data without touching the backend.
   void clearData() {
     _wishes.clear();
@@ -12,10 +142,13 @@ extension AccountExtension on PigioAppState {
     _events.clear();
     _sizes.clear();
     _giftPots.clear();
+    _polls.clear();
     _activityLogs.clear();
     _recentProfiles.clear();
+    _pendingInvites.clear();
     _notifications.clear();
     _unseenNotificationsCount = 0;
+    _unseenLogsCount = 0;
     notifyListeners();
     _saveData();
   }

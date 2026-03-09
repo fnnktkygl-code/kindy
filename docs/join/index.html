@@ -59,7 +59,7 @@
     <p class="subtitle" id="invite-subtitle"></p>
     <a class="btn btn-primary" id="open-app" href="#">J'ai déjà l'app → Ouvrir</a>
     <a class="btn btn-secondary" id="download-ios" href="https://apps.apple.com/app/pigio/id0000000000" target="_blank">📱 Télécharger sur l'App Store</a>
-    <a class="btn btn-secondary" id="download-android" href="https://play.google.com/store/apps/details?id=com.pigio.app" target="_blank">📱 Télécharger sur le Play Store</a>
+    <a class="btn btn-secondary" id="download-android" href="https://play.google.com/store/apps/details?id=app.pigio.android" target="_blank">📱 Télécharger sur le Play Store</a>
   </div>
 
   <div class="card hidden" id="expired">
@@ -109,7 +109,7 @@
         // Deep link to app
         const safeToken = encodeURIComponent(inviteToken);
         const deepLink = `pigio://invite?token=${safeToken}`;
-        const androidIntent = `intent://invite?token=${safeToken}#Intent;scheme=pigio;package=com.example.pigio.pigio_app;end`;
+        const androidIntent = `intent://invite?token=${safeToken}#Intent;scheme=pigio;package=app.pigio.android;end`;
         const openHref = isAndroid ? androidIntent : deepLink;
         const openBtn = document.getElementById('open-app');
         openBtn.href = openHref;

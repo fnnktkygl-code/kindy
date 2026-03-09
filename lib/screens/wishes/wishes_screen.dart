@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:pigio_app/core/config/constants.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 import 'package:pigio_app/core/i18n/i18n.dart';
@@ -44,6 +45,8 @@ class WishesScreen extends StatefulWidget {
 
 class _WishesScreenState extends State<WishesScreen> {
   String _currentTab = "grid";
+  WishPriority? _priorityFilter;
+  bool? _reservedFilter; // null=all, true=reserved, false=unreserved
 
   // Scrapbook tab pills
   Widget _buildTab(String id, String label, PigioThemeData theme) {
@@ -79,7 +82,7 @@ class _WishesScreenState extends State<WishesScreen> {
 
   ImageProvider? _getImageProvider(String? path) {
     if (path == null || path.isEmpty || path == 'null') return null;
-    if (path.startsWith('http')) return NetworkImage(path);
+    if (path.startsWith('http')) return CachedNetworkImageProvider(path);
     final file = File(path);
     if (file.existsSync()) return FileImage(file);
     return null;
@@ -181,13 +184,62 @@ class _WishesScreenState extends State<WishesScreen> {
                   ),
                   const SizedBox(height: 18),
 
+                  // ── Filter chips (grid tab only) ──────────────────────
+                  if (_currentTab == "grid" && wishes.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 14, right: 14, bottom: 12),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _buildFilterChip(null, '🎯 Tout', theme,
+                                isActive: _priorityFilter == null && _reservedFilter == null,
+                                onTap: () => setState(() {
+                                  _priorityFilter = null;
+                                  _reservedFilter = null;
+                                })),
+                            const SizedBox(width: 6),
+                            _buildFilterChip(WishPriority.high, '🔥 Priorité', theme,
+                                isActive: _priorityFilter == WishPriority.high,
+                                onTap: () => setState(() {
+                                  _priorityFilter = _priorityFilter == WishPriority.high ? null : WishPriority.high;
+                                })),
+                            const SizedBox(width: 6),
+                            _buildFilterChip(WishPriority.medium, '⭐ Normal', theme,
+                                isActive: _priorityFilter == WishPriority.medium,
+                                onTap: () => setState(() {
+                                  _priorityFilter = _priorityFilter == WishPriority.medium ? null : WishPriority.medium;
+                                })),
+                            const SizedBox(width: 6),
+                            _buildFilterChip(WishPriority.low, '💤 Pas pressé', theme,
+                                isActive: _priorityFilter == WishPriority.low,
+                                onTap: () => setState(() {
+                                  _priorityFilter = _priorityFilter == WishPriority.low ? null : WishPriority.low;
+                                })),
+                            const SizedBox(width: 6),
+                            _buildFilterChip(null, '✅ Réservé', theme,
+                                isActive: _reservedFilter == true,
+                                onTap: () => setState(() {
+                                  _reservedFilter = _reservedFilter == true ? null : true;
+                                })),
+                            const SizedBox(width: 6),
+                            _buildFilterChip(null, '🎁 Libre', theme,
+                                isActive: _reservedFilter == false,
+                                onTap: () => setState(() {
+                                  _reservedFilter = _reservedFilter == false ? null : false;
+                                })),
+                          ],
+                        ),
+                      ),
+                    ),
+
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: _currentTab == "grid"
-                        ? (wishes.isEmpty
+                        ? (wishes.isEmpty && _reservedFilter != true
                         ? _buildEmptyState(theme)
                         : _buildSmartMasonryGrid(
-                        wishes, theme,
+                        _applyWishFilters(wishes, context.read<PigioAppState>()), theme,
                         context.read<PigioAppState>(),
                         surpriseMode))
                         : _currentTab == "pots"
@@ -205,6 +257,61 @@ class _WishesScreenState extends State<WishesScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Wish Filters ──────────────────────────────────────────────────────────
+
+  List<Wish> _applyWishFilters(List<Wish> wishes, PigioAppState state) {
+    var filtered = wishes;
+    if (_priorityFilter != null) {
+      filtered = filtered.where((w) => w.priority == _priorityFilter).toList();
+    }
+    if (_reservedFilter != null) {
+      if (_reservedFilter!) {
+        // Show own reserved wishes + wishes from contacts that the user reserved
+        final ownReserved = filtered.where((w) => w.reservedById != null).toList();
+        final ownIds = ownReserved.map((w) => w.id).toSet();
+        final contactReserved = state.wishes
+            .where((w) => w.contactId != null && w.reservedById == 'self' && !ownIds.contains(w.id))
+            .toList();
+        filtered = [...ownReserved, ...contactReserved];
+      } else {
+        filtered = filtered.where((w) => w.reservedById == null).toList();
+      }
+    }
+    return filtered;
+  }
+
+  Widget _buildFilterChip(
+    WishPriority? priority,
+    String label,
+    PigioThemeData theme, {
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? theme.accent2.withAlpha(30) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isActive ? theme.accent2 : theme.divider,
+            width: 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: fw(
+            size: 12,
+            w: FontWeight.w700,
+            color: isActive ? theme.accent2 : theme.mid,
+          ),
+        ),
       ),
     );
   }

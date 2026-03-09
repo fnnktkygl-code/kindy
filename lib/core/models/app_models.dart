@@ -36,6 +36,7 @@ enum InviteBlockReason {
 enum InviteChannel { sms, whatsApp, copyLink, backendDispatch }
 enum PendingInviteState { pending, accepted, expired, revoked }
 enum ClothingSlot { hat, glasses, top, scarf, shoes, accessory }
+enum ItemRarity { common, uncommon, rare, legendary }
 enum TrustLevel { family, friend, public_ }
 enum WizzEffectMode { phase1, phase2 }
 enum GiftPotMode { amount, share }
@@ -48,17 +49,29 @@ class ClothingItem {
   final String name;
   final String emoji;
   final ClothingSlot slot;
+  final ItemRarity rarity;
   final bool isUnlocked;
   final String? unlockHint;
+  final String? season;
+  final List<String> tags;
+  /// If non-null, this item is only available until this date (limited-time).
+  final DateTime? expiresAt;
 
   const ClothingItem({
     required this.id,
     required this.name,
     required this.emoji,
     required this.slot,
+    this.rarity = ItemRarity.common,
     this.isUnlocked = true,
     this.unlockHint,
+    this.season,
+    this.tags = const [],
+    this.expiresAt,
   });
+
+  /// Whether this limited-time item is still available.
+  bool get isAvailable => expiresAt == null || DateTime.now().isBefore(expiresAt!);
 }
 
 class ClothingRequest {
@@ -73,6 +86,77 @@ class ClothingRequest {
     required this.bubbleTextFr,
     required this.contextHint,
   });
+}
+
+class OutfitPreset {
+  final String id;
+  final String name;
+  final String emoji;
+  final Map<ClothingSlot, String?> outfit;
+
+  const OutfitPreset({
+    required this.id,
+    required this.name,
+    required this.emoji,
+    required this.outfit,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'name': name,
+    'emoji': emoji,
+    'outfit': outfit.map((k, v) => MapEntry(k.name, v)),
+  };
+
+  factory OutfitPreset.fromMap(Map<String, dynamic> m) {
+    final outfitRaw = m['outfit'] as Map<String, dynamic>? ?? {};
+    final outfit = <ClothingSlot, String?>{};
+    outfitRaw.forEach((k, v) {
+      final slot = ClothingSlot.values.firstWhere(
+        (s) => s.name == k, orElse: () => ClothingSlot.accessory);
+      if (v is String) outfit[slot] = v;
+    });
+    return OutfitPreset(
+      id: m['id'] as String? ?? '',
+      name: m['name'] as String? ?? '',
+      emoji: m['emoji'] as String? ?? '👔',
+      outfit: outfit,
+    );
+  }
+}
+
+// ─── Mascot Memory ───────────────────────────────────────────────────────────
+
+class MascotMemory {
+  final String id;
+  final String emoji;
+  final String titleFr;
+  final String titleEn;
+  final DateTime timestamp;
+
+  const MascotMemory({
+    required this.id,
+    required this.emoji,
+    required this.titleFr,
+    required this.titleEn,
+    required this.timestamp,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'emoji': emoji,
+    'titleFr': titleFr,
+    'titleEn': titleEn,
+    'timestamp': timestamp.toIso8601String(),
+  };
+
+  factory MascotMemory.fromMap(Map<String, dynamic> m) => MascotMemory(
+    id: m['id'] as String? ?? '',
+    emoji: m['emoji'] as String? ?? '🐧',
+    titleFr: m['titleFr'] as String? ?? '',
+    titleEn: m['titleEn'] as String? ?? '',
+    timestamp: DateTime.tryParse(m['timestamp'] as String? ?? '') ?? DateTime.now(),
+  );
 }
 
 // ─── Wish ────────────────────────────────────────────────────────────────────
@@ -122,8 +206,8 @@ class Wish {
       };
 
   factory Wish.fromMap(Map<String, dynamic> map) => Wish(
-        id: map['id'] as String,
-        title: map['title'] as String,
+        id: (map['id'] as String?) ?? '',
+        title: (map['title'] as String?) ?? '',
         emoji: (map['emoji'] as String?) ?? '🎁',
         url: map['url'] as String?,
         imageUrl: map['imageUrl'] as String?,
@@ -278,11 +362,11 @@ class ContactProfile {
       trust = TrustLevel.family;
     }
     return ContactProfile(
-      id: map['id'] as String,
-      name: map['name'] as String,
-      role: map['role'] as String,
-      avatarName: map['avatarName'] as String,
-      color: Color(map['color'] as int),
+      id: (map['id'] as String?) ?? '',
+      name: (map['name'] as String?) ?? '',
+      role: (map['role'] as String?) ?? '',
+      avatarName: (map['avatarName'] as String?) ?? 'default',
+      color: Color((map['color'] as int?) ?? 0xFF9E9E9E),
       trustLevel: trust,
       birthdate: map['birthdate'] as String?,
       address: map['address'] as String?,
@@ -292,7 +376,7 @@ class ContactProfile {
       hideMondialRelay: map['hideMondialRelay'] as bool? ?? false,
       avatarIcon: map['avatarIcon'] as String?,
       avatarColor:
-          map['avatarColor'] != null ? Color(map['avatarColor'] as int) : null,
+          map['avatarColor'] != null ? Color((map['avatarColor'] as int?) ?? 0xFF9E9E9E) : null,
       managedProfile:
           map['managedProfile'] as bool? ?? map['isManaged'] as bool? ?? true,
       status: map['status'] != null
@@ -352,8 +436,8 @@ class CircleGroup {
         .map((entry) => entry.key)
         .toList();
     return CircleGroup(
-      id: map['id'] as String,
-      name: map['name'] as String,
+      id: (map['id'] as String?) ?? '',
+      name: (map['name'] as String?) ?? '',
       emoji: map['emoji'] as String? ?? '👥',
       contactIds: List<String>.from(map['contactIds'] ?? []),
       isSystem: (map['isSystem'] as bool?) ?? isOldFamille,
@@ -433,10 +517,10 @@ class PendingInvite {
       };
 
   factory PendingInvite.fromMap(Map<String, dynamic> map) => PendingInvite(
-        id: map['id'] as String,
-        tokenId: map['tokenId'] as String,
-        inviterId: map['inviterId'] as String,
-        contactId: map['contactId'] as String,
+        id: (map['id'] as String?) ?? '',
+        tokenId: (map['tokenId'] as String?) ?? '',
+        inviterId: (map['inviterId'] as String?) ?? '',
+        contactId: (map['contactId'] as String?) ?? '',
         groupId: map['groupId'] as String?,
         channel: InviteChannel.values.firstWhere(
           (e) => e.name == map['channel'],
@@ -529,14 +613,14 @@ class Event {
       eventDate = DateTime.now().add(Duration(days: days));
     }
     return Event(
-      id: map['id'] as String,
-      title: map['title'] as String,
-      typeEn: map['typeEn'] as String,
-      typeFr: map['typeFr'] as String,
+      id: (map['id'] as String?) ?? '',
+      title: (map['title'] as String?) ?? '',
+      typeEn: (map['typeEn'] as String?) ?? '',
+      typeFr: (map['typeFr'] as String?) ?? '',
       date: eventDate,
       isRecurring: map['isRecurring'] as bool? ?? false,
-      emoji: map['emoji'] as String,
-      color: Color(map['color'] as int),
+      emoji: (map['emoji'] as String?) ?? '📅',
+      color: Color((map['color'] as int?) ?? 0xFF9E9E9E),
       percent: (map['percent'] as num?)?.toDouble() ?? 0.0,
       contactId: map['contactId'] as String?,
       groupId: map['groupId'] as String?,
@@ -570,9 +654,9 @@ class ActivityLog {
       };
 
   factory ActivityLog.fromMap(Map<String, dynamic> map) => ActivityLog(
-        id: map['id'] as String,
-        title: map['title'] as String,
-        emoji: map['emoji'] as String,
+        id: (map['id'] as String?) ?? '',
+        title: (map['title'] as String?) ?? '',
+        emoji: (map['emoji'] as String?) ?? '📋',
         timestamp: DateTime.tryParse(map['timestamp']?.toString() ?? '') ?? DateTime.now(),
         contactId: map['contactId'] as String?,
       );
@@ -608,8 +692,10 @@ class SizeProfile {
 
   factory SizeProfile.fromMap(Map<String, dynamic> map) => SizeProfile(
         contactId: map['contactId'] as String?,
-        categoryKey: map['categoryKey'] as String,
-        values: Map<String, String>.from(map['values'] as Map),
+        categoryKey: (map['categoryKey'] as String?) ?? '',
+        values: map['values'] is Map
+            ? Map<String, String>.from(map['values'] as Map)
+            : <String, String>{},
         fitKey: map['fitKey'] as String?,
         visibilityKey: (map['visibilityKey'] as String?) ?? 'full_access',
         updatedAt:
@@ -681,7 +767,7 @@ class UserProfile {
         hideMondialRelay: map['hideMondialRelay'] as bool? ?? false,
         avatarIcon: map['avatarIcon'] as String?,
         avatarColor: map['avatarColor'] != null
-            ? Color(map['avatarColor'] as int)
+            ? Color((map['avatarColor'] as int?) ?? 0xFF9E9E9E)
             : null,
         fcmToken: map['fcmToken'] as String?,
       );
@@ -720,11 +806,11 @@ class GiftContribution {
 
   factory GiftContribution.fromMap(Map<String, dynamic> map) =>
       GiftContribution(
-        id: map['id'] as String,
-        potId: map['potId'] as String,
-        contributorId: map['contributorId'] as String,
-        contributorName: map['contributorName'] as String,
-        amount: (map['amount'] as num).toDouble(),
+        id: (map['id'] as String?) ?? '',
+        potId: (map['potId'] as String?) ?? '',
+        contributorId: (map['contributorId'] as String?) ?? '',
+        contributorName: (map['contributorName'] as String?) ?? '',
+        amount: (map['amount'] as num?)?.toDouble() ?? 0.0,
         contributedAt: map['contributedAt'] != null
             ? DateTime.tryParse(map['contributedAt'].toString())
             : null,
@@ -801,13 +887,13 @@ class GiftPot {
       };
 
   factory GiftPot.fromMap(Map<String, dynamic> map) => GiftPot(
-        id: map['id'] as String,
-        creatorId: map['creatorId'] as String,
-        title: map['title'] as String,
+        id: (map['id'] as String?) ?? '',
+        creatorId: (map['creatorId'] as String?) ?? '',
+        title: (map['title'] as String?) ?? '',
         emoji: (map['emoji'] as String?) ?? '🎁',
         description: map['description'] as String?,
         wishId: map['wishId'] as String?,
-        recipientContactId: map['recipientContactId'] as String,
+        recipientContactId: (map['recipientContactId'] as String?) ?? '',
         mode: GiftPotMode.values.firstWhere(
           (e) => e.name == map['mode'],
           orElse: () => GiftPotMode.amount,
@@ -816,7 +902,7 @@ class GiftPot {
           (e) => e.name == map['status'],
           orElse: () => GiftPotStatus.open,
         ),
-        targetAmount: (map['targetAmount'] as num).toDouble(),
+        targetAmount: (map['targetAmount'] as num?)?.toDouble() ?? 0.0,
         isSurprise: map['isSurprise'] as bool? ?? true,
         invitedContactIds: List<String>.from(map['invitedContactIds'] ?? []),
         contributions: (map['contributions'] as List<dynamic>?)
@@ -880,12 +966,12 @@ class GroupPoll {
       };
 
   factory GroupPoll.fromMap(Map<String, dynamic> map) => GroupPoll(
-        id: map['id'] as String,
-        groupId: map['groupId'] as String,
-        question: map['question'] as String,
+        id: (map['id'] as String?) ?? '',
+        groupId: (map['groupId'] as String?) ?? '',
+        question: (map['question'] as String?) ?? '',
         options: List<String>.from(map['options'] ?? []),
         votes: (map['votes'] as Map<String, dynamic>?)?.map(
-              (k, v) => MapEntry(int.parse(k), List<String>.from(v)),
+              (k, v) => MapEntry(int.tryParse(k) ?? 0, List<String>.from(v)),
             ) ??
             {},
         createdAt: map['createdAt'] != null

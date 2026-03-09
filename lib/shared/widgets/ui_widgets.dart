@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:pigio_app/core/config/constants.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 import 'package:pigio_app/core/theme/pigio_theme.dart';
-import 'package:pigio_app/screens/activity/activity_history_screen.dart';
+import 'package:pigio_app/screens/notifications/notification_inbox_screen.dart';
 
 class PigioAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -24,7 +25,7 @@ class PigioAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final state = Provider.of<PigioAppState>(context);
-    final notifCount = state.unseenLogsCount;
+    final notifCount = state.unseenLogsCount + state.unseenNotificationsCount;
     final canPop = Navigator.of(context).canPop();
     final shouldShowBack = showBack || (autoShowBackFromCanPop && canPop);
     final theme = context.pt;
@@ -91,9 +92,7 @@ class PigioAppBar extends StatelessWidget implements PreferredSizeWidget {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(14),
                   onTap: () {
-                    final currentCount = state.unseenLogsCount;
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => ActivityHistoryScreen(initialUnseenCount: currentCount)));
-                    state.clearUnseenLogs();
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationInboxScreen()));
                   },
                   child: Container(
                     width: 44, height: 44,
@@ -366,12 +365,12 @@ class PigioAvatar extends StatelessWidget {
         );
       } else if (avatarIcon!.startsWith('http')) {
         content = ClipOval(
-          child: Image.network(
-            avatarIcon!,
+          child: CachedNetworkImage(
+            imageUrl: avatarIcon!,
             width: size,
             height: size,
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => _buildInitials(initials, displayColor, theme),
+            errorWidget: (context, url, error) => _buildInitials(initials, displayColor, theme),
           ),
         );
       } else {

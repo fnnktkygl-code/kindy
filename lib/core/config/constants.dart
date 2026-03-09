@@ -6,9 +6,13 @@ class AppMeta {
 }
 
 class MondialRelayConfig {
-  // Brand ID for Mondial Relay. 
-  // 'BDTEST13' is the public demo account.
-  static const String brandId = 'BDTEST';
+  // Brand ID for Mondial Relay.
+  // IMPORTANT: Replace with your production brand ID before Play Store release.
+  // 'BDTEST' is the public demo/sandbox account.
+  static const String brandId = String.fromEnvironment(
+    'MONDIAL_RELAY_BRAND_ID',
+    defaultValue: 'BDTEST',
+  );
 }
 
 class AppColors {

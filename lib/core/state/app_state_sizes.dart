@@ -54,6 +54,9 @@ extension SizesExtension on PigioAppState {
     String? fitKey,
     String visibilityKey = 'general_access',
   }) {
+    final hadExisting = _sizes.any(
+      (s) => s.categoryKey == categoryKey && s.contactId == contactId,
+    );
     final cleanValues = <String, String>{};
     for (final entry in values.entries) {
       final v = entry.value.trim();
@@ -99,6 +102,12 @@ extension SizesExtension on PigioAppState {
             'sizes_updated',
             '${_profile.name} a mis à jour ses tailles.',
           ));
+      awardMascotProgress(
+        hadExisting ? 3 : 7,
+        emoji: hadExisting ? null : '📏',
+        titleFr: hadExisting ? null : 'Premiere taille enregistree',
+        titleEn: hadExisting ? null : 'First size profile saved',
+      );
     }
   }
 }

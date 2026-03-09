@@ -81,6 +81,12 @@ extension GiftPotsExtension on PigioAppState {
     _saveData();
     logActivity('Cagnotte créée : $title', '🎉',
         contactId: recipientContactId);
+    awardMascotProgress(
+      10,
+      emoji: '🤝',
+      titleFr: 'Cagnotte lancee avec Pigio',
+      titleEn: 'Gift pot launched with Pigio',
+    );
 
     // Notify invited contacts (exclude recipient if surprise)
     for (final contactId in invitedContactIds) {

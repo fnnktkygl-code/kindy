@@ -1,6 +1,5 @@
 import 'package:pigio_app/core/theme/pigio_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:pigio_app/core/config/constants.dart';
 import 'package:pigio_app/core/state/app_state.dart';
@@ -29,7 +28,6 @@ class ContactsScreen extends StatefulWidget {
 
 class _ContactsScreenState extends State<ContactsScreen> {
   String _search = '';
-  final Map<String, int> _incomingWizzNonceByContact = {};
 
   List<_ContactCardData> _cachedData = [];
   String? _highlightContactId;
@@ -60,20 +58,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
         state.clearInviteFocusContactId();
       });
     }
-    _syncIncomingWizzEffects(state);
     _recomputeData();
-  }
-
-  void _syncIncomingWizzEffects(PigioAppState state) {
-    final targets = state.consumeIncomingWizzContactIds();
-    if (targets.isEmpty) return;
-    if (!mounted) return;
-    setState(() {
-      for (final contactId in targets) {
-        _incomingWizzNonceByContact[contactId] =
-            (_incomingWizzNonceByContact[contactId] ?? 0) + 1;
-      }
-    });
   }
 
   void _recomputeData() {
@@ -344,6 +329,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
               : ListView.builder(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 120),
             itemCount: filtered.length,
+            addAutomaticKeepAlives: false,
             itemBuilder: (context, index) {
               final d = filtered[index];
               return _buildContactCard(d, state, theme);
@@ -462,12 +448,9 @@ class _ContactsScreenState extends State<ContactsScreen> {
   Widget _buildContactCard(_ContactCardData d, PigioAppState state, PigioThemeData theme) {
     final c = d.contact;
     final isHighlighted = _highlightContactId != null && _highlightContactId == c.id;
-    final incomingWizzNonce = _incomingWizzNonceByContact[c.id] ?? 0;
-
     final card = _ContactCard(
       data: d,
       isHighlighted: isHighlighted,
-      incomingWizzNonce: incomingWizzNonce,
       wizzEffectMode: state.wizzEffectMode,
       onTap: () {
         if (isHighlighted) setState(() => _highlightContactId = null);
@@ -541,14 +524,12 @@ class _ContactsScreenState extends State<ContactsScreen> {
 class _ContactCard extends StatefulWidget {
   final _ContactCardData data;
   final bool isHighlighted;
-  final int incomingWizzNonce;
   final WizzEffectMode wizzEffectMode;
   final VoidCallback onTap;
 
   const _ContactCard({
     required this.data,
     required this.isHighlighted,
-    required this.incomingWizzNonce,
     required this.wizzEffectMode,
     required this.onTap,
   });
@@ -561,7 +542,6 @@ class _ContactCardState extends State<_ContactCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _shakeCtrl;
   late final Animation<double> _shakeAnim;
-  bool _showWizzBadge = false;
 
   @override
   void initState() {
@@ -589,20 +569,6 @@ class _ContactCardState extends State<_ContactCard>
   @override
   void didUpdateWidget(covariant _ContactCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.incomingWizzNonce != oldWidget.incomingWizzNonce) {
-      HapticFeedback.mediumImpact();
-      _triggerShake();
-    }
-  }
-
-  void _triggerShake() {
-    _shakeCtrl.forward(from: 0);
-    if (widget.wizzEffectMode == WizzEffectMode.phase2) {
-      setState(() => _showWizzBadge = true);
-      Future.delayed(const Duration(milliseconds: 1200), () {
-        if (mounted) setState(() => _showWizzBadge = false);
-      });
-    }
   }
 
   void _openWizz(BuildContext context) {
@@ -646,16 +612,6 @@ class _ContactCardState extends State<_ContactCard>
                       : theme.divider.withValues(alpha: 0.5),
                   width: widget.isHighlighted ? 2 : 1,
                 ),
-                boxShadow: _showWizzBadge
-                    ? [
-                        BoxShadow(
-                          color: theme.accent1.withValues(alpha: 0.28),
-                          blurRadius: 16,
-                          spreadRadius: 1,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                    : null,
               ),
               child: Row(
                 children: [
@@ -730,22 +686,6 @@ class _ContactCardState extends State<_ContactCard>
                 ],
               ),
             ),
-            if (_showWizzBadge)
-              Positioned(
-                top: 4,
-                right: 14,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: theme.accent1,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '⚡ WIZZ !',
-                    style: fw(size: 10, w: FontWeight.w900, color: theme.onAccent),
-                  ),
-                ),
-              ),
           ],
         ),
       ),

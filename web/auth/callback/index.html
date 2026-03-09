@@ -54,7 +54,7 @@
   <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script>
     const SUPABASE_URL = 'https://rlghoamehiqlqzjdyxcg.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsZ2hvYW1laGlxbHF6amR5eGNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNzAxNTIsImV4cCI6MjA4Njk0NjE1Mn0.ET3FWND1kuKWytUzR2G8mXS230qssvO39R_JCef_IUw';
+    const SUPABASE_ANON_KEY = 'sb_publishable_aNsp_NzdpKG1dhbgPKBUTg_uE-67d13';
 
     async function handleCallback() {
       try {
@@ -69,7 +69,7 @@
           show('success');
           // Try to redirect to app
           setTimeout(() => {
-            window.location.href = 'com.pigio.app://auth/callback';
+            window.location.href = 'pigio://auth/callback';
           }, 2000);
         } else {
           show('error');

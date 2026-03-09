@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:pigio_app/core/config/constants.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 import 'package:pigio_app/shared/widgets/ui_widgets.dart';
+import 'package:pigio_app/core/i18n/i18n.dart';
 
 class AddGroupSheet extends StatefulWidget {
   final List<String>? preSelectedContactIds;
@@ -46,7 +47,7 @@ class _AddGroupSheetState extends State<AddGroupSheet> {
       (g) => g.name.toLowerCase() == name.toLowerCase(),
     );
     if (alreadyExists) {
-      setState(() => _nameError = 'Un cercle "$name" existe déjà.');
+      setState(() => _nameError = t(context, 'circle_duplicate').replaceAll('\$name', name));
       return;
     }
 

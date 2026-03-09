@@ -1,21 +1,63 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 import 'auth_screen.dart';
-import '../../app_shell/main_shell.dart';
-import 'onboarding/onboarding_shell.dart';
+import '../../shared/auth_navigator.dart';
 
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class AuthWelcomeScreen extends StatelessWidget {
+class AuthWelcomeScreen extends StatefulWidget {
   const AuthWelcomeScreen({super.key});
+
+  @override
+  State<AuthWelcomeScreen> createState() => _AuthWelcomeScreenState();
+}
+
+class _AuthWelcomeScreenState extends State<AuthWelcomeScreen> {
+  StreamSubscription<AuthState>? _authSub;
+  bool _oauthLoading = false;
+  String? _lastEmail;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastEmail();
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (!mounted) return;
+      if (data.event == AuthChangeEvent.signedIn && data.session != null) {
+        AuthNavigator.handleSignIn(
+          context,
+          data.session!,
+          onComplete: () { if (mounted) setState(() => _oauthLoading = false); },
+        );
+      }
+    });
+  }
+
+  Future<void> _loadLastEmail() async {
+    final email = await AuthNavigator.loadLastEmail();
+    if (mounted && email != null && email.isNotEmpty) {
+      setState(() => _lastEmail = email);
+    }
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
+  }
+
+  // _handleOAuthSignIn is now handled by AuthNavigator.handleSignIn in the auth listener above.
 
   @override
   Widget build(BuildContext context) {
     final pt = context.watch<PigioAppState>().currentTheme;
+    final isAuthenticated = Supabase.instance.client.auth.currentUser != null;
 
     return Scaffold(
       backgroundColor: pt.scaffold,
@@ -37,7 +79,7 @@ class AuthWelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               Text(
-                "Prêt à ne plus jamais rater un cadeau parfait ?",
+                "Prends soin de tes proches, simplement.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 24,
@@ -46,80 +88,72 @@ class AuthWelcomeScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 48),
-              
-              // Apple Sign In — iOS only
-              if (Platform.isIOS) ...[
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    try {
-                      await Supabase.instance.client.auth.signInWithOAuth(
-                        OAuthProvider.apple,
-                        redirectTo: 'com.pigio.app://auth/callback',
-                      );
-                    } catch (e) {
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Erreur: ${e.toString()}')),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.apple, color: Colors.white),
-                  label: const Text('Continuer avec Apple'),
-                  style: ElevatedButton.styleFrom(
+
+              // Show last email for returning users
+              if (_lastEmail != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: pt.card,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.person_outline, size: 18, color: pt.ink.withValues(alpha: 0.6)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Dernier compte: $_lastEmail',
+                          style: TextStyle(fontSize: 13, color: pt.ink.withValues(alpha: 0.6)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // Loading indicator for OAuth
+              if (_oauthLoading) ...[
+                const SizedBox(height: 16),
+                const Center(child: CircularProgressIndicator()),
+                const SizedBox(height: 16),
+              ] else ...[
+                // Apple Sign In — iOS only
+                if (Platform.isIOS) ...[
+                  _SocialButton(
+                    onPressed: () => _signInWithOAuth(context, OAuthProvider.apple),
+                    icon: Icons.apple,
+                    label: 'Continuer avec Apple',
                     backgroundColor: Colors.black,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
                   ),
+                  const SizedBox(height: 12),
+                ],
+                
+                // Google Sign In — all platforms
+                _SocialButton(
+                  onPressed: () => _signInWithOAuth(context, OAuthProvider.google),
+                  icon: Icons.g_mobiledata,
+                  iconSize: 32,
+                  label: 'Continuer avec Google',
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  borderColor: Colors.grey.shade300,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
               ],
               
-              // Google Sign In — not yet configured for Android
-              if (!Platform.isAndroid) ...[
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    try {
-                      await Supabase.instance.client.auth.signInWithOAuth(
-                        OAuthProvider.google,
-                        redirectTo: 'com.pigio.app://auth/callback',
-                        queryParams: {
-                          'prompt': 'select_account',
-                        },
-                      );
-                    } catch (e) {
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Erreur: ${e.toString()}')),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.g_mobiledata, color: Colors.black, size: 32),
-                  label: const Text('Continuer avec Google'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: Colors.grey.shade300),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-              
-              // Email Sign In
+              // Email — single entry point (defaults to sign-up)
               ElevatedButton.icon(
                 onPressed: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AuthScreen()),
+                    MaterialPageRoute(builder: (_) => const AuthScreen(mode: AuthScreenMode.signUp)),
                   );
                 },
                 icon: const Icon(Icons.email_outlined),
-                label: const Text('Continuer avec l\'email'),
+                label: const Text('Continuer avec Email'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: pt.primary,
                   foregroundColor: Colors.white,
@@ -129,36 +163,33 @@ class AuthWelcomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              
-              const SizedBox(height: 8),
 
-              // Guest mode
+              const SizedBox(height: 16),
+
+              // Sign-in link for returning users
               TextButton(
                 onPressed: () {
-                  final state = context.read<PigioAppState>();
-                  final Widget next = state.needsOnboarding
-                      ? const OnboardingShell()
-                      : const MainShell();
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => next),
-                    (route) => false,
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AuthScreen(mode: AuthScreenMode.signIn)),
                   );
                 },
                 child: Text(
-                  'Continuer sans compte',
+                  'Déjà un compte ? Se connecter',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: pt.ink.withValues(alpha: 0.5),
+                    color: pt.primary,
                     fontSize: 14,
-                    decoration: TextDecoration.underline,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
+              
 
               const Spacer(),
               
               // Terms
               GestureDetector(
-                onTap: () => launchUrl(Uri.parse('https://pigio.app/privacy/')),
+                onTap: () => launchUrl(Uri.parse('https://fnnktkygl-code.github.io/pigio-app/privacy/')),
                 child: Text.rich(
                   TextSpan(
                     text: "En continuant, vous acceptez nos ",
@@ -183,6 +214,57 @@ class AuthWelcomeScreen extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _signInWithOAuth(BuildContext context, OAuthProvider provider) async {
+    setState(() => _oauthLoading = true);
+    await AuthNavigator.signInWithOAuth(context, provider);
+    // If OAuth fails (error snackbar shown by AuthNavigator), reset loading.
+    // On success, the auth listener above handles navigation.
+    if (mounted && _oauthLoading) {
+      // Still loading means browser opened but user hasn't returned yet — keep spinner.
+    }
+  }
+}
+
+/// Consistent social sign-in button widget.
+class _SocialButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  final IconData icon;
+  final double iconSize;
+  final String label;
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final Color? borderColor;
+
+  const _SocialButton({
+    required this.onPressed,
+    required this.icon,
+    this.iconSize = 24,
+    required this.label,
+    required this.backgroundColor,
+    required this.foregroundColor,
+    this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, color: foregroundColor, size: iconSize),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: backgroundColor,
+        foregroundColor: foregroundColor,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: borderColor != null
+              ? BorderSide(color: borderColor!)
+              : BorderSide.none,
         ),
       ),
     );

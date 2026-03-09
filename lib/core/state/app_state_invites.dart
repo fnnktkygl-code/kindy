@@ -71,6 +71,12 @@ extension InvitesExtension on PigioAppState {
     setMascotMoment(MascotMoment.inviteSent);
     logActivity('Invitation envoyée à ${contact.name}', '📩',
         contactId: contactId);
+    awardMascotProgress(
+      8,
+      emoji: '📩',
+      titleFr: 'Invitation envoyee au cercle',
+      titleEn: 'Circle invitation sent',
+    );
     _saveData();
 
     // Pre-push own profile so the accepter can pull it immediately.
@@ -273,6 +279,12 @@ extension InvitesExtension on PigioAppState {
 
     notifyListeners();
     _saveData();
+    awardMascotProgress(
+      14,
+      emoji: '🎉',
+      titleFr: 'Invitation acceptee',
+      titleEn: 'Invitation accepted',
+    );
     return true;
   }
 

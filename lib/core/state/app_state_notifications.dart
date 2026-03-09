@@ -4,6 +4,29 @@ part of 'app_state.dart';
 // ─── In-App Notifications & Activity Log ─────────────────────────────────────
 
 extension NotificationsExtension on PigioAppState {
+  bool _isForegroundLifecycle(AppLifecycleState s) => s == AppLifecycleState.resumed;
+
+  void setAppLifecycleState(AppLifecycleState state) {
+    final isForeground = _isForegroundLifecycle(state);
+    if (_appIsForeground == isForeground) return;
+    _appIsForeground = isForeground;
+    if (_appIsForeground) {
+      // Immediate sync on app resume — complements Realtime + fallback timer.
+      Future.microtask(() {
+        _syncPendingInvitesFromServer();
+        _pullContactProfiles();
+        _pushOwnContactProfile();
+        _pullNotifications();
+        fetchWeather();
+      });
+      if (_pendingWizzShakeOnForeground) {
+        _pendingWizzShakeOnForeground = false;
+        _globalWizzNonce++;
+        notifyListeners();
+      }
+    }
+  }
+
   Future<void> _sendNotificationToContact(
     String contactId,
     String type,
@@ -213,9 +236,96 @@ extension NotificationsExtension on PigioAppState {
   void triggerIncomingWizzHaptic() {
     final count = consumeIncomingWizzCountForHaptics();
     if (count > 0) {
-      HapticFeedback.heavyImpact();
-      _globalWizzNonce++;
-      notifyListeners();
+      _playIncomingWizzSound();
+      if (!kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS)) {
+        try {
+          HapticFeedback.heavyImpact();
+        } catch (_) {
+          // Ignore unsupported haptic platforms to keep desktop stable.
+        }
+      }
+      if (_appIsForeground) {
+        _globalWizzNonce++;
+        notifyListeners();
+      } else {
+        _pendingWizzShakeOnForeground = true;
+      }
+    }
+  }
+
+  /// Local test helper: simulates a received Wizz for this account/UI only.
+  void triggerIncomingWizzTest() {
+    _playIncomingWizzSound();
+    _globalWizzNonce++;
+    notifyListeners();
+  }
+
+  void _playIncomingWizzSound() {
+    Future.microtask(() async {
+      try {
+        if (Platform.isMacOS) {
+          await _playIncomingWizzSoundMac();
+          return;
+        }
+
+        _wizzSoundBytes ??= (await rootBundle.load('msn-wizz-sound.mp3')).buffer.asUint8List();
+        await _wizzAudioPlayer.stop();
+        await _wizzAudioPlayer.play(
+          BytesSource(_wizzSoundBytes!),
+          volume: 1.0,
+        );
+        if (_wizzEffectMode == WizzEffectMode.phase2) {
+          await Future.delayed(const Duration(milliseconds: 280));
+          await _wizzAudioPlayer.stop();
+          await _wizzAudioPlayer.play(
+            BytesSource(_wizzSoundBytes!),
+            volume: 1.0,
+          );
+        }
+      } catch (_) {
+        try {
+          await SystemSound.play(SystemSoundType.alert);
+        } catch (_) {
+          // Keep Wizz functional even if sound APIs are unavailable.
+        }
+      }
+    });
+  }
+
+  Future<void> _playIncomingWizzSoundMac() async {
+    final path = await _ensureWizzSoundTempFile();
+    if (path == null) return;
+
+    final burstCount = _wizzEffectMode == WizzEffectMode.phase2 ? 2 : 1;
+    for (int i = 0; i < burstCount; i++) {
+      try {
+        await Process.start('afplay', [path]);
+      } catch (_) {
+        break;
+      }
+      if (i < burstCount - 1) {
+        await Future.delayed(const Duration(milliseconds: 260));
+      }
+    }
+  }
+
+  Future<String?> _ensureWizzSoundTempFile() async {
+    try {
+      final existingPath = _wizzSoundTempPath;
+      if (existingPath != null && await File(existingPath).exists()) {
+        return existingPath;
+      }
+
+      _wizzSoundBytes ??=
+          (await rootBundle.load('msn-wizz-sound.mp3')).buffer.asUint8List();
+      final out = File('${Directory.systemTemp.path}/pigio_wizz_sound.mp3');
+      await out.writeAsBytes(_wizzSoundBytes!, flush: true);
+      _wizzSoundTempPath = out.path;
+      return out.path;
+    } catch (_) {
+      return null;
     }
   }
 

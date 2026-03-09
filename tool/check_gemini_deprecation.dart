@@ -5,7 +5,11 @@ import 'dart:io';
 void main() async {
   print("🔍 Checking Gemini 2.5 Flash deprecation status...");
 
-  const apiKey = 'AIzaSyBDiW6kqGdkDiruFx5EEFwDiufcJwkXDx0';
+  final apiKey = Platform.environment['GEMINI_API_KEY'] ?? '';
+  if (apiKey.isEmpty) {
+    print("⚠️ Set the GEMINI_API_KEY environment variable before running this tool.");
+    exit(1);
+  }
   final uri = Uri.parse('https://generativelanguage.googleapis.com/v1beta/models?key=\$apiKey');
 
   try {

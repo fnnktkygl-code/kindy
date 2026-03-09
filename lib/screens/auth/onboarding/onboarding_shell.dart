@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/shared/widgets/invite_bottom_sheet.dart';
+import 'package:pigio_app/screens/auth/auth_screen.dart';
 import '../../../app_shell/main_shell.dart';
 
 class OnboardingShell extends StatefulWidget {
@@ -16,6 +18,9 @@ class _OnboardingShellState extends State<OnboardingShell> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   
+  // Total steps: Name → Avatar → Wish (with celebration) = 3
+  static const _totalSteps = 3;
+
   // Collected onboarding data
   final _nameController = TextEditingController();
   String? _selectedAvatarIcon;
@@ -31,23 +36,8 @@ class _OnboardingShellState extends State<OnboardingShell> {
   }
 
   void _nextPage() {
-    // Persist name + avatar as soon as we reach the circles (invite) step,
-    // so any invite generated there carries the real user identity.
-    if (_currentPage == 2) {
-      final name = _nameController.text.trim();
-      if (name.isNotEmpty) {
-        final state = context.read<PigioAppState>();
-        final handle = '@${name.toLowerCase().replaceAll(' ', '_')}';
-        state.updateProfile(
-          name: name,
-          handle: handle,
-          memberSince: DateTime.now().year,
-          avatarIcon: _selectedAvatarIcon,
-          avatarColor: _selectedAvatarColor,
-        );
-      }
-    }
-    if (_currentPage < 4) {
+    HapticFeedback.lightImpact();
+    if (_currentPage < _totalSteps - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -57,10 +47,21 @@ class _OnboardingShellState extends State<OnboardingShell> {
     }
   }
 
+  void _previousPage() {
+    if (_currentPage > 0) {
+      HapticFeedback.lightImpact();
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
   void _finishOnboarding() {
+    HapticFeedback.mediumImpact();
     final state = context.read<PigioAppState>();
     
-    // Save name if provided
+    // Save name (required so always non-empty)
     final name = _nameController.text.trim();
     if (name.isNotEmpty) {
       final handle = '@${name.toLowerCase().replaceAll(' ', '_')}';
@@ -87,6 +88,12 @@ class _OnboardingShellState extends State<OnboardingShell> {
     );
   }
 
+  void _openSignIn() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const AuthScreen(mode: AuthScreenMode.signIn)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pt = context.watch<PigioAppState>().currentTheme;
@@ -96,11 +103,43 @@ class _OnboardingShellState extends State<OnboardingShell> {
       body: SafeArea(
         child: Column(
           children: [
+            // Top actions
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+              child: Row(
+                children: [
+                  // Back button (visible on step 2+)
+                  if (_currentPage > 0)
+                    IconButton(
+                      onPressed: _previousPage,
+                      icon: Icon(Icons.arrow_back_ios, size: 20, color: pt.ink),
+                    )
+                  else
+                    const SizedBox(width: 48),
+                  const Spacer(),
+                  // Only show "Se connecter" if user is NOT authenticated
+                  if (Supabase.instance.client.auth.currentUser == null)
+                    TextButton.icon(
+                      onPressed: _openSignIn,
+                      icon: const Icon(Icons.login, size: 18),
+                      label: const Text('Se connecter'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: pt.primary,
+                        textStyle: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
             // Progress Bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
               child: LinearProgressIndicator(
-                value: (_currentPage + 1) / 5,
+                value: (_currentPage + 1) / _totalSteps,
                 backgroundColor: pt.card,
                 valueColor: AlwaysStoppedAnimation<Color>(pt.primary),
                 minHeight: 8,
@@ -129,10 +168,8 @@ class _OnboardingShellState extends State<OnboardingShell> {
                   ),
                   _StepWishScreen(
                     wishController: _wishController,
-                    onNext: _nextPage,
+                    onFinish: _finishOnboarding,
                   ),
-                  _StepCirclesScreen(onNext: _nextPage),
-                  _StepDoneScreen(onNext: _finishOnboarding),
                 ],
               ),
             ),
@@ -143,7 +180,7 @@ class _OnboardingShellState extends State<OnboardingShell> {
   }
 }
 
-// --- Step 1: Name ---
+// --- Step 1: Name (required) ---
 class _StepNameScreen extends StatelessWidget {
   final TextEditingController nameController;
   final VoidCallback onNext;
@@ -182,18 +219,29 @@ class _StepNameScreen extends StatelessWidget {
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
             style: TextStyle(color: pt.ink, fontSize: 18),
-            onSubmitted: (_) => onNext(),
+            onSubmitted: (_) {
+              if (nameController.text.trim().isNotEmpty) onNext();
+            },
           ),
           const Spacer(),
-          ElevatedButton(
-            onPressed: onNext,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: pt.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Continuer →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          // Button disabled until name is entered
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: nameController,
+            builder: (_, value, __) {
+              final hasName = value.text.trim().isNotEmpty;
+              return ElevatedButton(
+                onPressed: hasName ? onNext : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: pt.primary,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: pt.primary.withValues(alpha: 0.3),
+                  disabledForegroundColor: Colors.white54,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Continuer →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              );
+            },
           ),
         ],
       ),
@@ -395,12 +443,12 @@ class _StepAvatarScreenState extends State<_StepAvatarScreen> {
 }
 
 
-// --- Step 3: First Wish ---
+// --- Step 3: Wish + Finish (replaces old Wish + Circles + Done) ---
 class _StepWishScreen extends StatelessWidget {
   final TextEditingController wishController;
-  final VoidCallback onNext;
+  final VoidCallback onFinish;
 
-  const _StepWishScreen({required this.wishController, required this.onNext});
+  const _StepWishScreen({required this.wishController, required this.onFinish});
 
   @override
   Widget build(BuildContext context) {
@@ -438,147 +486,22 @@ class _StepWishScreen extends StatelessWidget {
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             ),
             style: TextStyle(color: pt.ink),
-            onSubmitted: (_) => onNext(),
+            onSubmitted: (_) => onFinish(),
           ),
           const Spacer(),
           ElevatedButton(
-            onPressed: onNext,
+            onPressed: onFinish,
             style: ElevatedButton.styleFrom(
               backgroundColor: pt.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Ajouter →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: const Text('Découvrir Pigio 🎉', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
           TextButton(
-            onPressed: onNext,
+            onPressed: onFinish,
             child: Text("Passer pour l'instant", style: TextStyle(color: pt.ink.withValues(alpha: 0.6))),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// --- Step 4: Invite Circle ---
-class _StepCirclesScreen extends StatefulWidget {
-  final VoidCallback onNext;
-  const _StepCirclesScreen({required this.onNext});
-
-  @override
-  State<_StepCirclesScreen> createState() => _StepCirclesScreenState();
-}
-
-class _StepCirclesScreenState extends State<_StepCirclesScreen> {
-  void _openInviteSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const InviteBottomSheet(),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final pt = context.watch<PigioAppState>().currentTheme;
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text('👥', style: TextStyle(fontSize: 80), textAlign: TextAlign.center),
-          const SizedBox(height: 32),
-          Text(
-            "Invitez vos proches !",
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: pt.ink),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Partagez vos envies avec votre entourage",
-            style: TextStyle(fontSize: 15, color: pt.ink.withValues(alpha: 0.7)),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: _openInviteSheet,
-            icon: const Icon(Icons.share),
-            label: const Text('Partager une invitation'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: pt.card,
-              foregroundColor: pt.ink,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          const Spacer(),
-          ElevatedButton(
-            onPressed: widget.onNext,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: pt.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Continuer →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ),
-          TextButton(
-            onPressed: widget.onNext,
-            child: Text("Passer", style: TextStyle(color: pt.ink.withValues(alpha: 0.6))),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// --- Step 5: Done ---
-class _StepDoneScreen extends StatelessWidget {
-  final VoidCallback onNext;
-  const _StepDoneScreen({required this.onNext});
-
-  @override
-  Widget build(BuildContext context) {
-    final pt = context.watch<PigioAppState>().currentTheme;
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Spacer(),
-          Center(
-            child: Image.asset(
-              'icon/app_icon.png',
-              width: 120,
-              height: 120,
-            ),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            "Pigio est prêt !",
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: pt.ink),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            "🎉",
-            style: TextStyle(fontSize: 48),
-            textAlign: TextAlign.center,
-          ),
-          const Spacer(),
-          ElevatedButton(
-            onPressed: onNext,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: pt.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Découvrir Pigio →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

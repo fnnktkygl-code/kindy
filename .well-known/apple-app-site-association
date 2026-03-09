@@ -3,7 +3,7 @@
     "details": [
       {
         "appIDs": [
-          "REPLACE_WITH_TEAM_ID.com.example.pigio.pigioApp"
+          "REPLACE_WITH_TEAM_ID.app.pigio.ios"
         ],
         "components": [
           {

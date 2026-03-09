@@ -393,6 +393,7 @@ class _KnowThyselfScreenState extends State<KnowThyselfScreen>
               size: 80,
               scarfColor: state.mascotScarfColor,
               outfit: state.activeOutfit,
+              outfitColors: state.outfitColors,
             ),
           ),
         ),
@@ -493,6 +494,7 @@ class _KnowThyselfScreenState extends State<KnowThyselfScreen>
               size: 120,
               scarfColor: state.mascotScarfColor,
               outfit: state.activeOutfit,
+              outfitColors: state.outfitColors,
             ),
             const SizedBox(height: 20),
             Text(

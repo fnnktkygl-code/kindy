@@ -33,6 +33,7 @@ extension ProfileExtension on PigioAppState {
     );
     notifyListeners();
     _saveData();
+    _savePerUserState();
     Future.microtask(_pushOwnContactProfile);
     Future.microtask(() => _sendNotificationToContacts(
           'profile_updated',

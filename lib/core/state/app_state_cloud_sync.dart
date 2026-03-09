@@ -9,7 +9,7 @@ extension CloudSyncExtension on PigioAppState {
     _syncKey = (key != null && key.trim().length >= 16) ? key.trim() : _newId();
     _syncEnabled = true;
     notifyListeners();
-    await _saveData();
+    await _saveDataNow();
     await _pushToCloud();
   }
 
@@ -23,7 +23,7 @@ extension CloudSyncExtension on PigioAppState {
       await _pushToCloud();
     }
     notifyListeners();
-    await _saveData();
+    await _saveDataNow();
     return true;
   }
 

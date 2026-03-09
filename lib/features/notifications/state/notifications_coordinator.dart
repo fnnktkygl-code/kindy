@@ -165,12 +165,14 @@ class NotificationsCoordinator {
     required String title,
     required String body,
     required String type,
+    required String? userJwt,
     required Future<void> Function({
       required String baseUrl,
       required String fcmToken,
       required String title,
       required String body,
       required String type,
+      required String? userJwt,
     }) sender,
   }) {
     if (apiBaseUrl.isEmpty || fcmToken.isEmpty) return Future.value();
@@ -181,8 +183,9 @@ class NotificationsCoordinator {
       title: title,
       body: body,
       type: type,
+      userJwt: userJwt,
     ).catchError((error) {
-      debugPrint('[Pigio] FCM push failed: $error');
+      if (kDebugMode) debugPrint('[Pigio] FCM push failed: $error');
     });
   }
 }

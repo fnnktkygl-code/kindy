@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -6,6 +7,8 @@ import '../../services/fcm_service.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 
 class FcmCoordinator {
+  final List<StreamSubscription> _subscriptions = [];
+
   Future<void> init({
     required PigioAppState state,
     required bool Function() isMounted,
@@ -27,7 +30,9 @@ class FcmCoordinator {
     final token = await messaging.getToken();
     state.updateFcmToken(token);
 
-    messaging.onTokenRefresh.listen(state.updateFcmToken);
+    _subscriptions.add(
+      messaging.onTokenRefresh.listen(state.updateFcmToken),
+    );
 
     Future<void> handleIncomingMessage(
       RemoteMessage message, {
@@ -40,6 +45,8 @@ class FcmCoordinator {
         retries: fromNotificationTap ? 2 : 1,
         triggerWizzHaptic: isWizz,
       );
+      // Piggy-back a contact data pull so the UI is fresh.
+      state.refreshContactDataAll();
     }
 
     final initialMessage = await messaging.getInitialMessage();
@@ -47,13 +54,24 @@ class FcmCoordinator {
       await handleIncomingMessage(initialMessage, fromNotificationTap: true);
     }
 
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-      await handleIncomingMessage(message, fromNotificationTap: false);
-    });
+    _subscriptions.add(
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+        await handleIncomingMessage(message, fromNotificationTap: false);
+      }),
+    );
 
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) async {
-      await handleIncomingMessage(message, fromNotificationTap: true);
-    });
+    _subscriptions.add(
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) async {
+        await handleIncomingMessage(message, fromNotificationTap: true);
+      }),
+    );
+  }
+
+  void dispose() {
+    for (final sub in _subscriptions) {
+      sub.cancel();
+    }
+    _subscriptions.clear();
   }
 
   Future<void> sendPush({
@@ -62,6 +80,7 @@ class FcmCoordinator {
     required String title,
     required String body,
     required String type,
+    required String? userJwt,
   }) {
     return FcmService.sendPush(
       baseUrl: baseUrl,
@@ -69,6 +88,7 @@ class FcmCoordinator {
       title: title,
       body: body,
       type: type,
+      userJwt: userJwt,
     );
   }
 }

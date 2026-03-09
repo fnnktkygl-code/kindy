@@ -1,6 +1,63 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { json } from '../_shared/response.ts';
+import { sha256Hex } from '../_shared/crypto.ts';
+
+/**
+ * Emit a Realtime sync signal so the target user's WebSocket subscription
+ * triggers an immediate pull instead of waiting for the fallback timer.
+ *
+ * Exchange key patterns:
+ *   cprof_inv_<tokenId>       → inviter pushed → notify accepter
+ *   cprof_acc_<tokenId>       → accepter pushed → notify inviter
+ *   notif_cprof_inv_<tokenId> → inviter pushed notif → notify accepter
+ *   notif_cprof_acc_<tokenId> → accepter pushed notif → notify inviter
+ */
+async function emitSyncSignal(
+  admin: ReturnType<typeof createClient>,
+  exchangeKey: string,
+): Promise<void> {
+  // Strip optional notif_ prefix to get the bare exchange key.
+  let bare = exchangeKey;
+  if (bare.startsWith('notif_')) bare = bare.slice(6);
+
+  // Determine direction and extract raw token.
+  let targetColumn: 'accepter_user_id' | 'inviter_id';
+  let rawToken: string;
+
+  if (bare.startsWith('cprof_inv_')) {
+    rawToken = bare.slice('cprof_inv_'.length);
+    targetColumn = 'accepter_user_id'; // inviter pushed → notify accepter
+  } else if (bare.startsWith('cprof_acc_')) {
+    rawToken = bare.slice('cprof_acc_'.length);
+    targetColumn = 'inviter_id'; // accepter pushed → notify inviter
+  } else {
+    return; // Unknown exchange key pattern — skip.
+  }
+
+  if (!rawToken || rawToken.length < 16) return;
+
+  const tokenHash = await sha256Hex(rawToken);
+
+  const { data: invite } = await admin
+    .from('invites')
+    .select(`${targetColumn}`)
+    .eq('token_hash', tokenHash)
+    .eq('status', 'accepted')
+    .maybeSingle();
+
+  const targetUserId = invite?.[targetColumn];
+  if (!targetUserId || typeof targetUserId !== 'string') return;
+  // Skip guest_ IDs — they don't have Realtime subscriptions.
+  if (targetUserId.startsWith('guest_')) return;
+
+  const signalType = exchangeKey.startsWith('notif_') ? 'notification' : 'profile';
+
+  await admin.from('sync_signals').insert({
+    target_user_id: targetUserId,
+    signal_type: signalType,
+  });
+}
 
 /**
  * Cross-device data sync.
@@ -17,6 +74,12 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // ── Payload size guard (1 MB) ──────────────────────────────────
+    const contentLength = Number(req.headers.get('content-length') ?? '0');
+    if (contentLength > 1_048_576) {
+      return json({ error: 'Payload too large' }, 413);
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     if (!supabaseUrl || !serviceRoleKey) {
@@ -107,6 +170,17 @@ Deno.serve(async (req) => {
       if (!exchange) {
         const ok = await requireAuth();
         if (!ok) return json({ error: 'Missing or invalid authorization' }, 401);
+
+        // Rate limit: max 60 pushes per minute per user
+        const { count: recentPushes } = await admin
+          .from('user_data')
+          .select('sync_key', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .gte('updated_at', new Date(Date.now() - 60_000).toISOString());
+
+        if (recentPushes && recentPushes > 60) {
+          return json({ error: 'Rate limit exceeded' }, 429);
+        }
       }
 
       // Check ownership: if this key already exists, it must belong to this user
@@ -141,6 +215,17 @@ Deno.serve(async (req) => {
         .upsert(row, { onConflict: 'sync_key' });
 
       if (error) return json({ error: 'DB error' }, 500);
+
+      // ── Emit Realtime signal for exchange keys ─────────────────────
+      // When a user pushes to an exchange key, notify the OTHER user via
+      // the sync_signals table so their Realtime subscription triggers a pull.
+      if (exchange) {
+        try {
+          await emitSyncSignal(admin, key);
+        } catch {
+          // Signal emission is best-effort; don't fail the push.
+        }
+      }
 
       return json({ ok: true });
     }

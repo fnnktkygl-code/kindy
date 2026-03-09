@@ -26,10 +26,4 @@ export function getCorsHeaders(req: Request): HeadersInit {
   return baseHeaders;
 }
 
-// Kept for backward-compat with existing function imports.
-// Functions that call public endpoints (invite-open, invite-status) may keep
-// using this; functions that mutate data should switch to getCorsHeaders(req).
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+// No wildcard CORS export — all endpoints must use getCorsHeaders(req).
