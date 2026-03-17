@@ -54,6 +54,8 @@ dependencies:
   firebase_messaging: ^15.2.6
   audioplayers: ^6.1.0
   sensors_plus: ^7.0.0
+  in_app_review: ^2.0.10
+  connectivity_plus: ^6.1.4
   cached_network_image: ^3.4.1
   shimmer: ^3.0.0
 
@@ -82,6 +84,7 @@ flutter:
 
   assets:
     - icon/app_icon.png
+    - icon/google.png
     - assets/avatars/
     - assets/defaults/
     - assets/sounds/

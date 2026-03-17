@@ -1,8 +1,11 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 import 'package:pigio_app/app_shell/main_shell.dart';
 import 'package:pigio_app/screens/auth/onboarding/onboarding_shell.dart';
@@ -13,17 +16,16 @@ class AuthNavigator {
   AuthNavigator._();
 
   static const _lastEmailKey = 'pigio_last_email';
+  static const _secureStorage = FlutterSecureStorage();
 
   /// Save the user's email for the welcome screen "returning user" feature.
   static Future<void> saveLastEmail(String email) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_lastEmailKey, email);
+    await _secureStorage.write(key: _lastEmailKey, value: email);
   }
 
   /// Load the last used email (nullable).
   static Future<String?> loadLastEmail() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_lastEmailKey);
+    return _secureStorage.read(key: _lastEmailKey);
   }
 
   /// Handle a successful OAuth / session sign-in:
@@ -65,6 +67,9 @@ class AuthNavigator {
       await Supabase.instance.client.auth.signInWithOAuth(
         provider,
         redirectTo: 'pigio://auth/callback',
+        authScreenLaunchMode: Platform.isAndroid || Platform.isIOS
+            ? LaunchMode.externalApplication
+            : LaunchMode.platformDefault,
         queryParams: provider == OAuthProvider.google
             ? {'prompt': 'select_account'}
             : null,
@@ -72,7 +77,7 @@ class AuthNavigator {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: ${e.toString()}')),
+        SnackBar(content: Text('Connexion impossible. Réessayez.')),
       );
     }
   }

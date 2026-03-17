@@ -71,7 +71,7 @@ class _GroupDetailSheetState extends State<GroupDetailSheet> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: $e')),
+        SnackBar(content: Text('Une erreur est survenue. Réessayez.')),
       );
     }
   }

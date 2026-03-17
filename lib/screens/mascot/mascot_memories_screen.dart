@@ -48,8 +48,8 @@ class MascotMemoriesScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               lang == 'fr'
-                  ? "Interagis avec Pigio chaque jour pour créer des moments spéciaux 💛"
-                  : "Interact with Pigio every day to create special moments 💛",
+                  ? "Les moments partagés avec Pigio apparaîtront ici 💛"
+                  : "Moments shared with Pigio will appear here 💛",
               style: fw(size: 14, color: theme.mid),
               textAlign: TextAlign.center,
             ),

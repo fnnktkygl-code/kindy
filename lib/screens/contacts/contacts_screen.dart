@@ -75,7 +75,9 @@ class _ContactsScreenState extends State<ContactsScreen> {
           final bday = DateTime(now.year, int.parse(parts[1]), int.parse(parts[0]));
           final diff = bday.difference(now).inDays;
           if (diff >= 0 && diff <= 30) bdaySoon = true;
-        } catch (_) {}
+        } catch (e) {
+          debugPrint('[Contacts] Invalid birthdate for ${c.name}: ${c.birthdate}');
+        }
       }
       return _ContactCardData(
           c,

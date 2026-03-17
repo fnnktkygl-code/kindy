@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:local_auth/local_auth.dart';
 import '../../services/auth_service.dart';
 import '../../app_shell/main_shell.dart';
-import 'auth_welcome_screen.dart';
+import 'auth_screen.dart';
 import 'onboarding/onboarding_shell.dart';
 import 'package:provider/provider.dart';
 import 'package:pigio_app/core/state/app_state.dart';
@@ -17,48 +17,94 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseCtrl;
+    with TickerProviderStateMixin {
+  late final AnimationController _logoCtrl;
+  late final Animation<double> _logoFade;
+  late final Animation<double> _logoScale;
+
+  late final AnimationController _textCtrl;
+  late final Animation<double> _textFade;
+  late final Animation<Offset> _textSlide;
+
+  late final AnimationController _loaderCtrl;
+  late final Animation<double> _loaderFade;
 
   @override
   void initState() {
     super.initState();
-    _pulseCtrl = AnimationController(
+
+    // Logo: fade in + subtle scale
+    _logoCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 800),
+    );
+    _logoFade = CurvedAnimation(parent: _logoCtrl, curve: Curves.easeOut);
+    _logoScale = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(parent: _logoCtrl, curve: Curves.easeOutBack),
+    );
+
+    // Brand text: staggered fade + slide
+    _textCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _textFade = CurvedAnimation(parent: _textCtrl, curve: Curves.easeOut);
+    _textSlide = Tween<Offset>(
+      begin: const Offset(0, 0.15),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _textCtrl, curve: Curves.easeOut));
+
+    // Loader: delayed fade in
+    _loaderCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _loaderFade = CurvedAnimation(parent: _loaderCtrl, curve: Curves.easeIn);
+
+    _runEntrySequence();
+  }
+
+  Future<void> _runEntrySequence() async {
+    await Future.delayed(const Duration(milliseconds: 100));
+    if (!mounted) return;
+    _logoCtrl.forward();
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+    _textCtrl.forward();
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+    _loaderCtrl.forward();
+
     _checkAuth();
   }
 
   @override
   void dispose() {
-    _pulseCtrl.dispose();
+    _logoCtrl.dispose();
+    _textCtrl.dispose();
+    _loaderCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _checkAuth() async {
-    // Wait for state to load
     final state = context.read<PigioAppState>();
     await state.ready.timeout(
       const Duration(seconds: 8),
       onTimeout: () {},
     );
 
-    // Brief splash
-    await Future.delayed(const Duration(milliseconds: 100));
+    await Future.delayed(const Duration(milliseconds: 200));
 
     final session = Supabase.instance.client.auth.currentSession;
     await state.reconcileAuthenticatedUser(session?.user.id);
 
     if (!mounted) return;
 
-    // Verify the session is still valid (not just non-null but also not expired).
     bool hasValidSession = false;
     if (session != null) {
       final expiresAt = session.expiresAt;
       final nowEpoch = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       if (expiresAt != null && expiresAt <= nowEpoch) {
-        // Token expired — attempt refresh
         try {
           await Supabase.instance.client.auth.refreshSession();
           hasValidSession =
@@ -67,10 +113,13 @@ class _SplashScreenState extends State<SplashScreen>
           hasValidSession = false;
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content:
-                    Text('Session expirée, veuillez vous reconnecter.'),
-                duration: Duration(seconds: 3),
+              SnackBar(
+                content: const Text('Session expirée, veuillez vous reconnecter.'),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                duration: const Duration(seconds: 3),
               ),
             );
           }
@@ -93,7 +142,6 @@ class _SplashScreenState extends State<SplashScreen>
         );
       }
     } else {
-      // No valid session — try auto biometric sign-in if credentials exist
       await _tryAutoBiometric(state);
     }
   }
@@ -108,15 +156,16 @@ class _SplashScreenState extends State<SplashScreen>
       }
 
       final localAuth = LocalAuthentication();
-      final canCheck = await localAuth.canCheckBiometrics || await localAuth.isDeviceSupported();
+      final canCheck =
+          await localAuth.canCheckBiometrics || await localAuth.isDeviceSupported();
       if (!canCheck || !mounted) {
         _goToWelcome();
         return;
       }
 
-      // Updated to avoid 'options' if it's causing build issues in this environment
       final ok = await localAuth.authenticate(
         localizedReason: 'Connectez-vous avec votre empreinte ou Face ID',
+        biometricOnly: true,
       );
       if (!ok || !mounted) {
         _goToWelcome();
@@ -131,9 +180,8 @@ class _SplashScreenState extends State<SplashScreen>
       await state.reconcileAuthenticatedUser(session?.user.id);
 
       if (!mounted) return;
-      final Widget next = state.needsOnboarding
-          ? const OnboardingShell()
-          : const MainShell();
+      final Widget next =
+      state.needsOnboarding ? const OnboardingShell() : const MainShell();
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => next),
       );
@@ -144,51 +192,91 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _goToWelcome() {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const AuthWelcomeScreen()),
+      MaterialPageRoute(
+        builder: (_) => const AuthScreen(mode: AuthScreenMode.signIn),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final pt = context.watch<PigioAppState>().currentTheme;
-    return Scaffold(
-      backgroundColor: pt.scaffold,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              'icon/app_icon.png',
-              width: 110,
-              height: 110,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Pigio',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: pt.ink,
-              ),
-            ),
-            const SizedBox(height: 32),
-            // Pulsing loading indicator
-            FadeTransition(
-              opacity: _pulseCtrl.drive(
-                Tween(begin: 0.3, end: 1.0),
-              ),
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    pt.primary.withValues(alpha: 0.7),
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: pt.isDark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: pt.scaffold,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Logo with scale + fade
+              FadeTransition(
+                opacity: _logoFade,
+                child: ScaleTransition(
+                  scale: _logoScale,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: pt.primary.withValues(alpha: 0.12),
+                          blurRadius: 32,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.asset(
+                        'icon/app_icon.png',
+                        width: 88,
+                        height: 88,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+
+              const SizedBox(height: 20),
+
+              // Brand name
+              FadeTransition(
+                opacity: _textFade,
+                child: SlideTransition(
+                  position: _textSlide,
+                  child: Text(
+                    'Pigio',
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w700,
+                      color: pt.ink,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 40),
+
+              // Minimal loader
+              FadeTransition(
+                opacity: _loaderFade,
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      pt.primary.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -45,6 +45,8 @@ class PigioPainter extends CustomPainter {
   final bool isTalking; // true = beak open for talking animation
   final double lookOffsetX; // -1 to 1, shifts pupils left/right
 
+  final int currentMonth;
+
   static final Map<String, Shader> _shaderCache = {};
   static final List<String> _shaderLruKeys = []; // P4: LRU eviction order
   static const int _shaderCacheMax = 50;
@@ -64,15 +66,18 @@ class PigioPainter extends CustomPainter {
     this.blinkPhase = 0.0,
     this.isTalking = false,
     this.lookOffsetX = 0.0,
-  });
+    int? currentMonth,
+  }) : currentMonth = currentMonth ?? DateTime.now().month;
 
-  // P4: LRU shader cache — evicts oldest entries beyond _shaderCacheMax
+  // P4: LRU shader cache — evicts oldest entries beyond _shaderCacheMax.
+  // Key includes bounds hash to avoid reusing shaders created for different sizes.
   Shader _getCachedShader(String key, Rect bounds, Gradient gradient) {
-    final cached = _shaderCache[key];
+    final fullKey = '$key@${bounds.width.toInt()}x${bounds.height.toInt()}';
+    final cached = _shaderCache[fullKey];
     if (cached != null) {
       // Move to end (most recently used)
-      _shaderLruKeys.remove(key);
-      _shaderLruKeys.add(key);
+      _shaderLruKeys.remove(fullKey);
+      _shaderLruKeys.add(fullKey);
       return cached;
     }
     // Evict oldest if at capacity
@@ -81,8 +86,8 @@ class PigioPainter extends CustomPainter {
       _shaderCache.remove(evict);
     }
     final shader = gradient.createShader(bounds);
-    _shaderCache[key] = shader;
-    _shaderLruKeys.add(key);
+    _shaderCache[fullKey] = shader;
+    _shaderLruKeys.add(fullKey);
     return shader;
   }
 
@@ -92,8 +97,7 @@ class PigioPainter extends CustomPainter {
     canvas.save();
     canvas.scale(scale, scale);
 
-    // Cache month once per paint cycle instead of inside _drawSeasonalFiltered.
-    final int currentMonth = DateTime.now().month;
+    // currentMonth is now a constructor parameter — no DateTime.now() inside paint.
 
     // Shift slightly down so hat elements don't clip the widget top boundary.
     // All coordinates below are in this translated space (effective y-origin is 5 units
@@ -1907,7 +1911,8 @@ class PigioPainter extends CustomPainter {
       !_mapIntEqual(oldDelegate.outfitColors, outfitColors) ||
       oldDelegate.blinkPhase != blinkPhase ||
       oldDelegate.isTalking != isTalking ||
-      oldDelegate.lookOffsetX != lookOffsetX;
+      oldDelegate.lookOffsetX != lookOffsetX ||
+      oldDelegate.currentMonth != currentMonth;
 
   static bool _outfitsEqual(Map<ClothingSlot, String?> a, Map<ClothingSlot, String?> b) {
     if (a.length != b.length) return false;
@@ -2047,6 +2052,7 @@ class _PigioWidgetState extends State<PigioWidget> with SingleTickerProviderStat
               blinkPhase: skipBlink ? 0.0 : _blinkAnim.value,
               isTalking: _talkFrame,
               lookOffsetX: widget.lookOffsetX,
+              currentMonth: DateTime.now().month,
             ),
           ),
         );

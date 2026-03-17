@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 import 'package:pigio_app/core/config/constants.dart';
 import 'package:pigio_app/screens/auth/auth_screen.dart';
+import 'package:pigio_app/services/analytics_service.dart';
 import '../../../app_shell/main_shell.dart';
 
 class OnboardingShell extends StatefulWidget {
@@ -18,18 +19,24 @@ class _OnboardingShellState extends State<OnboardingShell> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   
-  // Total steps: Name → Avatar → Wish (with celebration) = 3
-  static const _totalSteps = 3;
+  // Total steps: Name → Avatar → First Contact → Wish = 4
+  static const _totalSteps = 4;
 
   // Collected onboarding data
   final _nameController = TextEditingController();
   String? _selectedAvatarIcon;
   Color? _selectedAvatarColor;
+  final _contactNameController = TextEditingController();
+  final _contactBirthdayController = TextEditingController();
+  String _contactRole = 'Ami';
+  bool _addedContact = false;
   final _wishController = TextEditingController();
 
   @override
   void dispose() {
     _nameController.dispose();
+    _contactNameController.dispose();
+    _contactBirthdayController.dispose();
     _wishController.dispose();
     _pageController.dispose();
     super.dispose();
@@ -60,7 +67,7 @@ class _OnboardingShellState extends State<OnboardingShell> {
   void _finishOnboarding() {
     HapticFeedback.mediumImpact();
     final state = context.read<PigioAppState>();
-    
+
     // Save name (required so always non-empty)
     final name = _nameController.text.trim();
     if (name.isNotEmpty) {
@@ -74,6 +81,19 @@ class _OnboardingShellState extends State<OnboardingShell> {
       );
     }
 
+    // Save first contact if provided
+    final contactName = _contactNameController.text.trim();
+    if (contactName.isNotEmpty) {
+      state.addContact(
+        name: contactName,
+        role: _contactRole,
+        birthdate: _contactBirthdayController.text.trim().isEmpty
+            ? null
+            : _contactBirthdayController.text.trim(),
+      );
+      _addedContact = true;
+    }
+
     // Save first wish if provided
     final wish = _wishController.text.trim();
     if (wish.isNotEmpty) {
@@ -81,7 +101,14 @@ class _OnboardingShellState extends State<OnboardingShell> {
     }
 
     state.completeOnboarding();
-    
+
+    // Analytics: track onboarding completion
+    AnalyticsService.onboardingCompleted(
+      stepCount: _totalSteps,
+      addedContact: _addedContact,
+      addedWish: wish.isNotEmpty,
+    );
+
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const MainShell()),
       (route) => false,
@@ -165,6 +192,12 @@ class _OnboardingShellState extends State<OnboardingShell> {
                       _selectedAvatarIcon = icon;
                       _selectedAvatarColor = color;
                     },
+                  ),
+                  _StepContactScreen(
+                    nameController: _contactNameController,
+                    birthdayController: _contactBirthdayController,
+                    onRoleChanged: (role) => _contactRole = role,
+                    onNext: _nextPage,
                   ),
                   _StepWishScreen(
                     wishController: _wishController,
@@ -443,7 +476,151 @@ class _StepAvatarScreenState extends State<_StepAvatarScreen> {
 }
 
 
-// --- Step 3: Wish + Finish (replaces old Wish + Circles + Done) ---
+// --- Step 3: Add first contact (optional — drives activation) ---
+class _StepContactScreen extends StatefulWidget {
+  final TextEditingController nameController;
+  final TextEditingController birthdayController;
+  final ValueChanged<String> onRoleChanged;
+  final VoidCallback onNext;
+
+  const _StepContactScreen({
+    required this.nameController,
+    required this.birthdayController,
+    required this.onRoleChanged,
+    required this.onNext,
+  });
+
+  @override
+  State<_StepContactScreen> createState() => _StepContactScreenState();
+}
+
+class _StepContactScreenState extends State<_StepContactScreen> {
+  String _selectedRole = 'Ami';
+  static const _roles = ['Famille', 'Ami', 'Collègue', 'Autre'];
+
+  Future<void> _pickBirthday() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(now.year - 25, 1, 1),
+      firstDate: DateTime(1920),
+      lastDate: now,
+      helpText: "Date de naissance",
+    );
+    if (picked != null) {
+      final formatted =
+          '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+      widget.birthdayController.text = formatted;
+      setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pt = context.watch<PigioAppState>().currentTheme;
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('👥', style: TextStyle(fontSize: 80), textAlign: TextAlign.center),
+          const SizedBox(height: 24),
+          Text(
+            "Ajoutez un proche",
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: pt.ink),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Pour ne plus oublier ses dates importantes",
+            style: TextStyle(fontSize: 15, color: pt.ink.withValues(alpha: 0.7)),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 28),
+          // Name
+          TextField(
+            controller: widget.nameController,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(
+              hintText: "Prénom du proche",
+              filled: true,
+              fillColor: pt.card,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            ),
+            style: TextStyle(color: pt.ink, fontSize: 16),
+          ),
+          const SizedBox(height: 12),
+          // Birthday (optional)
+          GestureDetector(
+            onTap: _pickBirthday,
+            child: AbsorbPointer(
+              child: TextField(
+                controller: widget.birthdayController,
+                decoration: InputDecoration(
+                  hintText: "Date de naissance (optionnel)",
+                  filled: true,
+                  fillColor: pt.card,
+                  prefixIcon: Icon(Icons.cake_outlined, color: pt.mid),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                ),
+                style: TextStyle(color: pt.ink, fontSize: 16),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Role chips
+          Wrap(
+            spacing: 8,
+            children: _roles.map((role) {
+              final selected = _selectedRole == role;
+              return ChoiceChip(
+                label: Text(role),
+                selected: selected,
+                selectedColor: pt.primary.withValues(alpha: 0.2),
+                backgroundColor: pt.card,
+                labelStyle: TextStyle(
+                  color: selected ? pt.primary : pt.ink,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+                onSelected: (_) {
+                  setState(() => _selectedRole = role);
+                  widget.onRoleChanged(role);
+                },
+              );
+            }).toList(),
+          ),
+          const Spacer(),
+          ElevatedButton(
+            onPressed: widget.onNext,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: pt.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Continuer →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+          TextButton(
+            onPressed: widget.onNext,
+            child: Text("Passer", style: TextStyle(color: pt.ink.withValues(alpha: 0.6))),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --- Step 4: Wish + Finish ---
 class _StepWishScreen extends StatelessWidget {
   final TextEditingController wishController;
   final VoidCallback onFinish;

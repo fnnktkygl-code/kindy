@@ -8,9 +8,17 @@ import 'package:pigio_app/core/theme/pigio_theme.dart';
 import 'package:pigio_app/core/i18n/i18n.dart';
 import 'package:pigio_app/screens/mascot/mascot_settings_screen.dart';
 import 'package:pigio_app/screens/auth/splash_screen.dart';
+import 'package:pigio_app/services/pigio_logger.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _isDeleting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +41,7 @@ class SettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(PigioDesign.paddingMedium),
         child: Column(
           children: [
-            // Appearance
+            // ── Appearance ──────────────────────────────────────────────
             _buildSectionTitle(context, t(context, 'settings_appearance'), theme),
             Container(
               decoration: BoxDecoration(color: theme.card, borderRadius: BorderRadius.circular(PigioDesign.radiusMedium)),
@@ -49,9 +57,7 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
 
-
-
-            // Language
+            // ── General ─────────────────────────────────────────────────
             _buildSectionTitle(context, t(context, 'settings_general'), theme),
             Container(
               decoration: BoxDecoration(color: theme.card, borderRadius: BorderRadius.circular(PigioDesign.radiusMedium)),
@@ -74,14 +80,14 @@ class SettingsScreen extends StatelessWidget {
 
             const SizedBox(height: 30),
 
-            // Pigio
+            // ── Pigio ───────────────────────────────────────────────────
             _buildSectionTitle(context, "PIGIO", theme),
             Container(
               decoration: BoxDecoration(color: theme.card, borderRadius: BorderRadius.circular(PigioDesign.radiusMedium)),
               child: ListTile(
                 leading: const Text("🎁", style: TextStyle(fontSize: 22)),
-                title: Text(state.locale.languageCode == 'fr' ? "Réglages de Pigio" : "Pigio Settings", style: fw(size: 16, w: FontWeight.w700, color: theme.ink)),
-                subtitle: Text(state.locale.languageCode == 'fr' ? "Bavardage, écharpe, position..." : "Chattiness, scarf, position...", style: fw(size: 12, color: theme.mid)),
+                title: Text(t(context, 'settings_pigio'), style: fw(size: 16, w: FontWeight.w700, color: theme.ink)),
+                subtitle: Text(t(context, 'settings_pigio_sub'), style: fw(size: 12, color: theme.mid)),
                 trailing: Icon(Icons.chevron_right, color: theme.mid),
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MascotSettingsScreen())),
               ),
@@ -95,9 +101,9 @@ class SettingsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Wizz', style: fw(size: 16, w: FontWeight.w800, color: theme.ink)),
+                  Text(t(context, 'settings_wizz'), style: fw(size: 16, w: FontWeight.w800, color: theme.ink)),
                   const SizedBox(height: 4),
-                  Text('Choisissez le style d\'effet Wizz reçu.', style: fw(size: 12, color: theme.mid)),
+                  Text(t(context, 'settings_wizz_sub'), style: fw(size: 12, color: theme.mid)),
                   const SizedBox(height: 12),
                   SegmentedButton<WizzEffectMode>(
                     showSelectedIcon: false,
@@ -129,102 +135,38 @@ class SettingsScreen extends StatelessWidget {
                       state.setWizzEffectMode(mode);
                     },
                   ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        state.triggerIncomingWizzTest();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Test Wizz reçu déclenché ⚡')),
-                        );
-                      },
-                      icon: const Text('🧪'),
-                      label: const Text('Tester un Wizz reçu maintenant'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: theme.accent1,
-                        side: BorderSide(color: theme.accent1.withValues(alpha: 0.45)),
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
 
             const SizedBox(height: 30),
 
-            // Data
+            // ── Data ────────────────────────────────────────────────────
             _buildSectionTitle(context, t(context, 'settings_data'), theme),
             Container(
               decoration: BoxDecoration(color: theme.card, borderRadius: BorderRadius.circular(PigioDesign.radiusMedium)),
               child: Column(
                 children: [
                   ListTile(
-                    title: Text(t(context, 'settings_reset_data'), style: fw(size: 16, w: FontWeight.w700, color: theme.error)),
-                    subtitle: Text(t(context, 'settings_reset_sub'), style: fw(size: 12, color: theme.mid)),
-                    trailing: Icon(Icons.delete_outline, color: theme.error),
-                    onTap: () => _confirmReset(context, state, theme),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    title: Text("Relancer l'onboarding", style: fw(size: 16, w: FontWeight.w700, color: theme.ink)),
-                    subtitle: Text("Affiche à nouveau le parcours d'accueil au prochain lancement", style: fw(size: 12, color: theme.mid)),
-                    trailing: Icon(Icons.replay_outlined, color: theme.primary),
-                    onTap: () => _confirmOnboardingReset(context, state, theme),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    title: Text("Exporter mes données", style: fw(size: 16, w: FontWeight.w700, color: theme.ink)),
-                    subtitle: Text("Télécharger une copie de vos données (JSON)", style: fw(size: 12, color: theme.mid)),
-                    trailing: Icon(Icons.download_outlined, color: theme.primary),
-                    onTap: () async {
-                      final session = Supabase.instance.client.auth.currentSession;
-                      if (session == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Vous devez être connecté pour exporter vos données')),
-                        );
-                        return;
-                      }
-                      try {
-                        await Supabase.instance.client.functions.invoke(
-                          'account-export',
-                          headers: {'Authorization': 'Bearer ${session.accessToken}'},
-                        );
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Export réussi — données disponibles')),
-                        );
-                      } catch (e) {
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Erreur: ${e.toString()}')),
-                        );
-                      }
-                    },
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    title: Text("Supprimer mon compte", style: fw(size: 16, w: FontWeight.w700, color: theme.error)),
-                    subtitle: Text("Action irréversible — toutes vos données seront effacées", style: fw(size: 12, color: theme.mid)),
+                    title: Text(t(context, 'settings_delete_account'), style: fw(size: 16, w: FontWeight.w700, color: theme.error)),
+                    subtitle: Text(t(context, 'settings_delete_account_sub'), style: fw(size: 12, color: theme.mid)),
                     trailing: Icon(Icons.warning_amber_rounded, color: theme.error),
-                    onTap: () => _confirmAccountDelete(context, state, theme),
+                    onTap: _isDeleting ? null : () => _confirmAccountDelete(context, state, theme),
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 30),
-            
-            // Legal
-            _buildSectionTitle(context, "Légal", theme),
+
+            // ── Legal ───────────────────────────────────────────────────
+            _buildSectionTitle(context, t(context, 'settings_legal'), theme),
             Container(
               decoration: BoxDecoration(color: theme.card, borderRadius: BorderRadius.circular(PigioDesign.radiusMedium)),
               child: Column(
                 children: [
                   ListTile(
-                    title: Text("Politique de confidentialité", style: fw(size: 16, w: FontWeight.w700, color: theme.ink)),
+                    title: Text(t(context, 'settings_privacy'), style: fw(size: 16, w: FontWeight.w700, color: theme.ink)),
                     trailing: Icon(Icons.open_in_new, color: theme.mid),
                     onTap: () {
                       launchUrl(Uri.parse('https://fnnktkygl-code.github.io/pigio-app/privacy/'));
@@ -232,7 +174,7 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   const Divider(height: 1),
                   ListTile(
-                    title: Text("Conditions générales d'utilisation", style: fw(size: 16, w: FontWeight.w700, color: theme.ink)),
+                    title: Text(t(context, 'settings_terms'), style: fw(size: 16, w: FontWeight.w700, color: theme.ink)),
                     trailing: Icon(Icons.open_in_new, color: theme.mid),
                     onTap: () {
                       launchUrl(Uri.parse('https://fnnktkygl-code.github.io/pigio-app/cgu/'));
@@ -241,11 +183,11 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 30),
-            
-            // Account / Logout
-            _buildSectionTitle(context, "Compte", theme),
+
+            // ── Account / Logout ────────────────────────────────────────
+            _buildSectionTitle(context, t(context, 'settings_account'), theme),
             Container(
               decoration: BoxDecoration(color: theme.card, borderRadius: BorderRadius.circular(PigioDesign.radiusMedium)),
               child: Column(
@@ -253,7 +195,7 @@ class SettingsScreen extends StatelessWidget {
                   if (Supabase.instance.client.auth.currentUser != null) ...[
                     ListTile(
                       title: Text(
-                        Supabase.instance.client.auth.currentUser?.email ?? "Connecté",
+                        Supabase.instance.client.auth.currentUser?.email ?? t(context, 'settings_connected'),
                         style: fw(size: 14, color: theme.mid),
                       ),
                       leading: Icon(Icons.person_outline, color: theme.primary),
@@ -261,21 +203,14 @@ class SettingsScreen extends StatelessWidget {
                     const Divider(height: 1),
                   ],
                   ListTile(
-                    title: Text("Se déconnecter", style: fw(size: 16, w: FontWeight.w700, color: theme.error)),
+                    title: Text(t(context, 'settings_sign_out'), style: fw(size: 16, w: FontWeight.w700, color: theme.error)),
                     trailing: Icon(Icons.logout, color: theme.error),
-                    onTap: () async {
-                      await state.signOutAndCleanupLocalState();
-                      if (!context.mounted) return;
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const SplashScreen()),
-                        (route) => false,
-                      );
-                    },
+                    onTap: () => _confirmSignOut(context, state, theme),
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 30),
             Text('${t(context, 'app_name')} v${AppMeta.version}', style: fw(size: 12, color: theme.light, w: FontWeight.w600)),
             const SizedBox(height: 20),
@@ -295,117 +230,64 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _confirmAccountDelete(BuildContext context, PigioAppState state, PigioThemeData theme) {
-    final TextEditingController confirmCtrl = TextEditingController();
+  // ── Sign-out with confirmation ──────────────────────────────────────────
+  void _confirmSignOut(BuildContext context, PigioAppState state, PigioThemeData theme) {
     showDialog(
       context: context,
-      builder: (c) => StatefulBuilder(
-        builder: (ctx, setState) {
-          return AlertDialog(
-            backgroundColor: theme.card,
-            title: Text("Supprimer votre compte ?", style: fw(size: 20, w: FontWeight.w800, color: theme.error)),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Cette action est irréversible. Toutes vos données seront définitivement supprimées.", style: fw(size: 14, color: theme.mid)),
-                const SizedBox(height: 16),
-                Text("Tapez 'SUPPRIMER' pour confirmer :", style: fw(size: 12, w: FontWeight.w700, color: theme.error)),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: confirmCtrl,
-                  decoration: InputDecoration(
-                    hintText: "SUPPRIMER",
-                    enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: theme.divider), borderRadius: BorderRadius.circular(8)),
-                    focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: theme.error), borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  onChanged: (val) => setState(() {}),
-                  style: fw(size: 14, color: theme.ink),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(c), child: Text("Annuler", style: fw(size: 16, color: theme.mid))),
-              TextButton(
-                onPressed: confirmCtrl.text == 'SUPPRIMER' ? () async {
-                  Navigator.pop(c);
-                  try {
-                    // Best-effort: call the server-side deletion function if
-                    // we have a live Supabase session (deletes the auth user
-                    // from the database). Silently ignored when offline/anon.
-                    final session = Supabase.instance.client.auth.currentSession;
-                    if (session != null) {
-                      try {
-                        await Supabase.instance.client.functions.invoke(
-                          'account-delete',
-                          method: HttpMethod.post,
-                          headers: {'Authorization': 'Bearer ${session.accessToken}'},
-                          // Pass syncKey so the Edge Function can delete user_data
-                          // (user_data table is keyed by sync_key, not user_id).
-                          body: {'syncKey': state.syncKey},
-                        );
-                      } catch (_) {
-                        // If edge function fails, still wipe locally
-                      }
-                    }
-
-                    // Wipe all local state and SharedPreferences
-                    await state.deleteAccount();
-
-                    // Sign out of Supabase auth so the session is invalidated
-                    // locally (prevents the splash screen from auto-logging in).
-                    try {
-                      await Supabase.instance.client.auth.signOut();
-                    } catch (_) {}
-
-                    if (!context.mounted) return;
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const SplashScreen()),
-                      (route) => false,
-                    );
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Une erreur est survenue. Réessaie.')),
-                    );
-                  }
-                } : null,
-                child: Text("Supprimer", style: fw(size: 16, w: FontWeight.w800, color: confirmCtrl.text == 'SUPPRIMER' ? theme.error : theme.light)),
-              ),
-            ],
-          );
-        }
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: theme.card,
+        title: Text(t(context, 'settings_sign_out_title'), style: fw(size: 20, w: FontWeight.w800, color: theme.ink)),
+        content: Text(t(context, 'settings_sign_out_confirm'), style: fw(size: 14, color: theme.mid)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(t(context, 'cancel'), style: fw(size: 16, color: theme.mid)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await state.signOutAndCleanupLocalState();
+              if (!context.mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const SplashScreen()),
+                (route) => false,
+              );
+            },
+            child: Text(t(context, 'settings_sign_out'), style: fw(size: 16, w: FontWeight.w800, color: theme.error)),
+          ),
+        ],
       ),
     );
   }
 
-  void _confirmReset(BuildContext context, PigioAppState state, PigioThemeData theme) {
+  // ── Account deletion with confirmation + loading ─────────────────────────
+  void _confirmAccountDelete(BuildContext context, PigioAppState state, PigioThemeData theme) {
     final TextEditingController confirmCtrl = TextEditingController();
+    final keyword = t(context, 'settings_delete_keyword');
     showDialog(
       context: context,
       builder: (c) => StatefulBuilder(
-        builder: (ctx, setState) {
+        builder: (ctx, setDialogState) {
           return AlertDialog(
             backgroundColor: theme.card,
-            title: Text(t(context, 'settings_reset_title'), style: fw(size: 20, w: FontWeight.w800, color: theme.ink)),
+            title: Text(t(context, 'settings_delete_title'), style: fw(size: 20, w: FontWeight.w800, color: theme.error)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(t(context, 'settings_reset_confirm'), style: fw(size: 14, color: theme.mid)),
+                Text(t(context, 'settings_delete_body'), style: fw(size: 14, color: theme.mid)),
                 const SizedBox(height: 16),
-                Text("Veuillez taper 'SUPPRIMER' pour confirmer :", style: fw(size: 12, w: FontWeight.w700, color: theme.error)),
+                Text(t(context, 'settings_delete_hint'), style: fw(size: 12, w: FontWeight.w700, color: theme.error)),
                 const SizedBox(height: 8),
                 TextField(
                   controller: confirmCtrl,
                   decoration: InputDecoration(
-                    hintText: "SUPPRIMER",
+                    hintText: keyword,
                     enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: theme.divider), borderRadius: BorderRadius.circular(8)),
                     focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: theme.error), borderRadius: BorderRadius.circular(8)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
-                  onChanged: (val) => setState(() {}),
+                  onChanged: (val) => setDialogState(() {}),
                   style: fw(size: 14, color: theme.ink),
                 ),
               ],
@@ -413,12 +295,49 @@ class SettingsScreen extends StatelessWidget {
             actions: [
               TextButton(onPressed: () => Navigator.pop(c), child: Text(t(context, 'cancel'), style: fw(size: 16, color: theme.mid))),
               TextButton(
-                onPressed: confirmCtrl.text == 'SUPPRIMER' ? () {
-                  state.clearData();
+                onPressed: confirmCtrl.text == keyword ? () async {
                   Navigator.pop(c);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t(context, 'settings_reset_done'))));
+                  setState(() => _isDeleting = true);
+
+                  try {
+                    final session = Supabase.instance.client.auth.currentSession;
+                    if (session != null) {
+                      try {
+                        await Supabase.instance.client.functions.invoke(
+                          'account-delete',
+                          method: HttpMethod.post,
+                          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+                          body: {'syncKey': state.syncKey},
+                        );
+                      } catch (e) {
+                        log.warn('Settings', 'account-delete edge function failed, wiping locally', e);
+                      }
+                    }
+
+                    await state.deleteAccount();
+
+                    try {
+                      await Supabase.instance.client.auth.signOut();
+                    } catch (e) {
+                      log.warn('Settings', 'Supabase sign-out failed during deletion', e);
+                    }
+
+                    if (!context.mounted) return;
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const SplashScreen()),
+                      (route) => false,
+                    );
+                  } catch (e) {
+                    if (!mounted) return;
+                    setState(() => _isDeleting = false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(t(context, 'settings_delete_error'))),
+                    );
+                  }
                 } : null,
-                child: Text(t(context, 'settings_reset_btn'), style: fw(size: 16, w: FontWeight.w800, color: confirmCtrl.text == 'SUPPRIMER' ? theme.error : theme.light)),
+                child: _isDeleting
+                    ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: theme.error))
+                    : Text(t(context, 'settings_delete_btn'), style: fw(size: 16, w: FontWeight.w800, color: confirmCtrl.text == keyword ? theme.error : theme.light)),
               ),
             ],
           );
@@ -427,40 +346,6 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _confirmOnboardingReset(BuildContext context, PigioAppState state, PigioThemeData theme) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: theme.card,
-        title: Text("Relancer l'onboarding ?", style: fw(size: 20, w: FontWeight.w800, color: theme.ink)),
-        content: Text(
-          "Le parcours d'accueil sera affiché à nouveau au prochain écran.",
-          style: fw(size: 14, color: theme.mid),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text("Annuler", style: fw(size: 16, color: theme.mid)),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              await state.resetOnboardingForDebug();
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Onboarding réinitialisé")),
-              );
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const SplashScreen()),
-                (route) => false,
-              );
-            },
-            child: Text("Confirmer", style: fw(size: 16, w: FontWeight.w800, color: theme.primary)),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ── THEME PICKER ──
@@ -478,13 +363,13 @@ class _ThemePicker extends StatelessWidget {
       children: [
         Row(
           children: [
-            _ThemeChip(variant: PigioThemeVariant.light, label: 'Clair', icon: Icons.wb_sunny_outlined, current: currentVariant, onTap: onSelect, dimmed: autoTheme),
+            _ThemeChip(variant: PigioThemeVariant.light, label: t(context, 'theme_light'), icon: Icons.wb_sunny_outlined, current: currentVariant, onTap: onSelect, dimmed: autoTheme),
             const SizedBox(width: 8),
-            _ThemeChip(variant: PigioThemeVariant.sepia, label: 'Sépia', icon: Icons.coffee_outlined, current: currentVariant, onTap: onSelect, dimmed: autoTheme),
+            _ThemeChip(variant: PigioThemeVariant.sepia, label: t(context, 'theme_sepia'), icon: Icons.coffee_outlined, current: currentVariant, onTap: onSelect, dimmed: autoTheme),
             const SizedBox(width: 8),
-            _ThemeChip(variant: PigioThemeVariant.dark, label: 'Sombre', icon: Icons.nights_stay_outlined, current: currentVariant, onTap: onSelect, dimmed: autoTheme),
+            _ThemeChip(variant: PigioThemeVariant.dark, label: t(context, 'theme_dark'), icon: Icons.nights_stay_outlined, current: currentVariant, onTap: onSelect, dimmed: autoTheme),
             const SizedBox(width: 8),
-            _ThemeChip(variant: PigioThemeVariant.oled, label: 'OLED', icon: Icons.circle, current: currentVariant, onTap: onSelect, dimmed: autoTheme),
+            _ThemeChip(variant: PigioThemeVariant.oled, label: t(context, 'theme_oled'), icon: Icons.circle, current: currentVariant, onTap: onSelect, dimmed: autoTheme),
           ],
         ),
         const SizedBox(height: 8),
@@ -563,7 +448,6 @@ class _ThemeChip extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 6),
-              // Indicator dot
               Opacity(
                 opacity: isActive ? 1.0 : 0.0,
                 child: Container(
@@ -602,7 +486,6 @@ class _LangBtn extends StatelessWidget {
           color: active ? theme.primary : theme.surface,
           borderRadius: BorderRadius.circular(PigioDesign.radiusSmall),
         ),
-        // Ensures the text color contrasts properly based on the dynamic primary color chosen
         child: Text(lang.toUpperCase(), style: fw(size: 14, w: FontWeight.w800, color: active ? theme.onAccent : theme.mid)),
       ),
     );

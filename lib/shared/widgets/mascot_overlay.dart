@@ -12,12 +12,79 @@ import 'pigio_painter.dart';
 import 'ui_widgets.dart';
 import 'package:pigio_app/screens/mascot/mascot_settings_screen.dart';
 import 'package:pigio_app/screens/mascot/mascot_wardrobe_screen.dart';
+import 'package:pigio_app/screens/mascot/know_thyself_screen.dart';
 import 'package:pigio_app/screens/wishes/sheets/wish_editor_sheet.dart';
 import 'package:pigio_app/shared/widgets/invite_bottom_sheet.dart';
+import '../../services/ai_service.dart';
 import '../../services/mascot_insight_engine.dart';
 import '../../services/mascot_outfit_engine.dart';
 import '../../services/mascot_sound_service.dart';
 import '../../services/weather_service.dart';
+
+// ─── ERROR BOUNDARY ─────────────────────────────────────────────────────────
+/// Wraps the mascot in an error boundary so a crash in the mascot engine
+/// never takes down the host screen (tab bar, navigation, child screens).
+class SafeDraggableMascot extends StatefulWidget {
+  final int tabIndex;
+  const SafeDraggableMascot({super.key, this.tabIndex = 0});
+
+  @override
+  State<SafeDraggableMascot> createState() => _SafeDraggableMascotState();
+}
+
+class _SafeDraggableMascotState extends State<SafeDraggableMascot> {
+  bool _hasError = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasError) return const SizedBox.shrink();
+
+    return _MascotErrorCatcher(
+      onError: () {
+        if (mounted) setState(() => _hasError = true);
+      },
+      child: DraggableMascot(tabIndex: widget.tabIndex),
+    );
+  }
+}
+
+class _MascotErrorCatcher extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onError;
+  const _MascotErrorCatcher({required this.child, required this.onError});
+
+  @override
+  State<_MascotErrorCatcher> createState() => _MascotErrorCatcherState();
+}
+
+class _MascotErrorCatcherState extends State<_MascotErrorCatcher> {
+  @override
+  Widget build(BuildContext context) => widget.child;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Attach a Flutter error handler scoped to this widget subtree
+    FlutterError.onError = (FlutterErrorDetails details) {
+      // Only catch errors from the mascot painter / overlay
+      final isOurs = details.library == 'rendering library' ||
+          details.stack.toString().contains('mascot_overlay') ||
+          details.stack.toString().contains('pigio_painter');
+      if (isOurs) {
+        debugPrint('Mascot error caught: ${details.exception}');
+        widget.onError();
+      } else {
+        FlutterError.presentError(details);
+      }
+    };
+  }
+
+  @override
+  void dispose() {
+    FlutterError.onError = FlutterError.presentError;
+    super.dispose();
+  }
+}
 
 // ─── DRAGGABLE MASCOT ────────────────────────────────────────────────────────
 class DraggableMascot extends StatefulWidget {
@@ -43,6 +110,7 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
   bool _isGeneratingDynamic = false;
   DateTime? _lastBubbleTime;
   bool _dailyBonusClaimed = false;
+  Timer? _dynamicMsgClearTimer;  // P0-3: auto-clear stale dynamic messages
 
   // ── Emotion continuity: mood decays over 10s instead of resetting on tab change ──
   PigMood? _moodStackMood;
@@ -77,6 +145,7 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
   late Animation<double> _spinAnim;
 
   final MascotSoundService _sound = MascotSoundService.instance;
+  static final _rng = math.Random();
 
   bool _isIdle = false;
   Timer? _idleTimer;
@@ -92,6 +161,8 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
   String? _cachedInsightSignature;
   DateTime? _cachedInsightAt;
   String? _lastWeatherReactionSignature;
+  String? _lastExecutedInsightSignature;  // P1-8: dedup gate for insight side-effects
+  late Listenable _mergedAnimations;  // Pre-computed merged listenable
   
   int _lastWizzNonce = 0;
 
@@ -131,6 +202,20 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
       _pauseAnimations();
     } else if (!_reducedMotion && !hidden) {
       _resumeAnimations();
+    }
+
+    // P1-6: Weather sync moved from build() to didChangeDependencies()
+    _syncWeatherReaction(state);
+
+    // P2-12: Only tick _weatherCtrl when weather effects are actually needed
+    final weather = state.weatherEffectsEnabled ? state.currentWeather : null;
+    final needsWeatherAnim = !_reducedMotion && weather != null &&
+        (weather.condition == 'rain' || weather.condition == 'snow' ||
+         weather.temperature > 28 || weather.condition == 'storm');
+    if (needsWeatherAnim && !_weatherCtrl.isAnimating) {
+      _weatherCtrl.repeat();
+    } else if (!needsWeatherAnim && _weatherCtrl.isAnimating) {
+      _weatherCtrl.stop();
     }
   }
 
@@ -179,10 +264,14 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
       TweenSequenceItem(tween: Tween(begin: 0.96, end: 1.0), weight: 25),
     ]).animate(CurvedAnimation(parent: _squashCtrl, curve: Curves.easeOut));
 
-    _weatherCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat();
+    // P2-12: Don't auto-start — only tick when weather effects are active
+    _weatherCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 2));
 
     _resetIdleTimer();
     _sound.init();
+
+    // Pre-compute merged listenable once instead of creating it every build
+    _mergedAnimations = Listenable.merge([_floatAnim, _wiggleAnim, _breathAnim, _squashCtrl]);
 
     // Dizzy spin for easter egg
     _spinCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
@@ -206,14 +295,24 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
         if (_dailyBonusClaimed) {
           HapticFeedback.mediumImpact();
           final isFr = state.locale.languageCode == 'fr';
-          _dynamicMsg = isFr
-              ? '🌟 Bonus quotidien ! +10 XP (${state.mascotBondEmoji} ${state.mascotBondTitle})'
-              : '🌟 Daily bonus! +10 XP (${state.mascotBondEmoji} ${state.mascotBondTitle})';
+          final bonusFr = [
+            '🌟 +10 XP (${state.mascotBondEmoji} ${state.mascotBondTitle})',
+            '💛 +10 XP ! (${state.mascotBondEmoji} ${state.mascotBondTitle})',
+            '✨ +10 XP pour toi (${state.mascotBondEmoji} ${state.mascotBondTitle})',
+          ];
+          final bonusEn = [
+            '🌟 +10 XP (${state.mascotBondEmoji} ${state.mascotBondTitle})',
+            '💛 +10 XP! (${state.mascotBondEmoji} ${state.mascotBondTitle})',
+            '✨ +10 XP for you (${state.mascotBondEmoji} ${state.mascotBondTitle})',
+          ];
+          final idx = _rng.nextInt(bonusFr.length);
+          _dynamicMsg = isFr ? bonusFr[idx] : bonusEn[idx];
         }
       }
 
-      // E8: Stale circle nudge — remind to engage dormant connected contacts
-      state.checkStaleCircleNudge();
+      // Check birthday-proximity and re-engagement pushes (once per session)
+      state.checkBirthdayProximityPush();
+      state.checkReengagementPush();
 
       _triggerWiggle();
       _lastBubbleTime = DateTime.now();
@@ -297,8 +396,24 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
   void _resetIdleTimer() {
     _idleTimer?.cancel();
     if (_isIdle && mounted) {
-      setState(() => _isIdle = false);
+      // Wake-up greeting when coming out of idle
+      final isFr = Provider.of<PigioAppState>(context, listen: false).locale.languageCode == 'fr';
+      final wakeFr = const ['*bâille* 🥱 Oh, te revoilà !', 'Zzz... hein ? 😴 Ah c\'est toi !', 'Je dormais pas ! 😤 ...bon peut-être un peu.', '*s\'étire* 🐧 Re-coucou !'];
+      final wakeEn = const ['*yawns* 🥱 Oh, you\'re back!', 'Zzz... huh? 😴 Oh it\'s you!', 'I wasn\'t sleeping! 😤 ...ok maybe a little.', '*stretches* 🐧 Hey again!'];
+      final idx = _rng.nextInt(wakeFr.length);
+      setState(() {
+        _isIdle = false;
+        _dynamicMsg = isFr ? wakeFr[idx] : wakeEn[idx];
+        _cachedInsight = null;
+        _cachedTabIndex = null;
+        bubble = true;
+      });
       _sleepCtrl.reset();
+      _pushMood(PigMood.waving, duration: const Duration(seconds: 3));
+      _dynamicMsgClearTimer?.cancel();
+      _dynamicMsgClearTimer = Timer(const Duration(seconds: 4), () {
+        if (mounted) setState(() { _dynamicMsg = null; bubble = false; });
+      });
     }
     _idleTimer = Timer(const Duration(seconds: 45), () {
       if (mounted && !hidden && !bubble && !menu) {
@@ -310,19 +425,18 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
 
   /// Apply accelerometer tilt as a gravity-like force on Pigio's position.
   void _applyTilt(Timer _) {
-    if (!mounted || isDragging) return;
-    final size = MediaQuery.of(context).size;
+    if (!mounted || isDragging || hidden) return;
     // Dead zone: ignore very small tilts (phone resting flat)
     final dx = _tiltX.abs() > 0.5 ? _tiltX * 1.2 : 0.0;
-    
-    // Y-axis tilt is disabled because holding the phone normally applies a constant
-    // gravity on the Y axis, causing Pigio to constantly "float" upwards.
-    // We only want him to slide left/right on the X axis.
     if (dx == 0) return;
-    
+
+    final size = MediaQuery.of(context).size;
+    final newLeft = (left - dx).clamp(0.0, size.width - 80);
+    // P1-5: Skip setState if position didn't actually change (< 0.5px)
+    if ((newLeft - left).abs() < 0.5) return;
+
     setState(() {
-      left = (left - dx).clamp(0.0, size.width - 80);
-      // bottom is unchanged by tilt to keep him grounded
+      left = newLeft;
     });
   }
 
@@ -330,6 +444,7 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _idleTimer?.cancel();
+    _dynamicMsgClearTimer?.cancel();
     _accelSub?.cancel();
     _tiltTimer?.cancel();
     _floatCtrl.dispose();
@@ -384,7 +499,7 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
     }
     _accelSub?.cancel();
     try {
-      _accelSub = accelerometerEventStream(samplingPeriod: const Duration(milliseconds: 50)).listen((AccelerometerEvent event) {
+      _accelSub = accelerometerEventStream(samplingPeriod: const Duration(milliseconds: 150)).listen((AccelerometerEvent event) {
         _tiltX = event.x;
       });
     } catch (_) {
@@ -392,7 +507,8 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
       _accelSub = null;
     }
     _tiltTimer?.cancel();
-    _tiltTimer = Timer.periodic(const Duration(milliseconds: 50), _applyTilt);
+    // P1-5: Reduced from 50ms to 150ms to save battery
+    _tiltTimer = Timer.periodic(const Duration(milliseconds: 150), _applyTilt);
   }
 
   void _stopAccelerometer() {
@@ -424,6 +540,25 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
     if (_isGeneratingDynamic || _dynamicMsg != null) return;
     Future.microtask(() async {
       if (!mounted) return;
+
+      // Gate: check remaining free concierge credits
+      final remaining = await AiService.remainingFreeConcierge();
+      if (remaining <= 0) {
+        if (!mounted) return;
+        final isFr = state.locale.languageCode == 'fr';
+        setState(() {
+          _dynamicMsg = isFr
+              ? "J'ai plein d'idées cadeaux pour toi ! 🎁✨ Passe en Premium pour des suggestions illimitées."
+              : "I have tons of gift ideas for you! 🎁✨ Go Premium for unlimited suggestions.";
+          _isGeneratingDynamic = false;
+        });
+        _dynamicMsgClearTimer?.cancel();
+        _dynamicMsgClearTimer = Timer(const Duration(seconds: 60), () {
+          if (mounted) setState(() => _dynamicMsg = null);
+        });
+        return;
+      }
+
       setState(() => _isGeneratingDynamic = true);
       final raw = await task(state);
       if (mounted) {
@@ -431,6 +566,13 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
           _dynamicMsg = raw != null ? _firstSentence(raw) : null;
           _isGeneratingDynamic = false;
         });
+        // P0-3: Auto-clear dynamic message after 60s to prevent blocking future AI triggers
+        _dynamicMsgClearTimer?.cancel();
+        if (_dynamicMsg != null) {
+          _dynamicMsgClearTimer = Timer(const Duration(seconds: 60), () {
+            if (mounted) setState(() => _dynamicMsg = null);
+          });
+        }
       }
     });
   }
@@ -439,43 +581,12 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
     var cleaned = raw.replaceAll(RegExp(r'\*+'), '').replaceAll(RegExp(r'#+\s*'), '').replaceAll(RegExp(r'- '), '').trim();
     final match = RegExp(r'^(.{10,90}?[.!?🎁🎂🎉🎄💡📅📏👀✨💛])').firstMatch(cleaned);
     if (match != null) return match.group(1)!.trim();
-    return cleaned.length > 90 ? '${cleaned.substring(0, 88)}…' : cleaned;
+    // P2-10: Use Characters for emoji-safe truncation to avoid splitting multi-byte chars
+    final chars = cleaned.characters;
+    return chars.length > 90 ? '${chars.take(88)}…' : cleaned;
   }
 
-  PigPose _weatherPoseFor(WeatherData? weather, WeatherProtectionProfile protection) {
-    if (weather == null) return PigPose.normal;
-    if (protection.hasUmbrella && (weather.condition == 'rain' || weather.condition == 'storm')) {
-      return PigPose.umbrellaBrace;
-    }
-    if ((weather.condition == 'snow' || weather.temperature <= 4) && protection.snowCoverage >= 0.7) {
-      return PigPose.coldTucked;
-    }
-    if (weather.temperature >= 29 && protection.sunCoverage >= 0.8) {
-      return PigPose.sunRelaxed;
-    }
-    return PigPose.normal;
-  }
-
-  double _weatherExposureFor(WeatherData? weather, WeatherProtectionProfile protection) {
-    if (weather == null) return 0.0;
-    switch (weather.condition) {
-      case 'storm':
-        return (1 - protection.stormCoverage).clamp(0.0, 1.0);
-      case 'rain':
-        return (1 - protection.rainCoverage).clamp(0.0, 1.0);
-      case 'snow':
-        return (1 - protection.snowCoverage).clamp(0.0, 1.0);
-      case 'sunny':
-      case 'cloudy':
-        if (weather.isDay && weather.temperature >= 29) {
-          final heatFactor = ((weather.temperature - 29) / 9).clamp(0.2, 1.0);
-          return ((1 - protection.sunCoverage) * heatFactor).clamp(0.0, 1.0);
-        }
-        return 0.0;
-      default:
-        return 0.0;
-    }
-  }
+  // Weather pose/exposure/mood delegated to MascotOutfitEngine (single source of truth).
 
   void _syncWeatherReaction(PigioAppState state) {
     if (!state.weatherEffectsEnabled) return;
@@ -537,6 +648,14 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
           builder: (_) => const InviteBottomSheet(),
         );
         break;
+      case 'open_quiz':
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const KnowThyselfScreen()),
+          );
+        }
+        break;
     }
   }
 
@@ -561,8 +680,11 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
     }
 
     final insight = MascotInsightEngine.pick(state, widget.tabIndex);
-    // Q12: Defer side-effects to post-frame to avoid notifyListeners during build
-    if (insight.postAction != null || insight.aiTask != null) {
+    // Q12: Defer side-effects to post-frame to avoid notifyListeners during build.
+    // P1-8: Only fire side-effects once per unique insight signature.
+    if ((insight.postAction != null || insight.aiTask != null) &&
+        _lastExecutedInsightSignature != signature) {
+      _lastExecutedInsightSignature = signature;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         insight.postAction?.call();
@@ -587,7 +709,7 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
     final insight = _getInsight(state);
     final lang = state.locale.languageCode;
     final actionLabel = lang == 'fr' ? insight.actionLabelFr : insight.actionLabelEn;
-    _syncWeatherReaction(state);
+    // P1-6: _syncWeatherReaction moved to didChangeDependencies()
 
     // --- WIZZ REACTION LOGIC ---
     if (_lastWizzNonce != state.globalWizzNonce) {
@@ -598,7 +720,20 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
         _sound.playWhoosh();
         _spinCtrl.forward(from: 0.0);
         _pushMood(PigMood.dizzy, duration: const Duration(seconds: 3));
-        setState(() {});
+        final isFr = state.locale.languageCode == 'fr';
+        final wizzFr = const ['Whoaaaa ! 🌀 Ça tourne !', 'WIZZZZ ! 😵‍💫 Qui a fait ça ?!', 'Aïe aïe aïe ! 🌪️ Ma tête !', 'Hé oh ! 😵 Doucement !'];
+        final wizzEn = const ['Whoaaaa! 🌀 Everything\'s spinning!', 'WIZZZZ! 😵‍💫 Who did that?!', 'Ow ow ow! 🌪️ My head!', 'Hey! 😵 Easy there!'];
+        final idx = _rng.nextInt(wizzFr.length);
+        setState(() {
+          _dynamicMsg = isFr ? wizzFr[idx] : wizzEn[idx];
+          _cachedInsight = null;
+          _cachedTabIndex = null;
+          bubble = true;
+        });
+        _dynamicMsgClearTimer?.cancel();
+        _dynamicMsgClearTimer = Timer(const Duration(seconds: 4), () {
+          if (mounted) setState(() { _dynamicMsg = null; bubble = false; });
+        });
       });
     }
 
@@ -614,29 +749,14 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
     final hasRainProtection = protection.rainCoverage >= 0.72;
     final hasSnowProtection = protection.snowCoverage >= 0.65;
     final hasSunProtection = protection.sunCoverage >= 0.6;
-    final weatherPose = _weatherPoseFor(weather, protection);
-    final weatherExposure = _weatherExposureFor(weather, protection);
+    final weatherPose = MascotOutfitEngine.weatherPoseFor(weather, protection);
+    final weatherExposure = MascotOutfitEngine.weatherExposureFor(weather, protection);
     final mascotCenter = Offset(left + 40, size.height - bottom - 52);
 
     PigMood computedMood = _isIdle ? PigMood.sleeping : (bubble ? insight.mood : PigMood.normal);
     if (!_isIdle && !bubble && _activeMoodOverride == null && weather != null) {
-      if (weather.condition == 'storm' && protection.stormCoverage < 0.7) {
-        computedMood = PigMood.sad;
-      } else if (weather.condition == 'storm' && protection.stormCoverage >= 0.9) {
-        computedMood = PigMood.thinking;
-      } else if (weather.condition == 'rain' && protection.rainCoverage < 0.65) {
-        computedMood = PigMood.sad;
-      } else if (weather.condition == 'rain' && protection.rainCoverage >= 0.88) {
-        computedMood = PigMood.thinking;
-      } else if (weather.condition == 'snow' && protection.snowCoverage < 0.65) {
-        computedMood = PigMood.sad;
-      } else if (weather.condition == 'snow' && protection.snowCoverage >= 0.88) {
-        computedMood = PigMood.love;
-      } else if (weather.temperature > 28 && protection.sunCoverage < 0.55) {
-        computedMood = PigMood.sad;
-      } else if (weather.temperature > 28 && protection.sunCoverage >= 0.82) {
-        computedMood = PigMood.thumbsUp;
-      }
+      final weatherMood = MascotOutfitEngine.weatherMoodFor(weather, protection);
+      if (weatherMood != null) computedMood = weatherMood;
     }
     final effectiveMood = _activeMoodOverride ?? computedMood;
 
@@ -735,9 +855,18 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
                   _sound.playGiggle();
                   HapticFeedback.heavyImpact();
                   _pushMood(PigMood.embarrassed, duration: const Duration(seconds: 3));
-                  setState(() {});
-                  Future.delayed(const Duration(seconds: 3), () {
-                    if (mounted) setState(() { _isDizzy = false; });
+                  final isFr = Provider.of<PigioAppState>(context, listen: false).locale.languageCode == 'fr';
+                  final dizzyFr = const ['Wooooh... 🌀 La tête me tourne !', 'Doucement ! 😵 Je suis un pingouin, pas une toupie !', 'Ça tourne trop vite ! 🫨 Repose-moi !', 'Hé ! 😵‍💫 Tu veux me transformer en hélicoptère ?'];
+                  final dizzyEn = const ['Wooooh... 🌀 My head is spinning!', 'Easy! 😵 I\'m a penguin, not a spinning top!', 'Too fast! 🫨 Put me down!', 'Hey! 😵‍💫 Trying to turn me into a helicopter?'];
+                  setState(() {
+                    _dynamicMsg = isFr ? dizzyFr[_rng.nextInt(dizzyFr.length)] : dizzyEn[_rng.nextInt(dizzyEn.length)];
+                    _cachedInsight = null;
+                    _cachedTabIndex = null;
+                    bubble = true;
+                  });
+                  _dynamicMsgClearTimer?.cancel();
+                  _dynamicMsgClearTimer = Timer(const Duration(seconds: 3), () {
+                    if (mounted) setState(() { _dynamicMsg = null; bubble = false; _isDizzy = false; });
                   });
                   _dragFlipCount = 0;
                 }
@@ -790,7 +919,20 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
                 HapticFeedback.heavyImpact();
                 HapticFeedback.selectionClick();
                 _pushMood(PigMood.excited, duration: const Duration(seconds: 2));
-                setState(() {});
+                final isFr = Provider.of<PigioAppState>(context, listen: false).locale.languageCode == 'fr';
+                final tickleLines = isFr
+                    ? const ['Hahaha arrête ! 😆🐧', 'Ça chatouille ! 🤣', 'Hihihi pas là ! 😂', 'Encore ! Encore ! 🤭', 'Stoooop je vais tomber ! 😆']
+                    : const ['Hahaha stop it! 😆🐧', 'That tickles! 🤣', 'Hehehe not there! 😂', 'Again! Again! 🤭', 'Stoooop I\'ll fall over! 😆'];
+                setState(() {
+                  _dynamicMsg = tickleLines[_rng.nextInt(tickleLines.length)];
+                  _cachedInsight = null;
+                  _cachedTabIndex = null;
+                  bubble = true;
+                });
+                _dynamicMsgClearTimer?.cancel();
+                _dynamicMsgClearTimer = Timer(const Duration(seconds: 3), () {
+                  if (mounted) setState(() { _dynamicMsg = null; bubble = false; });
+                });
               }
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (!mounted) return;
@@ -884,7 +1026,7 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
                       ),
                     ),
                   AnimatedBuilder(
-                    animation: Listenable.merge([_floatAnim, _wiggleAnim, _breathAnim, _squashCtrl]),
+                    animation: _mergedAnimations,
                     builder: (ctx, child) {
                       // Corner peek: tilt when near screen edge
                       final edgeTilt = !_reducedMotion && isDragging

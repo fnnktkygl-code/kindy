@@ -222,8 +222,8 @@ Deno.serve(async (req) => {
           ? `🎂 C'est demain !`
           : `🎂 Anniversaire dans ${threshold} jours`;
         const body = threshold === 1
-          ? `L'anniversaire de ${bd.name} est demain ! Un cadeau est prêt ?`
-          : `L'anniversaire de ${bd.name} approche (${threshold}j). As-tu trouvé une idée cadeau ?`;
+          ? `L'anniversaire de ${bd.name} est demain !`
+          : `L'anniversaire de ${bd.name} approche (${threshold}j)`;
 
         const ok = await sendFcmPush(accessToken, fcmToken, title, body);
         if (ok) {

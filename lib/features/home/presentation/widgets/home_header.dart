@@ -45,8 +45,6 @@ class HomeHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text("Bonjour ${displayName.split(' ').first} 👋", style: fw(size: 26, w: FontWeight.w900, color: theme.ink, letterSpacing: -0.5)),
-                const SizedBox(height: 2),
-                Text("Prêt à faire plaisir ?", style: fw(size: 15, w: FontWeight.w600, color: theme.mid)),
               ],
             ),
           ),

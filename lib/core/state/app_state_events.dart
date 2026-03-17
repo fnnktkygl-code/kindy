@@ -64,8 +64,8 @@ extension EventsExtension on PigioAppState {
                 contactId: c.id,
               ));
             }
-          } catch (_) {
-            // Invalid date format, skip
+          } catch (e) {
+            log.warn('Events', 'Invalid birthdate format for contact ${c.id}', e);
           }
         }
       }

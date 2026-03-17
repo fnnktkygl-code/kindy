@@ -103,7 +103,7 @@ class ContactInviteStatusSection extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                "L'invitation n'a pas encore été acceptée. Partagez le lien ou renvoyez-le.",
+                "Invitation envoyée. Vous pouvez partager le lien ou le renvoyer.",
                 style: fw(size: 11, w: FontWeight.w600, color: theme.mid),
               ),
               const SizedBox(height: 6),
@@ -147,7 +147,7 @@ class ContactInviteStatusSection extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  "Invitation expirée · ${contact.name} n'a pas encore rejoint Pigio.",
+                  "Invitation expirée",
                   style: fw(size: 12, w: FontWeight.w700, color: theme.error),
                 ),
               ),

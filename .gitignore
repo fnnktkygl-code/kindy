@@ -3,6 +3,8 @@ dev.sh
 build.sh
 android/key.properties
 android/pigio-release.jks
+# Google OAuth client secret files — CRITICAL: never commit
+**/client_secret_*.json
 # Firebase — CRITICAL: private key must never be committed
 android/app/*firebase-adminsdk*.json
 android/app/google-services.json

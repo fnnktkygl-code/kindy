@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 
@@ -14,20 +15,6 @@ class WeatherData {
     required this.isDay,
     required this.fetchedAt,
   });
-
-  WeatherData copyWith({
-    double? temperature,
-    String? condition,
-    bool? isDay,
-    DateTime? fetchedAt,
-  }) {
-    return WeatherData(
-      temperature: temperature ?? this.temperature,
-      condition: condition ?? this.condition,
-      isDay: isDay ?? this.isDay,
-      fetchedAt: fetchedAt ?? this.fetchedAt,
-    );
-  }
 
   @override
   bool operator ==(Object other) {
@@ -69,25 +56,9 @@ class WeatherService {
         }
       }
 
-      // Default to Paris if no location
-      double lat = position?.latitude ?? 48.8566;
-      double lon = position?.longitude ?? 2.3522;
-
-      // If no GPS position, try IP-based geolocation as fallback
-      if (position == null) {
-        try {
-          final geoResp = await http.get(Uri.parse('https://ipapi.co/json/')).timeout(const Duration(seconds: 5));
-          if (geoResp.statusCode == 200) {
-            final geo = jsonDecode(geoResp.body);
-            if (geo['latitude'] is num && geo['longitude'] is num) {
-              lat = (geo['latitude'] as num).toDouble();
-              lon = (geo['longitude'] as num).toDouble();
-            }
-          }
-        } catch (_) {
-          // Fallback stays at Paris
-        }
-      }
+      // Default to Paris if no GPS permission
+      final double lat = position?.latitude ?? 48.8566;
+      final double lon = position?.longitude ?? 2.3522;
 
       final url = Uri.parse(
         'https://api.open-meteo.com/v1/forecast'
@@ -119,8 +90,8 @@ class WeatherService {
         );
         return _cache;
       }
-    } catch (_) {
-      // Fallback: offline return null
+    } catch (e) {
+      debugPrint('[Weather] Failed to fetch weather: $e');
     }
     return null;
   }

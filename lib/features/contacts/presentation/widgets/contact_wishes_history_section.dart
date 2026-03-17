@@ -48,7 +48,26 @@ class ContactWishesHistorySection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          ...historyChildren,
+          if (historyChildren.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+              decoration: BoxDecoration(
+                color: theme.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: theme.divider.withValues(alpha: 0.5)),
+              ),
+              child: Column(
+                children: [
+                  const Text('📦', style: TextStyle(fontSize: 28)),
+                  const SizedBox(height: 10),
+                  Text("Aucun historique", style: fw(size: 16, w: FontWeight.w800, color: theme.ink)),
+                  const SizedBox(height: 4),
+                  Text("Les envies passées apparaîtront ici.", style: fw(size: 13, w: FontWeight.w600, color: theme.mid), textAlign: TextAlign.center),
+                ],
+              ),
+            )
+          else
+            ...historyChildren,
         ],
       ),
     );

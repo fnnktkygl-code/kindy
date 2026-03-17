@@ -69,6 +69,7 @@ extension InvitesExtension on PigioAppState {
     if (groupId != null) _addGroupPendingInvite(groupId, contactId);
 
     setMascotMoment(MascotMoment.inviteSent);
+    AnalyticsService.firstInviteSent();
     logActivity('Invitation envoyée à ${contact.name}', '📩',
         contactId: contactId);
     awardMascotProgress(
@@ -275,6 +276,8 @@ extension InvitesExtension on PigioAppState {
     setTabIndex(3);
     setContactsSubIndex(0);
     setMascotMoment(MascotMoment.inviteAccepted);
+    AnalyticsService.inviteAccepted();
+    ReviewService.tryPrompt(); // High-value moment: circle is growing
     logActivity('Invitation acceptée', '✅', contactId: inviteContactId);
 
     notifyListeners();
@@ -285,6 +288,15 @@ extension InvitesExtension on PigioAppState {
       titleFr: 'Invitation acceptee',
       titleEn: 'Invitation accepted',
     );
+
+    // Invite reward: unlock friendship bracelet on first accepted invite
+    unlockClothing('acc_friendship');
+    // Ambassador crown: unlock after 5 accepted invites
+    final acceptedCount = _pendingInvites
+        .where((i) => i.state == PendingInviteState.accepted)
+        .length;
+    if (acceptedCount >= 5) unlockClothing('hat_ambassador');
+
     return true;
   }
 

@@ -78,6 +78,7 @@ extension ContactsExtension on PigioAppState {
     notifyListeners();
     _saveData();
     logActivity('Contact ajouté : $name', '👤', contactId: _contacts.last.id);
+    AnalyticsService.firstContactAdded();
   }
 
   void updateContact({
@@ -228,6 +229,7 @@ extension ContactsExtension on PigioAppState {
     notifyListeners();
     _saveData();
     logActivity('Cercle créé : $name', emoji);
+    AnalyticsService.circleCreated();
   }
 
   void deleteGroup(String id) {

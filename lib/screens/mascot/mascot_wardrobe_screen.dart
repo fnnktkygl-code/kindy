@@ -9,6 +9,7 @@ import 'package:pigio_app/core/theme/pigio_theme.dart';
 import 'package:pigio_app/shared/widgets/ui_widgets.dart';
 import 'package:pigio_app/shared/widgets/pigio_painter.dart';
 import 'package:pigio_app/services/mascot_outfit_engine.dart';
+import 'package:pigio_app/services/mascot_share_service.dart';
 
 // Per-slot accent colors — used in filter chips, slot dots, and item cards.
 const _kSlotAccents = <ClothingSlot?, Color>{
@@ -38,13 +39,13 @@ const _kItemColors = <Color>[
   Color(0xFF66BB6A), // Green
 ];
 
-const _kSlotFilters = <({String label, String emoji, ClothingSlot? slot})>[
-  (label: 'Tout', emoji: '✨', slot: null),
-  (label: 'Têtes', emoji: '🎩', slot: ClothingSlot.hat),
-  (label: 'Lunettes', emoji: '👓', slot: ClothingSlot.glasses),
-  (label: 'Hauts', emoji: '👕', slot: ClothingSlot.top),
-  (label: 'Chaussures', emoji: '👟', slot: ClothingSlot.shoes),
-  (label: 'Accessoires', emoji: '🎀', slot: ClothingSlot.accessory),
+const _kSlotFilters = <({String labelFr, String labelEn, String emoji, ClothingSlot? slot})>[
+  (labelFr: 'Tout', labelEn: 'All', emoji: '✨', slot: null),
+  (labelFr: 'Têtes', labelEn: 'Hats', emoji: '🎩', slot: ClothingSlot.hat),
+  (labelFr: 'Lunettes', labelEn: 'Glasses', emoji: '👓', slot: ClothingSlot.glasses),
+  (labelFr: 'Hauts', labelEn: 'Tops', emoji: '👕', slot: ClothingSlot.top),
+  (labelFr: 'Chaussures', labelEn: 'Shoes', emoji: '👟', slot: ClothingSlot.shoes),
+  (labelFr: 'Accessoires', labelEn: 'Accessories', emoji: '🎀', slot: ClothingSlot.accessory),
 ];
 
 class MascotWardrobeScreen extends StatefulWidget {
@@ -79,6 +80,17 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
       if (state.currentClothingRequest == null) {
         final req = await MascotOutfitEngine.evaluateContext(state);
         if (mounted && req != null) state.setClothingRequest(req);
+      }
+      // Check for newly unlocked achievements and offer to share rare+ items
+      if (mounted) {
+        final newUnlocks = MascotOutfitEngine.checkAchievements(state);
+        final shareableItem = newUnlocks
+            .map((id) => MascotOutfitEngine.getItem(id))
+            .where((item) => item != null && (item.rarity == ItemRarity.rare || item.rarity == ItemRarity.legendary))
+            .firstOrNull;
+        if (shareableItem != null && mounted) {
+          _showSharePrompt(shareableItem.id, state);
+        }
       }
     });
   }
@@ -121,6 +133,86 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
     HapticFeedback.selectionClick();
     setState(() => _selectedSlot = slot);
     _staggerCtrl.forward(from: 0);
+  }
+
+  void _showSharePrompt(String itemId, PigioAppState state) {
+    final item = MascotOutfitEngine.getItem(itemId);
+    if (item == null) return;
+    final isFr = state.locale.languageCode == 'fr';
+    final theme = context.pt;
+
+    HapticFeedback.heavyImpact();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: theme.sheet,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(item.emoji, style: const TextStyle(fontSize: 48)),
+            const SizedBox(height: 12),
+            Text(
+              isFr ? 'Nouvel objet débloqué !' : 'New item unlocked!',
+              style: fw(size: 20, w: FontWeight.w800, color: theme.ink),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              item.name,
+              style: fw(size: 16, w: FontWeight.w600, color: theme.mid),
+            ),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: _kRarityColors[item.rarity]?.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                item.rarity.name.toUpperCase(),
+                style: fw(size: 11, w: FontWeight.w900, color: _kRarityColors[item.rarity] ?? theme.mid),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                icon: const Icon(Icons.share_rounded, size: 18),
+                label: Text(
+                  isFr ? 'Partager ma réussite' : 'Share my achievement',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                onPressed: () {
+                  Navigator.pop(context);
+                  MascotShareService.shareAchievementCard(
+                    context: context,
+                    itemId: itemId,
+                    state: state,
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                isFr ? 'Plus tard' : 'Maybe later',
+                style: fw(size: 14, w: FontWeight.w600, color: theme.mid),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -216,6 +308,7 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
             delegate: _FilterBarDelegate(
               selected: _selectedSlot,
               theme: theme,
+              lang: state.locale.languageCode,
               onSelect: _onSlotTap,
             ),
           ),
@@ -533,7 +626,7 @@ class _MascotHeaderDelegate extends SliverPersistentHeaderDelegate {
                         children: _kSlotFilters
                             .where((f) => f.slot != null)
                             .map((f) => Semantics(
-                                  label: "${f.label}, ${state.activeOutfit[f.slot] != null ? 'équipé' : 'vide'}",
+                                  label: "${state.locale.languageCode == 'fr' ? f.labelFr : f.labelEn}, ${state.activeOutfit[f.slot] != null ? 'équipé' : 'vide'}",
                                   button: true,
                                   child: _SlotDot(
                                     emoji: f.emoji,
@@ -981,11 +1074,13 @@ class _SuggestionBanner extends StatelessWidget {
 class _FilterBarDelegate extends SliverPersistentHeaderDelegate {
   final ClothingSlot? selected;
   final PigioThemeData theme;
+  final String lang;
   final void Function(ClothingSlot?) onSelect;
 
   _FilterBarDelegate({
     required this.selected,
     required this.theme,
+    required this.lang,
     required this.onSelect,
   });
 
@@ -1007,7 +1102,7 @@ class _FilterBarDelegate extends SliverPersistentHeaderDelegate {
             final accent = _kSlotAccents[f.slot] ?? theme.primary;
             final count = MascotOutfitEngine.countForSlot(f.slot);
             return Semantics(
-              label: "${f.label}, $count articles",
+              label: "${lang == 'fr' ? f.labelFr : f.labelEn}, $count ${lang == 'fr' ? 'articles' : 'items'}",
               selected: isSelected,
               button: true,
               child: GestureDetector(
@@ -1040,7 +1135,7 @@ class _FilterBarDelegate extends SliverPersistentHeaderDelegate {
                       Text(f.emoji, style: const TextStyle(fontSize: 14)),
                       const SizedBox(width: 5),
                       Text(
-                        "${f.label} ($count)",
+                        "${lang == 'fr' ? f.labelFr : f.labelEn} ($count)",
                         style: fw(
                           size: 13,
                           w: isSelected ? FontWeight.w800 : FontWeight.w600,
@@ -1060,7 +1155,7 @@ class _FilterBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(_FilterBarDelegate old) =>
-      old.selected != selected || old.theme != theme;
+      old.selected != selected || old.theme != theme || old.lang != lang;
 }
 
 // ─────────────────────────────────────────────────────────────

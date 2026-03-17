@@ -67,8 +67,8 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
         isMounted: () => mounted,
         onInviteUri: _processIncomingInvite,
       );
-    } catch (_) {
-      // Keep app flow resilient if deep-link stream cannot be initialized.
+    } catch (e) {
+      debugPrint('[MainShell] Deep-link init failed: $e');
     }
   }
 
@@ -237,7 +237,7 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
       body: Stack(
         children: [
           _screens[currentIndex],
-          DraggableMascot(tabIndex: currentIndex),
+          SafeDraggableMascot(tabIndex: currentIndex),
           _buildWizzBanner(theme),
         ],
       ),

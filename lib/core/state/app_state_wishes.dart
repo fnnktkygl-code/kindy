@@ -31,6 +31,7 @@ extension WishesExtension on PigioAppState {
     _saveData();
     logActivity('Envie ajoutée : $title', emoji, contactId: contactId);
     if (contactId == null) {
+      AnalyticsService.firstWishAdded();
       awardMascotProgress(
         isFirstOwnWish ? 12 : 6,
         emoji: isFirstOwnWish ? '🎁' : null,

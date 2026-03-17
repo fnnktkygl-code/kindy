@@ -15,14 +15,11 @@ import 'pigio_voice.dart';
 class FcmService {
   static const String _path = '/functions/v1/send-fcm';
   static const String _supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  static const int _maxRetries = 2;
+  static const Duration _retryDelay = Duration(seconds: 2);
 
   /// Send a push notification to a single device identified by [fcmToken].
-  ///
-  /// [baseUrl]  — Supabase project base URL, e.g. https://abc.supabase.co
-  /// [fcmToken] — recipient device FCM registration token
-  /// [title]    — notification title (sender name)
-  /// [body]     — notification body text
-  /// [type]     — notification type identifier (e.g. 'profile_updated')
+  /// Retries up to [_maxRetries] times on transient failures (timeout, 5xx).
   static Future<void> sendPush({
     required String baseUrl,
     required String fcmToken,
@@ -41,28 +38,42 @@ class FcmService {
     final pushTitle = useMascotVoice ? PigioVoice.title(title) : title;
     final pushBody = useMascotVoice ? PigioVoice.body(body) : body;
 
-    try {
-      final response = await http
-          .post(
-            uri,
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': _supabaseAnonKey,
-              'Authorization': 'Bearer $jwt',
-            },
-            body: jsonEncode({
-              'token': fcmToken,
-              'title': pushTitle,
-              'body': pushBody,
-              'type': type,
-            }),
-          )
-          .timeout(const Duration(seconds: 10));
-      if (kDebugMode && response.statusCode >= 400) {
-        debugPrint('[Pigio] FCM push failed (${response.statusCode}): ${response.body}');
+    final payload = jsonEncode({
+      'token': fcmToken,
+      'title': pushTitle,
+      'body': pushBody,
+      'type': type,
+    });
+    final headers = {
+      'Content-Type': 'application/json',
+      'apikey': _supabaseAnonKey,
+      'Authorization': 'Bearer $jwt',
+    };
+
+    for (int attempt = 0; attempt <= _maxRetries; attempt++) {
+      try {
+        final response = await http
+            .post(uri, headers: headers, body: payload)
+            .timeout(const Duration(seconds: 10));
+
+        if (response.statusCode < 400) return; // Success
+
+        // 4xx = client error, don't retry (bad token, malformed request, etc.)
+        if (response.statusCode < 500) {
+          if (kDebugMode) debugPrint('[Pigio] FCM push failed (${response.statusCode}): ${response.body}');
+          return;
+        }
+
+        // 5xx = server error, retry
+        if (kDebugMode) debugPrint('[Pigio] FCM push 5xx (attempt ${attempt + 1}/${_maxRetries + 1})');
+      } catch (e) {
+        // Timeout or network error — retry
+        if (kDebugMode) debugPrint('[Pigio] FCM push error (attempt ${attempt + 1}/${_maxRetries + 1}): $e');
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('[Pigio] FCM push error: $e');
+
+      if (attempt < _maxRetries) {
+        await Future.delayed(_retryDelay * (attempt + 1)); // Linear backoff
+      }
     }
   }
 }

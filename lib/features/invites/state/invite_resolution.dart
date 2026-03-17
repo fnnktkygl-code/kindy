@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../../../services/invitation_service.dart';
 
 class InviteResolution {
@@ -11,7 +12,8 @@ class InviteResolution {
         link,
         accepterProfile: accepterProfile,
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[InviteResolution] Failed to resolve link $link: $e');
       return InvitationLinkResolution(valid: false);
     }
   }

@@ -134,8 +134,8 @@ class _AddProfileSheetState extends State<AddProfileSheet> {
           setState(() => _addressSuggestions = raw);
         }
       }
-    } catch (_) {
-      // Silently ignore network errors — address autocomplete is best-effort
+    } catch (e) {
+      debugPrint('[AddProfile] Address autocomplete failed: $e');
     } finally {
       if (mounted) setState(() => _isFetchingAddress = false);
     }
@@ -166,7 +166,9 @@ class _AddProfileSheetState extends State<AddProfileSheet> {
       try {
         final parts = _birthdate!.split('/');
         initialDate = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[AddProfile] Invalid birthdate format: $_birthdate');
+      }
     }
 
     final DateTime? picked = await showDatePicker(

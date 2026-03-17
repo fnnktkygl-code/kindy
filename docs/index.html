@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pigio — Prends soin de tes proches, simplement</title>
     <meta name="description"
-        content="L'app N°1 pour s'occuper de sa famille sans charge mentale. Pigio retient les tailles, événements et cercles avec une IA Gemini et une voix interactive. 100% gratuit.">
+        content="L'app N°1 pour s'occuper de sa famille sans charge mentale. Pigio retient les tailles, événements et cercles avec un Assistant IA intelligent.">
     <meta property="og:title" content="Pigio — Prends soin de tes proches, simplement">
     <meta property="og:description"
-        content="L'app qui retient tout pour ceux que vous aimez. Tailles, événements, cadeaux — avec une mascotte IA interactive.">
+        content="L'app qui retient tout pour ceux que vous aimez. Tailles, événements, cadeaux — avec un Assistant IA intelligent.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="logo.png">
     <link rel="icon" href="logo.png">
@@ -120,8 +120,8 @@
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(232, 114, 92, 0.45);
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(232, 114, 92, 0.45);
         }
 
         .btn-outline {
@@ -389,122 +389,173 @@
 
         /* ─── Screenshots gallery ──────── */
         .screenshots {
-            padding: 80px 0;
-            background: var(--light);
+            padding: 120px 0;
+            background: linear-gradient(to bottom, #ffffff, var(--light));
             transition: background-color 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .screenshots {
+                background: linear-gradient(to bottom, var(--bg), var(--card));
+            }
         }
 
         .screenshots .section-header {
             text-align: center;
-            margin-bottom: 48px;
+            margin-bottom: 70px;
+            position: relative;
+            z-index: 2;
         }
 
         .screenshots .section-header h2 {
-            font-size: 36px;
+            font-size: 42px;
             font-weight: 800;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--ink) 0%, var(--primary-dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .screenshots .section-header h2 {
+                background: linear-gradient(135deg, #ffffff 0%, var(--primary-light) 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
         }
 
         .screenshots .section-header p {
-            font-size: 17px;
+            font-size: 19px;
             color: var(--mid);
+            max-width: 500px;
+            margin: 0 auto;
         }
 
-        .gallery-track {
+        .gallery-center-grid {
             display: flex;
-            gap: 24px;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-            -webkit-overflow-scrolling: touch;
-            padding: 16px 32px 32px;
-            scrollbar-width: none;
+            justify-content: center;
+            align-items: center;
+            gap: 32px;
+            padding: 20px;
+            flex-wrap: wrap;
+            max-width: 1200px;
+            margin: 0 auto;
+            perspective: 1000px;
+            position: relative;
+            z-index: 2;
         }
 
-        .gallery-track::-webkit-scrollbar {
-            display: none;
+        .gallery-wrapper {
+            animation: float 6s ease-in-out infinite;
         }
 
-        .gallery-track::before,
-        .gallery-track::after {
-            content: '';
-            flex-shrink: 0;
-            width: 1px;
+        .gallery-wrapper.offset-down {
+            transform: translateY(40px);
+            animation: float-alt 6s ease-in-out infinite;
+        }
+
+        @keyframes float-alt {
+
+            0%,
+            100% {
+                transform: translateY(40px);
+            }
+
+            50% {
+                transform: translateY(20px);
+            }
         }
 
         .gallery-item {
-            flex-shrink: 0;
-            scroll-snap-align: center;
-            width: 240px;
-            border-radius: 32px;
+            width: 250px;
+            border-radius: 38px;
             overflow: hidden;
-            border: 5px solid var(--ink);
-            box-shadow: var(--shadow);
+            border: 8px solid var(--ink);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
             background: var(--ink);
-            transition: transform 0.4s ease, box-shadow 0.4s ease;
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transform-style: preserve-3d;
+            cursor: pointer;
         }
 
-        .gallery-item:hover {
-            transform: scale(1.03);
-            box-shadow: var(--shadow-lg);
+        @media (prefers-color-scheme: dark) {
+            .gallery-item {
+                border-color: #2a2a3e;
+                box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+            }
         }
 
-        .gallery-item img {
-            width: 100%;
-            aspect-ratio: 9/19.5;
-            object-fit: cover;
-            border-radius: 27px;
+        .gallery-wrapper:hover .gallery-item {
+            transform: translateY(-15px) scale(1.05);
+            border-color: var(--primary);
+            box-shadow: 0 30px 60px rgba(232, 114, 92, 0.3);
         }
 
         .gallery-item .placeholder-screen {
             width: 100%;
             aspect-ratio: 9/19.5;
-            border-radius: 27px;
+            border-radius: 30px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-direction: column;
-            gap: 8px;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
         }
 
-        .gallery-item:nth-child(2) .placeholder-screen {
+        .gallery-item .placeholder-screen::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 40%);
+            pointer-events: none;
+        }
+
+        .gallery-wrapper:nth-child(1) .placeholder-screen {
             background: linear-gradient(160deg, #1f1f38, #3d2f45);
         }
 
-        .gallery-item:nth-child(3) .placeholder-screen {
-            background: linear-gradient(160deg, #f7f3ee, #ede5d8);
+        .gallery-wrapper:nth-child(2) .placeholder-screen {
+            background: linear-gradient(160deg, #f0e6d2, #e0a96d);
+            color: #1a1a2e;
         }
 
-        .gallery-item:nth-child(4) .placeholder-screen {
-            background: linear-gradient(160deg, #1f1f38, #2f3545);
+        .gallery-wrapper:nth-child(3) .placeholder-screen {
+            background: linear-gradient(160deg, #2a2a3e, #4a4a6a);
         }
 
-        .gallery-item:nth-child(5) .placeholder-screen {
-            background: linear-gradient(160deg, #f7f3ee, #e8e0d2);
-        }
-
-        .gallery-item:nth-child(6) .placeholder-screen {
-            background: linear-gradient(160deg, #1f1f38, #352f3d);
-        }
-
-        .gallery-item:nth-child(7) .placeholder-screen {
-            background: linear-gradient(160deg, #f7f3ee, #e5dfd4);
+        .gallery-wrapper:nth-child(4) .placeholder-screen {
+            background: linear-gradient(160deg, #e8725c, #d45a44);
         }
 
         .gallery-item .placeholder-screen .p-emoji {
-            font-size: 32px;
-            opacity: 0.5;
+            font-size: 44px;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.2));
+            transition: transform 0.4s ease;
+        }
+
+        .gallery-wrapper:hover .p-emoji {
+            transform: scale(1.15) translateY(-5px);
         }
 
         .gallery-item .placeholder-screen .p-label {
-            font-size: 12px;
-            color: rgba(0, 0, 0, 0.25);
-            font-weight: 600;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 700;
+            text-align: center;
+            padding: 0 16px;
         }
 
-        .gallery-item:nth-child(2) .placeholder-screen .p-label,
-        .gallery-item:nth-child(4) .placeholder-screen .p-label,
-        .gallery-item:nth-child(6) .placeholder-screen .p-label {
-            color: rgba(255, 255, 255, 0.3);
+        .gallery-wrapper:nth-child(2) .placeholder-screen .p-label {
+            color: rgba(0, 0, 0, 0.7);
         }
 
         /* ─── Features ──────────────────── */
@@ -584,7 +635,7 @@
 
         .feature-hero-card .visual .phone-mockup {
             width: 220px;
-            animation: none;
+            animation: float 5s ease-in-out infinite;
             border-color: var(--ink);
             background: var(--ink);
         }
@@ -619,8 +670,8 @@
         }
 
         .f-card:hover {
-            box-shadow: var(--shadow-lg);
-            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            transform: translateY(-8px);
             border-color: var(--primary);
         }
 
@@ -706,8 +757,8 @@
 
         .p-card:hover {
             border-color: #22c55e;
-            transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(34, 197, 94, 0.1);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(34, 197, 94, 0.15);
         }
 
         .p-card .p-icon {
@@ -867,8 +918,8 @@
         }
 
         .btn-download:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 32px rgba(232, 114, 92, 0.5);
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 15px 35px rgba(232, 114, 92, 0.5);
         }
 
         .install-steps {
@@ -1081,7 +1132,7 @@
                     <div class="badge" style="background:var(--primary-light);color:var(--primary);">
                         <span
                             style="width:8px;height:8px;border-radius:50%;background:var(--primary);display:inline-block;animation:pulse 2s infinite;"></span>
-                        ✨ Mascotte IA Vocale · Gratuit
+                        ✨ Votre Assistant Familial Intelligent
                     </div>
                     <h1>Mieux s'occuper de <br>sa famille, <span class="gradient-text">sans charge mentale</span></h1>
                     <p>Pigio est l'application bienveillante qui retient tout pour vous : tailles, envies, et
@@ -1096,9 +1147,9 @@
                         </a>
                     </div>
                     <div class="hero-trust">
-                        <span><i class="fa-solid fa-check"></i> 100% Gratuit</span>
+                        <span><i class="fa-solid fa-check"></i> Sans Charge Mentale</span>
                         <span><i class="fa-solid fa-check"></i> Suppression Zéro Trace</span>
-                        <span><i class="fa-solid fa-check"></i> IA Vocale Interactive</span>
+                        <span><i class="fa-solid fa-check"></i> Assistant IA Intelligent</span>
                     </div>
                 </div>
                 <div class="hero-visual reveal delay-1">
@@ -1120,28 +1171,36 @@
         <div class="container">
             <div class="section-header">
                 <h2>Découvrez Pigio en images</h2>
-                <p>De vrais écrans, pas des maquettes.</p>
+                <p>Une expérience fluide, moderne, et pensée pour vous.</p>
             </div>
         </div>
-        <div class="gallery-track">
-            <div class="gallery-item">
-                <div class="placeholder-screen" style="background:linear-gradient(160deg,#1f1f38,#3d2f45);">
-                    <span class="p-emoji">🤖</span><span class="p-label">Dashboard & IA Vocale</span>
+        <div class="gallery-center-grid">
+            <div class="gallery-wrapper" style="animation-delay: 0s;">
+                <div class="gallery-item">
+                    <div class="placeholder-screen">
+                        <span class="p-emoji">🏡</span><span class="p-label">Dashboard Familial</span>
+                    </div>
                 </div>
             </div>
-            <div class="gallery-item">
-                <div class="placeholder-screen">
-                    <span class="p-emoji">🎁</span><span class="p-label">Suggestions par IA (Gemini)</span>
+            <div class="gallery-wrapper offset-down" style="animation-delay: -1.5s;">
+                <div class="gallery-item">
+                    <div class="placeholder-screen">
+                        <span class="p-emoji">✨</span><span class="p-label">Suggestions IA (Gemini)</span>
+                    </div>
                 </div>
             </div>
-            <div class="gallery-item">
-                <div class="placeholder-screen">
-                    <span class="p-emoji">👥</span><span class="p-label">Cercles Familiaux Partagés</span>
+            <div class="gallery-wrapper" style="animation-delay: -3s;">
+                <div class="gallery-item">
+                    <div class="placeholder-screen">
+                        <span class="p-emoji">👥</span><span class="p-label">Cercles Partagés</span>
+                    </div>
                 </div>
             </div>
-            <div class="gallery-item">
-                <div class="placeholder-screen">
-                    <span class="p-emoji">🌗</span><span class="p-label">Mode Sombre Dynamique</span>
+            <div class="gallery-wrapper offset-down" style="animation-delay: -4.5s;">
+                <div class="gallery-item">
+                    <div class="placeholder-screen">
+                        <span class="p-emoji">🌗</span><span class="p-label">Mode Sombre Dynamique</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1162,18 +1221,18 @@
                 <div class="content">
                     <div class="badge"
                         style="background:linear-gradient(135deg,var(--secondary),var(--primary));color:#fff;font-weight:700;">
-                        IA Gemini Vocale ✨
+                        Assistant IA Intelligent ✨
                     </div>
-                    <h3>Une Mascotte Familiale Interactive</h3>
-                    <p>L'IA Pigio n'est pas qu'un simple robot. Elle comprend vos profils, vous parle avec sa voix
-                        unique, suit la météo, vous donne des conseils (Insights) et vous pouvez même la customiser avec
-                        des vêtements débloqués au fil du temps.</p>
+                    <h3>Votre Assistant Familial</h3>
+                    <p>L'IA de Pigio n'est pas qu'un simple gadget. Elle analyse les profils de vos proches, comprend
+                        leurs goûts et vous génère des suggestions de cadeaux personnalisées (Insights). Fini les pannes
+                        d'inspiration ou les cadeaux de dernière minute !</p>
                 </div>
                 <div class="visual">
                     <div class="phone-mockup" style="width:200px;">
                         <div class="placeholder-screen">
                             <img src="mascot.png" alt="IA Pigio" style="width:60px;opacity:0.6;">
-                            <span class="p-text">Mascotte en action</span>
+                            <span class="p-text">IA en action</span>
                         </div>
                     </div>
                 </div>
@@ -1253,7 +1312,8 @@
                     <div class="p-icon"><i class="fa-solid fa-shield-halved"></i></div>
                     <h4>Sécurité & IA Privée</h4>
                     <p>Connexions chiffrées (TLS 1.3), protection biométrique locale, et l'IA (Vertex AI) n'utilise
-                        <strong>aucune</strong> de vos requêtes pour s'entraîner.</p>
+                        <strong>aucune</strong> de vos requêtes pour s'entraîner.
+                    </p>
                 </div>
             </div>
         </div>
@@ -1264,8 +1324,8 @@
         <div class="container download-content">
             <div class="logo-glow"><img src="logo.png" alt="Pigio"></div>
             <h2>Prêt à simplifier votre vie de famille ?</h2>
-            <p>Téléchargez Pigio et commencez à organiser envies, tailles et connexions dès aujourd'hui. C'est 100%
-                gratuit, sans publicité, et sécurisé.</p>
+            <p>Téléchargez Pigio et commencez à organiser envies, tailles et connexions dès aujourd'hui. C'est sans
+                publicité et redoutablement sécurisé.</p>
             <div class="download-card reveal">
                 <div class="download-card-top">
                     <div>
@@ -1273,8 +1333,8 @@
                         <div class="meta">Version 1.0.0 • Android 8.0+</div>
                         <div class="tags">
                             <span><i class="fa-solid fa-shield-halved"></i> RGPD</span>
-                            <span><i class="fa-solid fa-bolt"></i> IA Gemini</span>
-                            <span><i class="fa-solid fa-heart"></i> Gratuit</span>
+                            <span><i class="fa-solid fa-wand-magic-sparkles"></i> Assistant IA</span>
+                            <span><i class="fa-solid fa-heart"></i> Pour la Famille</span>
                         </div>
                     </div>
                     <a href="app-release.apk" download class="btn-download">

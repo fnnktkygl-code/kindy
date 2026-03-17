@@ -140,7 +140,8 @@ class _CirclesScreenState extends State<CirclesScreen> {
         next = DateTime(ny, month, nd);
       }
       return next.difference(today).inDays;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[Circles] Invalid birthdate for ${contact.name}: ${contact.birthdate}');
       return 999;
     }
   }
@@ -169,6 +170,34 @@ class _CirclesScreenState extends State<CirclesScreen> {
     final allGroups = List<CircleGroup>.from(groups)
       ..sort((a, b) => a.isSystem ? -1 : b.isSystem ? 1 : 0);
     final suggestions = state.mascotCircleSuggestions;
+
+    if (allGroups.isEmpty && suggestions.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CustomPaint(size: const Size(64, 64), painter: PigioPainter(mood: PigMood.searching, scarfColor: theme.primary)),
+              const SizedBox(height: 16),
+              Text(
+                _filter == 'all' ? 'Aucun cercle' : 'Aucun cercle dans cette catégorie',
+                style: fw(size: 18, w: FontWeight.w900, color: theme.ink),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _filter == 'all'
+                    ? 'Créez votre premier cercle pour regrouper vos proches et gérer leurs envies ensemble.'
+                    : 'Essayez un autre filtre ou créez un nouveau cercle.',
+                style: fw(size: 13, w: FontWeight.w600, color: theme.mid),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 120),

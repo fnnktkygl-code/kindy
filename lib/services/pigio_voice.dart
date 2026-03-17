@@ -19,20 +19,20 @@ class PigioVoice {
   static String bondGreeting(int bondLevel, {String lang = 'fr'}) {
     if (lang == 'fr') {
       switch (bondLevel) {
-        case 0: return 'Coucou ! 👋';
-        case 1: return 'Salut, copain ! 🤝';
-        case 2: return 'Hey l\'ami(e) ! 💛';
-        case 3: return 'Mon BFF ! 🌟';
-        case 4: return 'Mon âme sœur ! 💕';
+        case 0: return _pick(const ['Coucou ! 👋', 'Salut ! 🐧', 'Ohé ! 👋']);
+        case 1: return _pick(const ['Salut, copain ! 🤝', 'Hé, on se connaît ! 🤝', 'Re-coucou ! 🐧']);
+        case 2: return _pick(const ['Hey l\'ami(e) ! 💛', 'Mon pote ! 💛', 'Salut l\'artiste ! 🌟']);
+        case 3: return _pick(const ['Mon BFF ! 🌟', 'Meilleur ami(e) ! ✨', 'Mon préféré(e) ! 🌟']);
+        case 4: return _pick(const ['Mon âme sœur ! 💕', 'Mon tout ! 💕', 'Toi et moi pour toujours ! 💕']);
         default: return 'Hey ! 🐧';
       }
     } else {
       switch (bondLevel) {
-        case 0: return 'Hey there! 👋';
-        case 1: return 'Hi buddy! 🤝';
-        case 2: return 'Hey friend! 💛';
-        case 3: return 'BFF! 🌟';
-        case 4: return 'Soulmate! 💕';
+        case 0: return _pick(const ['Hey there! 👋', 'Hello! 🐧', 'Hi! 👋']);
+        case 1: return _pick(const ['Hi buddy! 🤝', 'Hey, I know you! 🤝', 'Hey again! 🐧']);
+        case 2: return _pick(const ['Hey friend! 💛', 'My pal! 💛', 'Hey superstar! 🌟']);
+        case 3: return _pick(const ['BFF! 🌟', 'Best friend! ✨', 'My favorite! 🌟']);
+        case 4: return _pick(const ['Soulmate! 💕', 'My everything! 💕', 'You and me forever! 💕']);
         default: return 'Hey! 🐧';
       }
     }
@@ -41,11 +41,15 @@ class PigioVoice {
   static T _pick<T>(List<T> list) => list[_rng.nextInt(list.length)];
 
   static const _suffixesFr = [
-    '🐧✨', '— Pigio', '💛🐧', '🎁✨', 
+    '🐧✨', '— Pigio', '💛🐧', '🎁✨',
     '— ton Pigio préféré 🐧', '🌟',
+    '— bisou de Pigio 💋🐧', '🎯✨',
+    '— Pigio veille sur toi 👀🐧', '🫶',
   ];
   static const _suffixesEn = [
     '🐧✨', '— Pigio', '💛🐧', '🎁✨',
     '— your favorite Pigio 🐧', '🌟',
+    '— kiss from Pigio 💋🐧', '🎯✨',
+    '— Pigio\'s got your back 👀🐧', '🫶',
   ];
 }

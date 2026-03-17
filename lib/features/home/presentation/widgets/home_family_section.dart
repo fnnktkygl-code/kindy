@@ -22,7 +22,53 @@ class HomeFamilySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final family = state.contacts.where((c) => c.isFamily).toList();
-    if (family.isEmpty) return const SizedBox.shrink();
+    if (family.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("MA FAMILLE", style: fw(size: 11, w: FontWeight.w800, color: theme.mid, letterSpacing: 1.2)),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: onSeeAllMembers,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.success.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: theme.success.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: theme.success.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text('🏠', style: TextStyle(fontSize: 20)),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Ajouter des proches", style: fw(size: 15, w: FontWeight.w800, color: theme.ink)),
+                        const SizedBox(height: 2),
+                        Text("Ajoutez vos proches au cercle Famille pour suivre leurs envies.", style: fw(size: 12, w: FontWeight.w600, color: theme.mid)),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, color: theme.success, size: 20),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+        ],
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -38,7 +84,9 @@ class HomeFamilySection extends StatelessWidget {
               final birthdate = DateTime(DateTime.now().year, int.parse(parts[1]), int.parse(parts[0]));
               final diff = birthdate.difference(DateTime.now()).inDays;
               if (diff >= 0 && diff <= 30) birthdaySoon = true;
-            } catch (_) {}
+            } catch (e) {
+              debugPrint('[HomeFamily] Invalid birthdate for ${member.name}: ${member.birthdate}');
+            }
           }
           final bool incomplete = sizes.length < 3;
 

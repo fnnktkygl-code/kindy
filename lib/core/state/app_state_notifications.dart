@@ -255,13 +255,6 @@ extension NotificationsExtension on PigioAppState {
     }
   }
 
-  /// Local test helper: simulates a received Wizz for this account/UI only.
-  void triggerIncomingWizzTest() {
-    _playIncomingWizzSound();
-    _globalWizzNonce++;
-    notifyListeners();
-  }
-
   void _playIncomingWizzSound() {
     Future.microtask(() async {
       try {

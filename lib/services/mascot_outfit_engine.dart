@@ -1,5 +1,9 @@
+import 'dart:math' as math;
 import 'package:pigio_app/core/state/app_state.dart';
+import 'package:pigio_app/shared/widgets/pigio_painter.dart';
 import 'weather_service.dart';
+
+final _rng = math.Random();
 
 // ─── ACHIEVEMENT DEFINITIONS ──────────────────────────────────────────────────
 class Achievement {
@@ -143,6 +147,8 @@ class MascotOutfitEngine {
     const ClothingItem(id: 'acc_egg', name: 'Œuf de Pâques', emoji: '🥚', slot: ClothingSlot.accessory, rarity: ItemRarity.uncommon, season: 'spring', tags: ['pâques', 'printemps']),
     const ClothingItem(id: 'acc_bowtie', name: 'Nœud papillon', emoji: '🎀', slot: ClothingSlot.accessory, rarity: ItemRarity.uncommon, isUnlocked: false, unlockHint: 'Crée ton premier vœu', tags: ['chic', 'fête']),
     const ClothingItem(id: 'acc_cape', name: 'Cape de super-héros', emoji: '🦸', slot: ClothingSlot.accessory, rarity: ItemRarity.legendary, isUnlocked: false, unlockHint: 'Réserve 3 vœux pour tes proches', tags: ['héros', 'spécial']),
+    const ClothingItem(id: 'acc_friendship', name: 'Bracelet d\'amitié', emoji: '🤝', slot: ClothingSlot.accessory, rarity: ItemRarity.rare, isUnlocked: false, unlockHint: 'Fais accepter ta première invitation', tags: ['amitié', 'social']),
+    const ClothingItem(id: 'hat_ambassador', name: 'Couronne d\'ambassadeur', emoji: '🫅', slot: ClothingSlot.hat, rarity: ItemRarity.legendary, isUnlocked: false, unlockHint: 'Fais accepter 5 invitations', tags: ['social', 'ambassadeur']),
   ];
 
   // ─── ACHIEVEMENTS ───────────────────────────────────────────────────────────
@@ -412,6 +418,12 @@ class MascotOutfitEngine {
     return null;
   }
 
+  /// Pick a random (fr, en) pair from parallel lists.
+  static ({String fr, String en}) _pickPair(List<String> frs, List<String> ens) {
+    final i = _rng.nextInt(frs.length);
+    return (fr: frs[i], en: ens[i]);
+  }
+
   /// Null-safe factory — returns null when item ID is missing from catalog.
   static ClothingRequest? _safeRequest(
     String itemId, {
@@ -471,6 +483,58 @@ class MascotOutfitEngine {
     );
   }
 
+  // ─── WEATHER REACTION HELPERS ────────────────────────────────────────────────
+  // Single source of truth for pose, exposure and mood based on weather +
+  // outfit protection. Used by mascot overlay, weather lab, and tests.
+
+  static PigPose weatherPoseFor(WeatherData? weather, WeatherProtectionProfile protection) {
+    if (weather == null) return PigPose.normal;
+    if (protection.hasUmbrella && (weather.condition == 'rain' || weather.condition == 'storm')) {
+      return PigPose.umbrellaBrace;
+    }
+    if ((weather.condition == 'snow' || weather.temperature <= 4) && protection.snowCoverage >= 0.7) {
+      return PigPose.coldTucked;
+    }
+    if (weather.temperature >= 29 && protection.sunCoverage >= 0.8) {
+      return PigPose.sunRelaxed;
+    }
+    return PigPose.normal;
+  }
+
+  static double weatherExposureFor(WeatherData? weather, WeatherProtectionProfile protection) {
+    if (weather == null) return 0.0;
+    switch (weather.condition) {
+      case 'storm':
+        return (1 - protection.stormCoverage).clamp(0.0, 1.0);
+      case 'rain':
+        return (1 - protection.rainCoverage).clamp(0.0, 1.0);
+      case 'snow':
+        return (1 - protection.snowCoverage).clamp(0.0, 1.0);
+      case 'sunny':
+      case 'cloudy':
+        if (weather.isDay && weather.temperature >= 29) {
+          final heatFactor = ((weather.temperature - 29) / 9).clamp(0.2, 1.0);
+          return ((1 - protection.sunCoverage) * heatFactor).clamp(0.0, 1.0);
+        }
+        return 0.0;
+      default:
+        return 0.0;
+    }
+  }
+
+  static PigMood? weatherMoodFor(WeatherData? weather, WeatherProtectionProfile protection) {
+    if (weather == null) return null;
+    if (weather.condition == 'storm' && protection.stormCoverage < 0.7) return PigMood.sad;
+    if (weather.condition == 'storm' && protection.stormCoverage >= 0.9) return PigMood.thinking;
+    if (weather.condition == 'rain' && protection.rainCoverage < 0.65) return PigMood.sad;
+    if (weather.condition == 'rain' && protection.rainCoverage >= 0.88) return PigMood.thinking;
+    if (weather.condition == 'snow' && protection.snowCoverage < 0.65) return PigMood.sad;
+    if (weather.condition == 'snow' && protection.snowCoverage >= 0.88) return PigMood.love;
+    if (weather.temperature > 28 && protection.sunCoverage < 0.55) return PigMood.sad;
+    if (weather.temperature > 28 && protection.sunCoverage >= 0.82) return PigMood.thumbsUp;
+    return null;
+  }
+
   /// Pure weather-only evaluator used by the main context engine and tests.
   static ClothingRequest? evaluateWeatherRequest({
     required WeatherData weather,
@@ -481,32 +545,35 @@ class MascotOutfitEngine {
 
     if (weather.condition == 'storm') {
       if (!protection.hasUmbrella) {
+        final t = _pickPair(
+          ["Ouh la, quel orage ⛈️ Vite, il me faut un vrai abri !", "La foudre gronde ! ⚡ Vite, protège-moi !", "Tempête en vue ⛈️ Mon parapluie, pitié !"],
+          ["Whoa, that's a storm ⛈️ I need proper cover, quick!", "Thunder's rumbling! ⚡ Quick, protect me!", "Storm incoming ⛈️ My umbrella, please!"],
+        );
         final request = _firstUnlockedRequest(
           const ['acc_umbrella', 'top_raincoat', 'top_windbreaker'],
-          isUnlocked: isUnlocked,
-          bubbleTextFr: "Ouh la, quel orage ⛈️ Vite, il me faut un vrai abri !",
-          bubbleTextEn: "Whoa, that's a storm ⛈️ I need proper cover, quick!",
-          contextHint: 'Orage ⛈️',
+          isUnlocked: isUnlocked, bubbleTextFr: t.fr, bubbleTextEn: t.en, contextHint: 'Orage ⛈️',
         );
         if (request != null) return request;
       }
       if (!protection.hasStormShell) {
+        final t = _pickPair(
+          ["Le vent me fouette de côté 🌬️ Il me faut une couche coupe-pluie !", "Ça souffle fort ! 🌬️ Un coupe-vent, viiite !"],
+          ["The wind is whipping sideways 🌬️ I need a weather shell!", "It's blowing hard! 🌬️ A windbreaker, pleease!"],
+        );
         final request = _firstUnlockedRequest(
           const ['top_raincoat', 'top_windbreaker'],
-          isUnlocked: isUnlocked,
-          bubbleTextFr: "Le vent me fouette de côté 🌬️ Il me faut une couche coupe-pluie !",
-          bubbleTextEn: "The wind is whipping sideways 🌬️ I need a weather shell!",
-          contextHint: 'Orage ⛈️',
+          isUnlocked: isUnlocked, bubbleTextFr: t.fr, bubbleTextEn: t.en, contextHint: 'Orage ⛈️',
         );
         if (request != null) return request;
       }
       if (!protection.hasWaterproofShoes) {
+        final t = _pickPair(
+          ["Les flaques arrivent jusqu'à mes pattes 🌧️ Mes bottes !", "Splash splash ! 💦 Mes pieds sont trempés !"],
+          ["The puddles are reaching my feet 🌧️ My boots!", "Splash splash! 💦 My feet are soaked!"],
+        );
         final request = _firstUnlockedRequest(
           const ['shoes_boots'],
-          isUnlocked: isUnlocked,
-          bubbleTextFr: "Les flaques arrivent jusqu'à mes pattes 🌧️ Mes bottes !",
-          bubbleTextEn: "The puddles are reaching my feet 🌧️ My boots!",
-          contextHint: 'Orage ⛈️',
+          isUnlocked: isUnlocked, bubbleTextFr: t.fr, bubbleTextEn: t.en, contextHint: 'Orage ⛈️',
         );
         if (request != null) return request;
       }
@@ -514,22 +581,24 @@ class MascotOutfitEngine {
 
     if (weather.condition == 'rain') {
       if (protection.rainCoverage < 0.74) {
+        final t = _pickPair(
+          ["Il pleut dehors 🌧️ Je veux rester bien au sec !", "Gouttes en approche ! 🌧️ Vite, quelque chose pour me couvrir !", "Plic ploc ! 💧 Je vais finir trempé si on fait rien !"],
+          ["It's raining outside 🌧️ I want to stay dry!", "Drops incoming! 🌧️ Quick, something to cover me!", "Drip drop! 💧 I'll be drenched if we don't act!"],
+        );
         final request = _firstUnlockedRequest(
           const ['acc_umbrella', 'top_raincoat', 'top_windbreaker'],
-          isUnlocked: isUnlocked,
-          bubbleTextFr: "Il pleut dehors 🌧️ Je veux rester bien au sec !",
-          bubbleTextEn: "It's raining outside 🌧️ I want to stay dry!",
-          contextHint: 'Il pleut 🌧️',
+          isUnlocked: isUnlocked, bubbleTextFr: t.fr, bubbleTextEn: t.en, contextHint: 'Il pleut 🌧️',
         );
         if (request != null) return request;
       }
       if (weather.temperature <= 8 && !protection.hasWaterproofShoes) {
+        final t = _pickPair(
+          ["Pluie froide = pattes mouillées 🥾 Vite, mes bottes !", "Mes petites pattes gèlent dans les flaques ! 🥶🥾"],
+          ["Cold rain means wet feet 🥾 Quick, my boots!", "My little feet are freezing in the puddles! 🥶🥾"],
+        );
         final request = _firstUnlockedRequest(
           const ['shoes_boots'],
-          isUnlocked: isUnlocked,
-          bubbleTextFr: "Pluie froide = pattes mouillées 🥾 Vite, mes bottes !",
-          bubbleTextEn: "Cold rain means wet feet 🥾 Quick, my boots!",
-          contextHint: 'Pluie froide 🌧️',
+          isUnlocked: isUnlocked, bubbleTextFr: t.fr, bubbleTextEn: t.en, contextHint: 'Pluie froide 🌧️',
         );
         if (request != null) return request;
       }
@@ -537,88 +606,96 @@ class MascotOutfitEngine {
 
     if (weather.condition == 'snow') {
       if (!protection.hasWarmScarf) {
+        final t = _pickPair(
+          ["Il neige ! ❄️ Vite, mon écharpe !", "Brrr, des flocons partout ! 🌨️ Mon écharpe, s'il te plaît !", "La neige me chatouille le cou ! ❄️ Vite, une écharpe !"],
+          ["It's snowing! ❄️ Quick, my scarf!", "Brrr, snowflakes everywhere! 🌨️ My scarf, please!", "Snow is tickling my neck! ❄️ Quick, a scarf!"],
+        );
         final request = _firstUnlockedRequest(
           const ['top_scarf_thick'],
-          isUnlocked: isUnlocked,
-          bubbleTextFr: "Il neige ! ❄️ Vite, mon écharpe !",
-          bubbleTextEn: "It's snowing! ❄️ Quick, my scarf!",
-          contextHint: 'Il neige ❄️',
+          isUnlocked: isUnlocked, bubbleTextFr: t.fr, bubbleTextEn: t.en, contextHint: 'Il neige ❄️',
         );
         if (request != null) return request;
       }
       if (!protection.hasWinterHat) {
+        final t = _pickPair(
+          ["La neige pique ma tête 🥶 Mon bonnet, vite !", "Ma tête gèle ! 🧊 Un bonnet bien chaud ?", "Flocons sur le crâne ! ❄️ Mon bonnet !"],
+          ["The snow is freezing my head 🥶 My beanie, quick!", "My head is freezing! 🧊 A warm beanie?", "Snowflakes on my head! ❄️ My beanie!"],
+        );
         final request = _firstUnlockedRequest(
           const ['hat_winter'],
-          isUnlocked: isUnlocked,
-          bubbleTextFr: "La neige pique ma tête 🥶 Mon bonnet, vite !",
-          bubbleTextEn: "The snow is freezing my head 🥶 My beanie, quick!",
-          contextHint: 'Il neige ❄️',
+          isUnlocked: isUnlocked, bubbleTextFr: t.fr, bubbleTextEn: t.en, contextHint: 'Il neige ❄️',
         );
         if (request != null) return request;
       }
       if (weather.temperature <= 0 && !protection.hasWaterproofShoes) {
+        final t = _pickPair(
+          ["La neige fond sous mes pieds ❄️ J'ai besoin de bottes !", "Mes pattes s'enfoncent dans la neige ! 🥾 Des bottes !"],
+          ["Snow is melting under my feet ❄️ I need boots!", "My feet are sinking in the snow! 🥾 Boots!"],
+        );
         final request = _firstUnlockedRequest(
           const ['shoes_boots'],
-          isUnlocked: isUnlocked,
-          bubbleTextFr: "La neige fond sous mes pieds ❄️ J'ai besoin de bottes !",
-          bubbleTextEn: "Snow is melting under my feet ❄️ I need boots!",
-          contextHint: 'Neige humide ❄️',
+          isUnlocked: isUnlocked, bubbleTextFr: t.fr, bubbleTextEn: t.en, contextHint: 'Neige humide ❄️',
         );
         if (request != null) return request;
       }
     }
 
     if (weather.temperature < 5 && !protection.hasWinterHat) {
+      final t = _pickPair(
+        ["Brrr il fait ${weather.temperature.round()}°C 🥶 Il me faut une couche chaude !", "${weather.temperature.round()}°C dehors ! 🧊 Mon bonnet, vite !", "Je grelotte ! 🥶 Il fait ${weather.temperature.round()}°C et je suis à plumes !"],
+        ["Brrr it's ${weather.temperature.round()}°C 🥶 I need something warm!", "${weather.temperature.round()}°C outside! 🧊 My beanie, quick!", "I'm shivering! 🥶 It's ${weather.temperature.round()}°C and I'm all feathers!"],
+      );
       final request = _firstUnlockedRequest(
         const ['hat_winter', 'top_scarf_thick'],
-        isUnlocked: isUnlocked,
-        bubbleTextFr: "Brrr il fait ${weather.temperature.round()}°C 🥶 Il me faut une couche chaude !",
-        bubbleTextEn: "Brrr it's ${weather.temperature.round()}°C 🥶 I need something warm!",
-        contextHint: 'Froid polaire ❄️',
+        isUnlocked: isUnlocked, bubbleTextFr: t.fr, bubbleTextEn: t.en, contextHint: 'Froid polaire ❄️',
       );
       if (request != null) return request;
     }
 
     if (weather.temperature > 25 && weather.condition == 'sunny' && weather.isDay && !protection.hasSunglasses) {
+      final t = _pickPair(
+        ["Ça tape aujourd'hui ! 😎 Vite, mes lunettes !", "Soleil en pleine face ! ☀️ Mes lunettes, s'il te plaît !", "Aaah mes yeux ! 😎 Il me faut des lunettes de soleil !"],
+        ["It's scorching today! 😎 Quick, my sunglasses!", "Sun straight in my face! ☀️ My sunglasses, please!", "Aaah my eyes! 😎 I need sunglasses!"],
+      );
       final request = _firstUnlockedRequest(
         const ['glasses_sun'],
-        isUnlocked: isUnlocked,
-        bubbleTextFr: "Ça tape aujourd'hui ! 😎 Vite, mes lunettes !",
-        bubbleTextEn: "It's scorching today! 😎 Quick, my sunglasses!",
-        contextHint: 'Grand soleil ☀️',
+        isUnlocked: isUnlocked, bubbleTextFr: t.fr, bubbleTextEn: t.en, contextHint: 'Grand soleil ☀️',
       );
       if (request != null) return request;
     }
 
     if (weather.temperature > 32 && !protection.hasBreathableTop) {
+      final t = _pickPair(
+        ["Il fait trop chaud 🌡️ Il me faut une tenue légère !", "Je fonds ! 🫠 Vite, un haut léger !", "${weather.temperature.round()}°C ! 🔥 Je suis un pingouin, pas un cactus !"],
+        ["It's way too hot 🌡️ I need a lighter top!", "I'm melting! 🫠 Quick, a lighter top!", "${weather.temperature.round()}°C! 🔥 I'm a penguin, not a cactus!"],
+      );
       final request = _firstUnlockedRequest(
         const ['top_hawaiian', 'top_linen'],
-        isUnlocked: isUnlocked,
-        bubbleTextFr: "Il fait trop chaud 🌡️ Il me faut une tenue légère !",
-        bubbleTextEn: "It's way too hot 🌡️ I need a lighter top!",
-        contextHint: 'Canicule 🌡️',
+        isUnlocked: isUnlocked, bubbleTextFr: t.fr, bubbleTextEn: t.en, contextHint: 'Canicule 🌡️',
       );
       if (request != null) return request;
     }
 
     if (weather.temperature > 30 && weather.isDay && !protection.hasSunHat) {
+      final t = _pickPair(
+        ["Le soleil tape sur ma tête ☀️ J'ai besoin d'un chapeau !", "Mon crâne chauffe ! ☀️ Un chapeau, vite !", "Coup de soleil en approche ! 🌞 Un chapeau s'il te plaît !"],
+        ["The sun is hitting my head ☀️ I need a hat!", "My head is heating up! ☀️ A hat, quick!", "Sunburn incoming! 🌞 A hat please!"],
+      );
       final request = _firstUnlockedRequest(
         const ['hat_straw', 'hat_bucket'],
-        isUnlocked: isUnlocked,
-        bubbleTextFr: "Le soleil tape sur ma tête ☀️ J'ai besoin d'un chapeau !",
-        bubbleTextEn: "The sun is hitting my head ☀️ I need a hat!",
-        contextHint: 'Soleil fort ☀️',
+        isUnlocked: isUnlocked, bubbleTextFr: t.fr, bubbleTextEn: t.en, contextHint: 'Soleil fort ☀️',
       );
       if (request != null) return request;
     }
 
     if (weather.temperature > 34 && !protection.hasSandals) {
+      final t = _pickPair(
+        ["Mes pieds cuisent sur le sol 🩴 Des chaussures d'été, vite !", "Aïe aïe le sol brûle ! 🔥 Des sandales, pitié !", "Le sol est une poêle ! 🍳 Des tongs, vite !"],
+        ["My feet are roasting on the ground 🩴 Summer shoes, quick!", "Ouch the ground is burning! 🔥 Sandals, please!", "The ground is a frying pan! 🍳 Flip-flops, quick!"],
+      );
       final request = _firstUnlockedRequest(
         const ['shoes_sandals', 'shoes_flipflops'],
-        isUnlocked: isUnlocked,
-        bubbleTextFr: "Mes pieds cuisent sur le sol 🩴 Des chaussures d'été, vite !",
-        bubbleTextEn: "My feet are roasting on the ground 🩴 Summer shoes, quick!",
-        contextHint: 'Chaleur au sol 🌞',
+        isUnlocked: isUnlocked, bubbleTextFr: t.fr, bubbleTextEn: t.en, contextHint: 'Chaleur au sol 🌞',
       );
       if (request != null) return request;
     }
@@ -632,7 +709,10 @@ class MascotOutfitEngine {
     final weather = state.currentWeather ?? await WeatherService.fetchCurrent();
 
     // 0. Auto-unlock achievements
-    checkAchievements(state);
+    final newUnlocks = checkAchievements(state);
+    if (newUnlocks.isNotEmpty && state.mascotMoment == MascotMoment.none) {
+      state.setMascotMoment(MascotMoment.achievementUnlocked);
+    }
 
     // 1. Events — User's birthday
     if (state.profile.birthdate != null && state.profile.birthdate!.isNotEmpty) {
@@ -640,10 +720,12 @@ class MascotOutfitEngine {
       if (parts.length >= 2) {
         if (int.tryParse(parts[0]) == now.day && int.tryParse(parts[1]) == now.month) {
           if (!state.activeOutfit.containsValue('hat_birthday') && isItemUnlocked('hat_birthday', state)) {
+            final bt = _pickPair(
+              ["C'est ton anniversaire ! Mets-moi ma couronne 👑", "JOYEUX ANNIVERSAIRE ! 🎂 Ma couronne, vite !", "Ton jour spécial ! 🥳 Je veux être aussi chic que toi !"],
+              ["It's your birthday! Give me my crown 👑", "HAPPY BIRTHDAY! 🎂 My crown, quick!", "Your special day! 🥳 I want to look as fabulous as you!"],
+            );
             final r = _safeRequest('hat_birthday',
-              bubbleTextFr: "C'est ton anniversaire ! Mets-moi ma couronne 👑",
-              bubbleTextEn: "It's your birthday! Give me my crown 👑",
-              contextHint: "Ton anniversaire 🎂",
+              bubbleTextFr: bt.fr, bubbleTextEn: bt.en, contextHint: "Ton anniversaire 🎂",
             );
             if (r != null) return r;
           }
@@ -655,10 +737,12 @@ class MascotOutfitEngine {
     // Christmas (December)
     if (now.month == 12 && now.day >= 1) {
       if (!state.activeOutfit.containsValue('hat_santa')) {
+        final bt = _pickPair(
+          ["Bientôt Noël ! Je peux avoir mon bonnet ? 🎅", "Ho ho ho ! 🎄 Mon bonnet de Noël, s'il te plaît !", "C'est la saison ! 🎅 Je veux mon look festif !"],
+          ["Christmas soon! Can I have my hat? 🎅", "Ho ho ho! 🎄 My Christmas hat, please!", "Tis the season! 🎅 I want my festive look!"],
+        );
         final r = _safeRequest('hat_santa',
-          bubbleTextFr: "Bientôt Noël ! Je peux avoir mon bonnet ? 🎅",
-          bubbleTextEn: "Christmas soon! Can I have my hat? 🎅",
-          contextHint: "Période de Noël 🎄",
+          bubbleTextFr: bt.fr, bubbleTextEn: bt.en, contextHint: "Période de Noël 🎄",
         );
         if (r != null) return r;
       }
@@ -666,10 +750,12 @@ class MascotOutfitEngine {
     // Halloween (Oct 25+)
     if (now.month == 10 && now.day >= 25) {
       if (!state.activeOutfit.containsValue('acc_pumpkin')) {
+        final bt = _pickPair(
+          ["Des bonbons ou un sort ! 🎃", "Bou ! 👻 Tu m'as fait peur ! Enfin... moi je fais peur à personne.", "Halloween mode activé ! 🎃 Ma citrouille !"],
+          ["Trick or treat! 🎃", "Boo! 👻 You scared me! Well... I don't scare anyone.", "Halloween mode activated! 🎃 My pumpkin!"],
+        );
         final r = _safeRequest('acc_pumpkin',
-          bubbleTextFr: "Des bonbons ou un sort ! 🎃",
-          bubbleTextEn: "Trick or treat! 🎃",
-          contextHint: "Halloween 🦇",
+          bubbleTextFr: bt.fr, bubbleTextEn: bt.en, contextHint: "Halloween 🦇",
         );
         if (r != null) return r;
       }
@@ -677,10 +763,12 @@ class MascotOutfitEngine {
     // Valentine's Day (Feb 10-15)
     if (now.month == 2 && now.day >= 10 && now.day <= 15) {
       if (!state.activeOutfit.containsValue('glasses_heart')) {
+        final bt = _pickPair(
+          ["De l'amour dans l'air 💕", "Saint Valentin ! 💘 Mes lunettes cœur, s'il te plaît !", "L'amour est partout ! 💕 Mes yeux doivent briller !"],
+          ["Love is in the air 💕", "Valentine's Day! 💘 My heart glasses, please!", "Love is everywhere! 💕 My eyes need to sparkle!"],
+        );
         final r = _safeRequest('glasses_heart',
-          bubbleTextFr: "De l'amour dans l'air 💕",
-          bubbleTextEn: "Love is in the air 💕",
-          contextHint: "Saint Valentin 💘",
+          bubbleTextFr: bt.fr, bubbleTextEn: bt.en, contextHint: "Saint Valentin 💘",
         );
         if (r != null) return r;
       }
@@ -699,10 +787,12 @@ class MascotOutfitEngine {
     // New Year's Eve/Day (Dec 31 - Jan 2)
     if ((now.month == 12 && now.day == 31) || (now.month == 1 && now.day <= 2)) {
       if (!state.activeOutfit.containsValue('hat_party')) {
+        final bt = _pickPair(
+          ["Bonne année ! 🎉 Chapeau de fête !", "3, 2, 1... 🥂 Mon chapeau de fête, vite !", "Nouvelle année, nouveau look ! 🎆 Mon chapeau !"],
+          ["Happy New Year! 🎉 Party hat!", "3, 2, 1... 🥂 My party hat, quick!", "New year, new look! 🎆 My hat!"],
+        );
         final r = _safeRequest('hat_party',
-          bubbleTextFr: "Bonne année ! 🎉 Chapeau de fête !",
-          bubbleTextEn: "Happy New Year! 🎉 Party hat!",
-          contextHint: "Nouvel An 🎆",
+          bubbleTextFr: bt.fr, bubbleTextEn: bt.en, contextHint: "Nouvel An 🎆",
         );
         if (r != null) return r;
       }
@@ -712,10 +802,12 @@ class MascotOutfitEngine {
     final daysToEaster = easter.difference(DateTime(now.year, now.month, now.day)).inDays;
     if (daysToEaster >= -2 && daysToEaster <= 7) {
       if (!state.activeOutfit.containsValue('acc_egg')) {
+        final bt = _pickPair(
+          ["Joyeuses Pâques ! 🐣 Mon œuf en chocolat !", "Le lapin est passé ? 🐰 Mon œuf, vite !", "Pâques ! 🥚 Je veux mon accessoire chocolaté !"],
+          ["Happy Easter! 🐣 My chocolate egg!", "Did the bunny come? 🐰 My egg, quick!", "Easter! 🥚 I want my chocolatey accessory!"],
+        );
         final r = _safeRequest('acc_egg',
-          bubbleTextFr: "Joyeuses Pâques ! 🐣 Mon œuf en chocolat !",
-          bubbleTextEn: "Happy Easter! 🐣 My chocolate egg!",
-          contextHint: "Pâques 🥚",
+          bubbleTextFr: bt.fr, bubbleTextEn: bt.en, contextHint: "Pâques 🥚",
         );
         if (r != null) return r;
       }
@@ -723,10 +815,12 @@ class MascotOutfitEngine {
     // Mother's Day (last Sunday of May, approximate: May 25-31)
     if (now.month == 5 && now.day >= 25) {
       if (!state.activeOutfit.containsValue('acc_flowers')) {
+        final bt = _pickPair(
+          ["Bonne fête des mères ! 💐", "C'est la fête des mamans ! 🌷 Mes fleurs, s'il te plaît !", "Journée spéciale ! 💐 Un bouquet pour l'occasion !"],
+          ["Happy Mother's Day! 💐", "It's Mom's Day! 🌷 My flowers, please!", "Special day! 💐 A bouquet for the occasion!"],
+        );
         final r = _safeRequest('acc_flowers',
-          bubbleTextFr: "Bonne fête des mères ! 💐",
-          bubbleTextEn: "Happy Mother's Day! 💐",
-          contextHint: "Fête des mères 💐",
+          bubbleTextFr: bt.fr, bubbleTextEn: bt.en, contextHint: "Fête des mères 💐",
         );
         if (r != null) return r;
       }
@@ -745,10 +839,12 @@ class MascotOutfitEngine {
     // 4. Time of day
     if (now.hour >= 23 || now.hour < 5) {
        if (!state.activeOutfit.containsValue('top_pyjama')) {
+        final bt = _pickPair(
+          ["Quelle heure est-il ? 🥱 Pyjama time...", "Bâille... 😴 C'est l'heure du pyjama !", "Zzz... 🌙 Allez, mon pyjama douillet !"],
+          ["What time is it? 🥱 Pyjama time...", "Yawns... 😴 It's pyjama o'clock!", "Zzz... 🌙 Come on, my cozy pyjamas!"],
+        );
         final r = _safeRequest('top_pyjama',
-          bubbleTextFr: "Quelle heure est-il ? 🥱 Pyjama time...",
-          bubbleTextEn: "What time is it? 🥱 Pyjama time...",
-          contextHint: "Tard la nuit 🌙",
+          bubbleTextFr: bt.fr, bubbleTextEn: bt.en, contextHint: "Tard la nuit 🌙",
         );
         if (r != null) return r;
        }
@@ -756,10 +852,12 @@ class MascotOutfitEngine {
     // Quiet afternoon → reading glasses
     if (now.hour >= 14 && now.hour <= 16 && now.weekday >= 6) {
       if (!state.activeOutfit.containsValue('glasses_reading')) {
+        final bt = _pickPair(
+          ["Un bon moment pour bouquiner ! 📚", "Week-end calme... 📖 Mes lunettes de lecture ?", "Mode détente activé ! 📚 Un bon livre et mes lunettes."],
+          ["Good time for a read! 📚", "Quiet weekend... 📖 My reading glasses?", "Chill mode on! 📚 A good book and my glasses."],
+        );
         final r = _safeRequest('glasses_reading',
-          bubbleTextFr: "Un bon moment pour bouquiner ! 📚",
-          bubbleTextEn: "Good time for a read! 📚",
-          contextHint: "Moment lecture 📖",
+          bubbleTextFr: bt.fr, bubbleTextEn: bt.en, contextHint: "Moment lecture 📖",
         );
         if (r != null) return r;
       }
@@ -768,10 +866,12 @@ class MascotOutfitEngine {
     // 5. Milestones
     if (state.contacts.length >= 10 && isItemUnlocked('acc_star', state)) {
       if (!state.activeOutfit.containsValue('acc_star')) {
+        final bt = _pickPair(
+          ["10 contacts ! Tu es une star ⭐", "10 proches sur Pigio ! 🌟 Tu mérites une étoile !", "Waouh, 10 contacts ! ⭐ Mets-moi mon étoile !"],
+          ["10 contacts! You're a star ⭐", "10 people on Pigio! 🌟 You deserve a star!", "Wow, 10 contacts! ⭐ Give me my star!"],
+        );
         final r = _safeRequest('acc_star',
-          bubbleTextFr: "10 contacts ! Tu es une star ⭐",
-          bubbleTextEn: "10 contacts! You're a star ⭐",
-          contextHint: "10 contacts atteints 🌟",
+          bubbleTextFr: bt.fr, bubbleTextEn: bt.en, contextHint: "10 contacts atteints 🌟",
         );
         if (r != null) return r;
       }
@@ -780,22 +880,26 @@ class MascotOutfitEngine {
     // 6. Smart combo suggestion
     final comboItem = suggestCombo(state);
     if (comboItem != null) {
+      final ct = _pickPair(
+        ["Et si tu ajoutais ${comboItem.emoji} ${comboItem.name} ? Ça irait bien ensemble !", "J'ai une idée ! ✨ ${comboItem.emoji} ${comboItem.name} compléterait parfaitement ton look !", "Combo parfait ! ${comboItem.emoji} ${comboItem.name} + ta tenue actuelle = 🔥"],
+        ["How about adding ${comboItem.emoji} ${comboItem.name}? It would go great together!", "I have an idea! ✨ ${comboItem.emoji} ${comboItem.name} would complete your look perfectly!", "Perfect combo! ${comboItem.emoji} ${comboItem.name} + your current outfit = 🔥"],
+      );
       return ClothingRequest(
         item: comboItem,
-        bubbleTextFr: "Et si tu ajoutais ${comboItem.emoji} ${comboItem.name} ? Ça irait bien ensemble !",
-        bubbleTextEn: "How about adding ${comboItem.emoji} ${comboItem.name}? It would go great together!",
-        contextHint: "Combo suggéré ✨",
+        bubbleTextFr: ct.fr, bubbleTextEn: ct.en, contextHint: "Combo suggéré ✨",
       );
     }
 
     // 7. Personality-based suggestion
     final personalityItem = personalitySuggestion(state);
     if (personalityItem != null) {
+      final pt = _pickPair(
+        ["D'après ton profil, ${personalityItem.emoji} ${personalityItem.name} te correspond bien !", "Je te connais ! 🧠 ${personalityItem.emoji} ${personalityItem.name}, c'est tellement toi !", "Suggestion perso : ${personalityItem.emoji} ${personalityItem.name} ! Ça te ressemble. 🎭"],
+        ["Based on your profile, ${personalityItem.emoji} ${personalityItem.name} suits you!", "I know you! 🧠 ${personalityItem.emoji} ${personalityItem.name} is so you!", "Personal pick: ${personalityItem.emoji} ${personalityItem.name}! It's very you. 🎭"],
+      );
       return ClothingRequest(
         item: personalityItem,
-        bubbleTextFr: "D'après ton profil, ${personalityItem.emoji} ${personalityItem.name} te correspond bien !",
-        bubbleTextEn: "Based on your profile, ${personalityItem.emoji} ${personalityItem.name} suits you!",
-        contextHint: "Ton style perso 🎭",
+        bubbleTextFr: pt.fr, bubbleTextEn: pt.en, contextHint: "Ton style perso 🎭",
       );
     }
 

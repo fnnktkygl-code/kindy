@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:pigio_app/core/config/constants.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 import 'package:pigio_app/core/theme/pigio_theme.dart';
+import 'package:pigio_app/services/tooltip_service.dart';
+import '../../../shared/widgets/contextual_tip.dart';
 import '../../../shared/widgets/ui_widgets.dart';
 import 'package:pigio_app/screens/contacts/sheets/add_profile_sheet.dart';
 import 'package:pigio_app/features/contacts/presentation/contact_profile_screen.dart';
@@ -55,6 +57,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   state.clearUnseenLogs();
                 },
               ),
+              // Progressive disclosure: suggest adding first contact
+              if (state.contacts.isEmpty)
+                ContextualTip(
+                  tooltipKey: TooltipService.homeAddContact,
+                  text: lang == 'fr'
+                      ? 'Ajoutez un proche pour suivre ses dates et coordonner les cadeaux'
+                      : 'Add someone close to track their dates and coordinate gifts',
+                  icon: Icons.person_add_outlined,
+                  onTap: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => const AddProfileSheet(),
+                  ),
+                ),
               HomeUpcomingSection(
                 events: events,
                 lang: lang,

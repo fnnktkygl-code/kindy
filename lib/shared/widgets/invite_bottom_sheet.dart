@@ -28,6 +28,10 @@ class InviteBottomSheet extends StatefulWidget {
 class _InviteBottomSheetState extends State<InviteBottomSheet> {
   bool _isSending = false;
 
+  /// Client-side cooldown: prevent spam-tapping invite sends.
+  static DateTime? _lastSendTime;
+  static const _sendCooldown = Duration(seconds: 30);
+
   Future<bool> _showConsentModal(PigioThemeData theme) async {
     final result = await showDialog<bool>(
       context: context,
@@ -83,6 +87,16 @@ class _InviteBottomSheetState extends State<InviteBottomSheet> {
 
   Future<void> _sendInvite(InviteChannel channel) async {
     if (_isSending) return;
+
+    // Rate limit: 30s cooldown between invite sends
+    if (_lastSendTime != null && DateTime.now().difference(_lastSendTime!) < _sendCooldown) {
+      final isFr = context.read<PigioAppState>().locale.languageCode == 'fr';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(isFr ? 'Patiente un peu avant de renvoyer une invitation.' : 'Please wait a moment before sending another invite.')),
+      );
+      return;
+    }
+
     final theme = context.ptnl;
     final state = context.read<PigioAppState>();
 
@@ -143,6 +157,8 @@ class _InviteBottomSheetState extends State<InviteBottomSheet> {
         );
       }
 
+      _lastSendTime = DateTime.now();
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -157,7 +173,7 @@ class _InviteBottomSheetState extends State<InviteBottomSheet> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur d’invitation: $e')),
+        SnackBar(content: Text("Impossible d’envoyer l’invitation. R\u00e9essayez.")),
       );
     } finally {
       if (mounted) setState(() => _isSending = false);

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 
+import '../../services/analytics_service.dart';
 import '../../services/fcm_service.dart';
 import 'package:pigio_app/core/state/app_state.dart';
 
@@ -62,6 +63,8 @@ class FcmCoordinator {
 
     _subscriptions.add(
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) async {
+        final type = message.data['type'] as String? ?? 'unknown';
+        AnalyticsService.pushOpened(type);
         await handleIncomingMessage(message, fromNotificationTap: true);
       }),
     );

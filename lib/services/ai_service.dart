@@ -144,45 +144,31 @@ No markdown, no bullet points, no newlines.
     final user =
         'Suggest one very specific, original gift for ${contact.name} ($rel). $bday $personality'.trim();
 
-    return _call(system, user, 'Gift Concierge');
+    final result = await _call(system, user, 'Gift Concierge');
+    if (result != null) await _incrementConciergeUsage();
+    return result;
   }
 
-  /// Warns the user about a busy upcoming month with no gifts saved.
-  static Future<String?> generateBusyMonthInsight(
-      String monthName, List<String> names) async {
-    const system = '''
-You are Pigio, a warm gift-app mascot.
-Reply in the app's language (French if context is French, English otherwise).
-Write EXACTLY 1 sentence, max 18 words. Friendly & slightly playful. Sign "— Pigio 📅".
-No markdown, no bullet points, no newlines.
-''';
-
-    final namesList = names.join(', ');
-    final user =
-        '$monthName has events for $namesList but no gifts are saved yet.';
-
-    return _call(system, user, 'Busy Month');
+  /// Check how many concierge calls the user has made this month.
+  /// Returns the remaining free calls (out of [freeMonthlyLimit]).
+  static Future<int> remainingFreeConcierge({int freeMonthlyLimit = 3}) async {
+    final used = await _conciergeUsedThisMonth();
+    return (freeMonthlyLimit - used).clamp(0, freeMonthlyLimit);
   }
 
-  /// Produces a short, funny year-in-review for the user's wish history.
-  /// Output is limited to 2 short sentences.
-  static Future<String?> generatePigioWrapped(List<Wish> wishes) async {
-    if (wishes.isEmpty) return null;
+  /// Increment the monthly concierge usage counter.
+  static Future<void> _incrementConciergeUsage() async {
+    final now = DateTime.now();
+    final monthKey = 'ai_concierge_${now.year}_${now.month}';
+    final raw = await _storage.read(key: monthKey);
+    final count = (raw != null ? int.tryParse(raw) ?? 0 : 0) + 1;
+    await _storage.write(key: monthKey, value: count.toString());
+  }
 
-    const system = '''
-You are Pigio, a warm gift-app mascot doing a year-end wrap-up.
-Reply in French (or English if the user's language is English).
-Write EXACTLY 2 short sentences, max 25 words total. Be funny, warm, a bit cheeky.
-Sign "— Pigio 🎁". No markdown, no bullet points.
-''';
-
-    final summary = wishes
-        .map((w) =>
-    '${w.title} (${w.priceRange?.name ?? 'unknown price'})')
-        .join(', ');
-
-    final user = 'Gifts this year: $summary';
-
-    return _call(system, user, 'Pigio Wrapped');
+  static Future<int> _conciergeUsedThisMonth() async {
+    final now = DateTime.now();
+    final monthKey = 'ai_concierge_${now.year}_${now.month}';
+    final raw = await _storage.read(key: monthKey);
+    return raw != null ? int.tryParse(raw) ?? 0 : 0;
   }
 }

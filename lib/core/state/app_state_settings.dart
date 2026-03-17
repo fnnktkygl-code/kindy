@@ -49,6 +49,8 @@ extension SettingsExtension on PigioAppState {
           timestamp: DateTime.now(),
         ),
       );
+      _mascotMoment = MascotMoment.bondLevelUp;
+      ReviewService.tryPrompt(); // High-value moment: bond grew stronger
     }
 
     _trimMascotMemories();
@@ -150,39 +152,6 @@ extension SettingsExtension on PigioAppState {
     if (val) _checkDaypartAutoTheme();
   }
 
-  void setWeatherTestOverride(WeatherData weather) {
-    _weatherTestOverride = weather;
-    notifyListeners();
-  }
-
-  void updateWeatherTestOverride({
-    String? condition,
-    double? temperature,
-    bool? isDay,
-  }) {
-    final base = _weatherTestOverride ??
-        _currentWeather ??
-        WeatherData(
-          temperature: 22,
-          condition: 'sunny',
-          isDay: true,
-          fetchedAt: DateTime.now(),
-        );
-    _weatherTestOverride = base.copyWith(
-      condition: condition,
-      temperature: temperature,
-      isDay: isDay,
-      fetchedAt: DateTime.now(),
-    );
-    notifyListeners();
-  }
-
-  void clearWeatherTestOverride() {
-    if (_weatherTestOverride == null) return;
-    _weatherTestOverride = null;
-    notifyListeners();
-  }
-
   void setMascotMoment(MascotMoment m) {
     _mascotMoment = m;
     notifyListeners();
@@ -204,6 +173,15 @@ extension SettingsExtension on PigioAppState {
     if (_mascotLastDailyBonus != null) {
       final lastDate = DateTime(_mascotLastDailyBonus!.year, _mascotLastDailyBonus!.month, _mascotLastDailyBonus!.day);
       if (!lastDate.isBefore(today)) return false; // already claimed today
+      // Track consecutive days: if yesterday, increment; otherwise reset.
+      final yesterday = today.subtract(const Duration(days: 1));
+      if (lastDate == yesterday) {
+        _loginStreak++;
+      } else {
+        _loginStreak = 1;
+      }
+    } else {
+      _loginStreak = 1;
     }
     _mascotLastDailyBonus = now;
     awardMascotProgress(
@@ -212,6 +190,7 @@ extension SettingsExtension on PigioAppState {
       titleFr: 'Bonus quotidien réclamé ! +10 XP',
       titleEn: 'Daily bonus claimed! +10 XP',
     );
+    if (_loginStreak == 7) ReviewService.tryPrompt(); // 7-day streak = engaged user
     return true;
   }
 
@@ -254,86 +233,33 @@ extension SettingsExtension on PigioAppState {
 
   /// E7: Schedule a self-push re-engagement notification if user has been away 2+ days.
   /// Only fires once per 48h. Uses the user's own FCM token.
+  /// Enhanced with churn scoring: at-risk users get high-value contextual pushes
+  /// (upcoming birthday, gift ideas) instead of generic re-engagement.
   Future<void> checkReengagementPush() async {
     if (_mascotAbsenceDays < 2) return;
     if (_lastReengagePush != null && DateTime.now().difference(_lastReengagePush!).inHours < 48) return;
     final token = _profile.fcmToken;
     if (token == null || token.isEmpty) return;
-    final lang = _locale.languageCode;
-    final greeting = PigioVoice.bondGreeting(mascotBondLevel, lang: lang);
-    final body = lang == 'fr'
-        ? 'Tu me manques ! Ça fait $_mascotAbsenceDays jours… reviens vite ! 🐧💛'
-        : 'I miss you! It\'s been $_mascotAbsenceDays days… come back soon! 🐧💛';
-    try {
-      await FcmService.sendPush(
-        baseUrl: _apiBaseUrl,
-        fcmToken: token,
-        title: greeting,
-        body: body,
-        type: 'mascot_reengage',
-        userJwt: Supabase.instance.client.auth.currentSession?.accessToken,
-      );
-      markReengagePushSent();
-    } catch (_) {
-      // Silently fail — non-critical feature
+
+    // Try churn-aware preemptive push first (high-value, contextual)
+    final churnPush = ChurnScoreService.getPreemptivePush(this);
+    final String title;
+    final String body;
+    final String type;
+
+    if (churnPush != null) {
+      title = churnPush.title;
+      body = churnPush.body;
+      type = churnPush.type;
+    } else {
+      // Fallback to warm generic message
+      final lang = _locale.languageCode;
+      title = PigioVoice.bondGreeting(mascotBondLevel, lang: lang);
+      body = lang == 'fr'
+          ? 'Pigio est là quand tu veux ! 🐧💛'
+          : 'Pigio is here whenever you want! 🐧💛';
+      type = 'mascot_reengage';
     }
-  }
-
-  // ── Stale Circle Nudge Push ─────────────────────────────────────────────
-
-  void markStaleCircleNudgeSent() {
-    _lastStaleCircleNudge = DateTime.now();
-    _saveData();
-  }
-
-  /// Detect joined contacts with no wishes, no sizes, and no upcoming birthday,
-  /// then send a single self-push reminder to reconnect. Fires at most once per 7 days.
-  Future<void> checkStaleCircleNudge() async {
-    // Only nudge once a week
-    if (_lastStaleCircleNudge != null &&
-        DateTime.now().difference(_lastStaleCircleNudge!).inDays < 7) {
-      return;
-    }
-    final token = _profile.fcmToken;
-    if (token == null || token.isEmpty) return;
-
-    // Find joined contacts that have zero wishes AND zero sizes
-    final staleContacts = _contacts.where((c) {
-      if (c.status != ContactStatus.joined) return false;
-      final hasWishes = _wishes.any((w) => w.contactId == c.id);
-      final hasSizes = _sizes.any((s) => s.contactId == c.id);
-      if (hasWishes || hasSizes) return false;
-      // Skip if they have a birthday within 30 days (already tracked)
-      if (c.birthdate != null && c.birthdate!.isNotEmpty) {
-        final parts = c.birthdate!.split('-');
-        if (parts.length >= 2) {
-          final now = DateTime.now();
-          final m = int.tryParse(parts[parts.length - 2]) ?? 0;
-          final d = int.tryParse(parts.last) ?? 0;
-          if (m > 0 && d > 0) {
-            var next = DateTime(now.year, m, d);
-            if (next.isBefore(now)) {
-              next = DateTime(now.year + 1, m, d);
-            }
-            if (next.difference(now).inDays <= 30) return false;
-          }
-        }
-      }
-      return true;
-    }).toList();
-
-    if (staleContacts.isEmpty) return;
-
-    // Pick the first stale contact for the message (avoid spamming with a list)
-    final first = staleContacts.first;
-    final extra = staleContacts.length > 1 ? ' (+${staleContacts.length - 1})' : '';
-    final lang = _locale.languageCode;
-    final body = lang == 'fr'
-        ? '${first.name}$extra est connecté(e) mais n\'a pas encore de liste. Propose-lui d\'ajouter des vœux ! 🎁'
-        : '${first.name}$extra is connected but has no list yet. Suggest they add some wishes! 🎁';
-    final title = lang == 'fr'
-        ? 'Cercle endormi 💤'
-        : 'Sleeping circle 💤';
 
     try {
       await FcmService.sendPush(
@@ -341,14 +267,81 @@ extension SettingsExtension on PigioAppState {
         fcmToken: token,
         title: title,
         body: body,
-        type: 'circle_stale',
+        type: type,
         userJwt: Supabase.instance.client.auth.currentSession?.accessToken,
       );
-      markStaleCircleNudgeSent();
-      // Trigger the mascot moment so the insight engine can display it
-      setMascotMoment(MascotMoment.circleStale);
+      markReengagePushSent();
+    } catch (e) {
+      log.warn('Settings', 'Re-engagement push failed', e);
+    }
+  }
+
+  // ── Birthday-Proximity Smart Push ──────────────────────────────────────────
+
+  /// Check for upcoming birthdays (3 days out) and send a contextual push
+  /// to the user. Only sends one push per birthday per year.
+  Future<void> checkBirthdayProximityPush() async {
+    final token = _profile.fcmToken;
+    if (token == null || token.isEmpty) return;
+
+    final now = DateTime.now();
+    final lang = _locale.languageCode;
+
+    for (final contact in _contacts) {
+      if (contact.birthdate == null || contact.birthdate!.isEmpty) continue;
+
+      final birthday = _parseNextBirthday(contact.birthdate!, now);
+      if (birthday == null) continue;
+
+      final daysUntil = birthday.difference(now).inDays;
+      if (daysUntil < 0 || daysUntil > 3) continue;
+
+      // Deduplicate: one push per contact per year
+      final dedupeKey = 'pigio_bday_push_${contact.id}_${now.year}';
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(dedupeKey) == true) continue;
+      await prefs.setBool(dedupeKey, true);
+
+      final title = lang == 'fr'
+          ? '🎂 Anniversaire à venir'
+          : '🎂 Upcoming birthday';
+      final body = daysUntil == 0
+          ? (lang == 'fr'
+              ? "C'est l'anniversaire de ${contact.name} aujourd'hui !"
+              : "It's ${contact.name}'s birthday today!")
+          : (lang == 'fr'
+              ? "L'anniversaire de ${contact.name} est dans $daysUntil jour${daysUntil > 1 ? 's' : ''}"
+              : "${contact.name}'s birthday is in $daysUntil day${daysUntil > 1 ? 's' : ''}");
+
+      try {
+        await FcmService.sendPush(
+          baseUrl: _apiBaseUrl,
+          fcmToken: token,
+          title: title,
+          body: body,
+          type: 'birthday_reminder',
+          userJwt: Supabase.instance.client.auth.currentSession?.accessToken,
+        );
+      } catch (e) {
+        log.warn('Settings', 'Birthday push failed for ${contact.name}', e);
+      }
+    }
+  }
+
+  /// Parse a DD/MM/YYYY or DD/MM birthdate and return the next occurrence.
+  DateTime? _parseNextBirthday(String birthdate, DateTime now) {
+    try {
+      final parts = birthdate.split('/');
+      if (parts.length < 2) return null;
+      final day = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      var next = DateTime(now.year, month, day);
+      if (next.isBefore(now.subtract(const Duration(days: 1)))) {
+        next = DateTime(now.year + 1, month, day);
+      }
+      return next;
     } catch (_) {
-      // Silently fail — non-critical feature
+      return null;
     }
   }
 
@@ -381,6 +374,7 @@ extension SettingsExtension on PigioAppState {
   void unlockClothing(String itemId) {
     if (!_unlockedClothing.contains(itemId)) {
       _unlockedClothing.add(itemId);
+      AnalyticsService.wardrobeUnlock(itemId);
       notifyListeners();
       _saveData();
     }
@@ -457,6 +451,10 @@ extension SettingsExtension on PigioAppState {
 
   void completeOnboarding() {
     _onboardingCompleted = true;
+    // Trigger Pigio's first-open introduction if the quiz hasn't been completed yet
+    if (_personalityProfile.isEmpty) {
+      _mascotMoment = MascotMoment.firstOpen;
+    }
     notifyListeners();
     _saveData();
     // Also persist per-user so returning users skip onboarding after sign-out.
@@ -473,12 +471,6 @@ extension SettingsExtension on PigioAppState {
       '${PigioAppState._profileKey}_$userId',
       jsonEncode(_profile.toMap()),
     );
-  }
-
-  Future<void> resetOnboardingForDebug() async {
-    _onboardingCompleted = false;
-    notifyListeners();
-    await _saveDataNow();
   }
 
   void savePersonalityProfile(Map<String, List<String>> answers) {

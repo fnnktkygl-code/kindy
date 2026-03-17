@@ -6,6 +6,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../services/analytics_service.dart';
+import '../../services/connectivity_service.dart';
 import '../../services/pigio_logger.dart';
 
 @pragma('vm:entry-point')
@@ -44,8 +46,12 @@ Future<void> bootstrapApp() async {
     );
   }
 
+  ConnectivityService.instance.init();
+
   await Supabase.initialize(
     url: supabaseUrl,
     anonKey: supabaseAnonKey,
   );
+
+  await AnalyticsService.init();
 }

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'dart:math' as math;
 import 'package:pigio_app/core/state/app_state.dart';
 import 'package:pigio_app/core/theme/pigio_theme.dart';
 import 'package:pigio_app/shared/widgets/ui_widgets.dart';
-import 'package:pigio_app/services/ai_service.dart';
 
 /// Year-end "Pigio Wrapped" summary screen — shows the user's gifting
 /// stats for the current year alongside an AI-generated quip from Pigio.
@@ -18,8 +18,7 @@ class WrappedScreen extends StatefulWidget {
 class _WrappedScreenState extends State<WrappedScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _fadeCtrl;
-  String? _aiQuip;
-  bool _loadingAI = true;
+  String _quip = '';
 
   @override
   void initState() {
@@ -28,19 +27,44 @@ class _WrappedScreenState extends State<WrappedScreen>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..forward();
-    _loadAIQuip();
+    _generateQuip();
   }
 
-  Future<void> _loadAIQuip() async {
+  void _generateQuip() {
     final state = Provider.of<PigioAppState>(context, listen: false);
-    final allWishes = state.wishes.where((w) => w.contactId == null).toList();
-    final quip = await AiService.generatePigioWrapped(allWishes);
-    if (mounted) {
-      setState(() {
-        _aiQuip = quip;
-        _loadingAI = false;
-      });
+    final isFr = state.locale.languageCode == 'fr';
+    final wishCount = state.wishes.where((w) => w.contactId == null).length;
+    final reservedCount = state.wishes.where((w) => w.contactId != null && w.reservedById != null).length;
+    final contactCount = state.contacts.length;
+    final rng = math.Random();
+
+    final List<String> pool;
+    if (isFr) {
+      pool = [
+        if (wishCount == 0) "Nouvelle année, nouvelles envies à découvrir ! — Pigio 🎁",
+        if (wishCount > 0 && wishCount <= 3) "$wishCount vœux tout doux. Discret, mais efficace ! — Pigio 🎁",
+        if (wishCount > 3 && wishCount <= 10) "$wishCount envies cette année ! Tu sais ce que tu veux. — Pigio 🎁",
+        if (wishCount > 10) "$wishCount envies ?! Tu es une machine à rêves ! — Pigio 🎁",
+        if (reservedCount > 0) "$reservedCount cadeaux réservés en secret… Quel(le) complice ! — Pigio 🤫",
+        if (contactCount >= 5) "$contactCount proches dans ton cercle. Belle équipe ! — Pigio 💛",
+        if (contactCount == 0) "L'aventure Pigio ne fait que commencer ! — Pigio 🐧",
+        "Une année de plus avec toi, et c'est toujours un bonheur. — Pigio 💛",
+        "Merci d'avoir partagé cette année avec moi ! — Pigio 🎉",
+      ];
+    } else {
+      pool = [
+        if (wishCount == 0) "New year, new wishes to discover! — Pigio 🎁",
+        if (wishCount > 0 && wishCount <= 3) "$wishCount gentle wishes. Subtle, but effective! — Pigio 🎁",
+        if (wishCount > 3 && wishCount <= 10) "$wishCount wishes this year! You know what you want. — Pigio 🎁",
+        if (wishCount > 10) "$wishCount wishes?! You're a dream machine! — Pigio 🎁",
+        if (reservedCount > 0) "$reservedCount gifts secretly reserved… What a co-conspirator! — Pigio 🤫",
+        if (contactCount >= 5) "$contactCount people in your circle. Great team! — Pigio 💛",
+        if (contactCount == 0) "The Pigio adventure is just getting started! — Pigio 🐧",
+        "Another year with you, and it's always a joy. — Pigio 💛",
+        "Thanks for sharing this year with me! — Pigio 🎉",
+      ];
     }
+    _quip = pool[rng.nextInt(pool.length)];
   }
 
   @override
@@ -131,20 +155,8 @@ class _WrappedScreenState extends State<WrappedScreen>
                   ),
                 ],
               ),
-              child: _loadingAI
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: CircularProgressIndicator(
-                          color: theme.primary,
-                          strokeWidth: 2,
-                        ),
-                      ),
-                    )
-                  : Text(
-                      _aiQuip ?? (isFr
-                          ? 'Pigio n\'a pas pu résumer ton année cette fois. 🐧'
-                          : 'Pigio couldn\'t summarize your year this time. 🐧'),
+              child: Text(
+                      _quip,
                       style: GoogleFonts.nunito(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,

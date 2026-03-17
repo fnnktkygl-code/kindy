@@ -33,7 +33,9 @@ extension AccountExtension on PigioAppState {
       try {
         final decoded = jsonDecode(savedProfile) as Map<String, dynamic>;
         _profile = UserProfile.fromMap(decoded);
-      } catch (_) {}
+      } catch (e) {
+        log.warn('Account', 'Failed to decode saved user profile for $userId', e);
+      }
     }
 
     notifyListeners();
@@ -42,14 +44,16 @@ extension AccountExtension on PigioAppState {
   Future<void> signOutAndCleanupLocalState() async {
     try {
       await Supabase.instance.client.auth.signOut();
-    } catch (_) {
-      // Continue cleanup even if remote sign-out fails.
+    } catch (e) {
+      log.warn('Account', 'Remote sign-out failed, continuing cleanup', e);
     }
 
     // Clear biometric credentials so the next user can't re-auth as this user.
     try {
       await const FlutterSecureStorage().deleteAll();
-    } catch (_) {}
+    } catch (e) {
+      log.warn('Account', 'Failed to clear secure storage on sign-out', e);
+    }
 
     await _wipeLocalUserDataForSessionSwitch();
 
@@ -127,7 +131,9 @@ extension AccountExtension on PigioAppState {
     ]) {
       try {
         await PigioAppState._secureStorage.delete(key: key);
-      } catch (_) {}
+      } catch (e) {
+        log.warn('Account', 'Failed to delete secure key $key during session wipe', e);
+      }
     }
 
     notifyListeners();
@@ -192,8 +198,8 @@ extension AccountExtension on PigioAppState {
           events: [],
           sizes: [],
         );
-      } catch (_) {
-        // Best effort — continue even if some fail
+      } catch (e) {
+        log.warn('Account', 'Failed to wipe sync key $key during deletion', e);
       }
     }
 
@@ -210,7 +216,9 @@ extension AccountExtension on PigioAppState {
           events: [],
           sizes: [],
         );
-      } catch (_) {}
+      } catch (e) {
+        log.warn('Account', 'Failed to wipe cloud sync data during deletion', e);
+      }
     }
 
     // 3. Cancel sync timer
@@ -246,8 +254,8 @@ extension AccountExtension on PigioAppState {
     //    Without this the data reappears on next launch.
     try {
       await PigioAppState._secureStorage.deleteAll();
-    } catch (_) {
-      // Fallback: delete each known key individually
+    } catch (e) {
+      log.warn('Account', 'Bulk secure storage delete failed, falling back to individual keys', e);
       for (final key in [
         PigioAppState._contactsKey,
         PigioAppState._profileKey,
@@ -256,7 +264,7 @@ extension AccountExtension on PigioAppState {
         PigioAppState._notificationsKey,
         PigioAppState._syncKeyKey,
       ]) {
-        try { await PigioAppState._secureStorage.delete(key: key); } catch (_) {}
+        try { await PigioAppState._secureStorage.delete(key: key); } catch (e2) { log.warn('Account', 'Failed to delete key $key', e2); }
       }
     }
 

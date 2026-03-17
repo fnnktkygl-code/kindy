@@ -11,6 +11,7 @@ enum WishPriority { low, medium, high }
 enum WishPriceRange { budget, mid, premium }
 enum MascotMoment {
   none,
+  firstOpen,
   firstWish,
   wishReserved,
   birthdaySoon,
@@ -21,6 +22,8 @@ enum MascotMoment {
   inviteSent,
   inviteAccepted,
   quizCompleted,
+  bondLevelUp,
+  achievementUnlocked,
 }
 enum ContactStatus { local, invited, pending, joined }
 

@@ -183,12 +183,12 @@ Deno.serve(async (req) => {
       const lang = (profile.locale as string)?.startsWith("en") ? "en" : "fr";
       const title =
         lang === "fr"
-          ? `Pigio s'ennuie 🐧`
-          : `Pigio misses you 🐧`;
+          ? `🐧 Pigio`
+          : `🐧 Pigio`;
       const body =
         lang === "fr"
-          ? `${name ? name + ', ç' : 'Ç'}a fait ${daysAway} jours… reviens vite ! 💛`
-          : `${name ? name + ', i' : 'I'}t's been ${daysAway} days… come back soon! 💛`;
+          ? `${name ? name + ', p' : 'P'}igio est là quand tu veux ! 💛`
+          : `${name ? name + ', P' : 'P'}igio is here whenever you want! 💛`;
 
       const ok = await sendFcm(accessToken, fcmToken, title, body);
       if (ok) sent++;

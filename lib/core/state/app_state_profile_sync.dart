@@ -294,7 +294,9 @@ extension ProfileSyncExtension on PigioAppState {
           _sizes.add(sp);
         }
         changed = true;
-      } catch (_) {}
+      } catch (e) {
+        log.warn('ProfileSync', 'Failed to apply exchanged size for contact $contactId', e);
+      }
     }
     return changed;
   }

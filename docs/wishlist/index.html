@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Liste d'envies — Pigio</title>
+  <meta name="description" content="Découvrez cette liste d'envies partagée sur Pigio. Téléchargez l'app pour coordonner les cadeaux avec vos proches.">
+  <meta property="og:title" content="Liste d'envies — Pigio">
+  <meta property="og:description" content="Quelqu'un partage sa liste d'envies avec vous sur Pigio !">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="../logo.png">
+  <link rel="icon" href="../logo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #e8725c;
+      --primary-dark: #d45a44;
+      --ink: #1a1a2e;
+      --mid: #6b7280;
+      --bg: #ffffff;
+      --card: #ffffff;
+      --light: #f7f7fb;
+      --border: #f0f0f5;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ink: #f4f4f5;
+        --mid: #a1a1aa;
+        --bg: #121214;
+        --card: #27272a;
+        --light: #18181b;
+        --border: rgba(255, 255, 255, 0.05);
+      }
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      padding: 48px 32px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .card { box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); }
+    }
+
+    .mascot {
+      font-size: 72px;
+      margin-bottom: 24px;
+      line-height: 1;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--mid);
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 24px 0;
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--mid);
+      margin-bottom: 16px;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      text-decoration: none;
+      margin-bottom: 12px;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(232, 114, 92, 0.35);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      box-shadow: 0 8px 24px rgba(232, 114, 92, 0.45);
+    }
+
+    .btn-secondary {
+      background: var(--light);
+      color: var(--ink);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--primary);
+    }
+
+    .hidden { display: none; }
+
+    .spinner {
+      animation: spin 1s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .features {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .feature-pill {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--mid);
+      background: var(--light);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Loading state -->
+  <div class="card" id="loading">
+    <div class="mascot"><span class="spinner">🎁</span></div>
+    <h1>Chargement...</h1>
+  </div>
+
+  <!-- Main wishlist landing page -->
+  <div class="card hidden" id="main">
+    <div class="mascot">🎁</div>
+    <h1>Une liste d'envies vous attend !</h1>
+    <p class="subtitle">
+      Quelqu'un partage ses envies de cadeaux avec vous sur Pigio.
+      Ouvrez l'app pour les découvrir et coordonner les cadeaux.
+    </p>
+
+    <a class="btn btn-primary" id="open-app" href="#">Ouvrir dans Pigio</a>
+
+    <div class="divider"></div>
+    <p class="section-label">Pas encore l'app ?</p>
+
+    <a class="btn btn-secondary" id="download-ios"
+      href="https://apps.apple.com/app/pigio/id0000000000" target="_blank">
+      Télécharger sur l'App Store
+    </a>
+    <a class="btn btn-secondary" id="download-android"
+      href="https://play.google.com/store/apps/details?id=app.pigio.android" target="_blank">
+      Télécharger sur le Play Store
+    </a>
+
+    <div class="features">
+      <span class="feature-pill">Listes d'envies</span>
+      <span class="feature-pill">Coordination cadeaux</span>
+      <span class="feature-pill">Rappels anniversaires</span>
+    </div>
+  </div>
+
+  <!-- Error/fallback state -->
+  <div class="card hidden" id="fallback">
+    <div class="mascot">🐧</div>
+    <h1>Pigio</h1>
+    <p class="subtitle">
+      L'app qui retient tout pour ceux que vous aimez.
+      Tailles, envies, anniversaires — le tout simplement.
+    </p>
+    <a class="btn btn-primary" href="https://pigio.app">Découvrir Pigio</a>
+  </div>
+
+  <script>
+    (function () {
+      const path = window.location.pathname;
+      const ua = navigator.userAgent || '';
+      const isAndroid = /android/i.test(ua);
+
+      // Extract syncKey from /wishlist/<syncKey>
+      let syncKey = '';
+      if (path.startsWith('/wishlist/')) {
+        syncKey = path.replace('/wishlist/', '').replace(/\/$/, '');
+      }
+
+      if (!syncKey) {
+        show('fallback');
+        return;
+      }
+
+      // Build deep link
+      const safeKey = encodeURIComponent(syncKey);
+      const deepLink = 'pigio://wishlist?key=' + safeKey;
+      const androidIntent = 'intent://wishlist?key=' + safeKey +
+        '#Intent;scheme=pigio;package=app.pigio.android;end';
+      const openHref = isAndroid ? androidIntent : deepLink;
+
+      document.getElementById('open-app').href = openHref;
+
+      // Try to open app automatically
+      setTimeout(function () {
+        window.location.href = openHref;
+      }, 150);
+
+      show('main');
+    })();
+
+    function show(id) {
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById(id).classList.remove('hidden');
+    }
+  </script>
+</body>
+
+</html>

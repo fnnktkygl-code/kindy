@@ -116,7 +116,9 @@ class GroupBirthdayTimeline extends StatelessWidget {
         if (diff <= 90) {
           entries.add(_BirthdayEntry(contact: member, daysUntil: diff));
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[BirthdayTimeline] Invalid birthdate for ${member.name}: ${member.birthdate}');
+      }
     }
     entries.sort((a, b) => a.daysUntil.compareTo(b.daysUntil));
     return entries;

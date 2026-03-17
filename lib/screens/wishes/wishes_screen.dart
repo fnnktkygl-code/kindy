@@ -13,6 +13,9 @@ import 'package:pigio_app/shared/widgets/gift_pot_card.dart';
 import 'package:pigio_app/screens/wishes/sheets/wish_editor_sheet.dart';
 import 'package:pigio_app/screens/wishes/sheets/gift_pot_editor_sheet.dart';
 import 'package:pigio_app/screens/wishes/sheets/gift_pot_detail_sheet.dart';
+import 'package:pigio_app/services/tooltip_service.dart';
+import 'package:pigio_app/services/wishlist_share_service.dart';
+import 'package:pigio_app/shared/widgets/contextual_tip.dart';
 
 // ─── Dotted paper background painter ──────────────────────────────────────────
 class _DottedPaperPainter extends CustomPainter {
@@ -116,6 +119,17 @@ class _WishesScreenState extends State<WishesScreen> {
       appBar: PigioAppBar(
         title: t(context, 'wishes_title'),
         autoShowBackFromCanPop: false,
+        actions: [
+          if (context.read<PigioAppState>().syncEnabled)
+            IconButton(
+              icon: Icon(Icons.share_outlined, color: theme.mid, size: 22),
+              tooltip: 'Partager ma liste',
+              onPressed: () => WishlistShareService.shareMyWishlist(
+                context: context,
+                state: context.read<PigioAppState>(),
+              ),
+            ),
+        ],
       ),
       // ── FAB ───────────────────────────────────────────────────────────────
       floatingActionButton: FloatingActionButton.extended(
@@ -168,6 +182,19 @@ class _WishesScreenState extends State<WishesScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Suggest sharing wishlist once user has wishes
+                  if (wishes.isNotEmpty && context.read<PigioAppState>().syncEnabled)
+                    ContextualTip(
+                      tooltipKey: TooltipService.wishlistShare,
+                      text: t(context, 'wishes_title') == 'Envies'
+                          ? 'Partagez votre liste pour que vos proches sachent quoi offrir'
+                          : 'Share your list so your friends know what to get you',
+                      icon: Icons.share_outlined,
+                      onTap: () => WishlistShareService.shareMyWishlist(
+                        context: context,
+                        state: context.read<PigioAppState>(),
+                      ),
+                    ),
                   const SizedBox(height: 8),
                   // Tab row
                   Padding(

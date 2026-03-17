@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pigio_app/core/config/constants.dart';
 import 'package:pigio_app/core/state/app_state.dart';
+import 'package:pigio_app/services/tooltip_service.dart';
+import 'package:pigio_app/shared/widgets/contextual_tip.dart';
 import 'package:pigio_app/shared/widgets/ui_widgets.dart';
 import 'package:pigio_app/shared/widgets/pigio_painter.dart';
 import 'package:pigio_app/screens/events/sheets/add_event_sheet.dart';
@@ -42,6 +44,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
         child: Builder(
           builder: (internalContext) => CustomScrollView(
             slivers: [
+              // Progressive disclosure: suggest adding contacts when calendar is empty
+              if (state.contacts.isEmpty)
+                SliverToBoxAdapter(
+                  child: ContextualTip(
+                    tooltipKey: TooltipService.calendarEmpty,
+                    text: 'Ajoutez un proche pour voir ses dates ici',
+                    icon: Icons.calendar_month_outlined,
+                  ),
+                ),
               // Heatmap / Summary Section
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
@@ -460,7 +471,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           }
                           bdayDate = candidate;
                         }
-                      } catch (_) {}
+                      } catch (e) {
+                        debugPrint('[Calendar] Invalid birthdate for ${c.name}: ${c.birthdate}');
+                      }
                     }
                     return Padding(
                     padding: const EdgeInsets.only(bottom: 8),

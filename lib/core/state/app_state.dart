@@ -22,6 +22,11 @@ import '../../services/invitation_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/fcm_service.dart';
 import '../../services/pigio_voice.dart';
+import '../../services/connectivity_service.dart';
+import '../../services/pigio_logger.dart';
+import '../../services/analytics_service.dart';
+import '../../services/churn_score_service.dart';
+import '../../services/review_service.dart';
 import '../../services/weather_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -95,6 +100,7 @@ class PigioAppState extends ChangeNotifier {
   static const String _lastAuthUserIdKey       = 'pigio_last_auth_user_id';
   static const String _mascotMemoriesKey        = 'pigio_mascot_memories';
   static const String _mascotLastDailyBonusKey  = 'pigio_mascot_last_daily_bonus';
+  static const String _loginStreakKey            = 'pigio_login_streak';
   static const String _lastOutfitDismissKey     = 'pigio_last_outfit_dismiss';
   static const String _lastReengagePushKey      = 'pigio_last_reengage_push';
   static const String _lastStaleCircleNudgeKey  = 'pigio_last_stale_circle_nudge';
@@ -193,11 +199,11 @@ class PigioAppState extends ChangeNotifier {
   DateTime     _mascotLastOpen       = DateTime.now();
   int          _mascotAbsenceDays    = 0;
   WeatherData? _currentWeather;
-  WeatherData? _weatherTestOverride;
   bool         _weatherEffectsEnabled = true;
   bool         _autoTheme            = false;
   List<MascotMemory> _mascotMemories = [];
   DateTime? _mascotLastDailyBonus;
+  int        _loginStreak           = 0;
   DateTime? _lastOutfitDismiss;
   DateTime? _lastReengagePush;
   DateTime? _lastStaleCircleNudge;
@@ -268,15 +274,14 @@ class PigioAppState extends ChangeNotifier {
   bool         get mascotPrivacyMode     => _mascotPrivacyMode;
   List<MascotMemory> get mascotMemories  => _mascotMemories;
   DateTime?    get mascotLastDailyBonus  => _mascotLastDailyBonus;
+  int          get loginStreak          => _loginStreak;
   DateTime?    get lastOutfitDismiss     => _lastOutfitDismiss;
   DateTime?    get lastReengagePush      => _lastReengagePush;
   bool         get surpriseMode          => _surpriseMode;
   bool         get contactsConsentGiven  => _contactsConsentGiven;
   MascotMoment get mascotMoment          => _mascotMoment;
   int          get mascotBondXp          => _mascotBondXp;
-  WeatherData? get currentWeather        => _weatherTestOverride ?? _currentWeather;
-  WeatherData? get weatherTestOverride   => _weatherTestOverride;
-  bool         get weatherTestMode       => _weatherTestOverride != null;
+  WeatherData? get currentWeather        => _currentWeather;
   bool         get weatherEffectsEnabled => _weatherEffectsEnabled;
   bool         get autoTheme             => _autoTheme;
 
@@ -326,6 +331,7 @@ class PigioAppState extends ChangeNotifier {
 
   void incrementMascotBond([int xp = 1]) {
     _mascotBondXp += xp;
+    AnalyticsService.mascotInteraction('bond_increment');
     notifyListeners();
     _saveData();
   }
@@ -430,6 +436,7 @@ class PigioAppState extends ChangeNotifier {
     if (_mascotLastDailyBonus != null) {
       await prefs.setString(_mascotLastDailyBonusKey, _mascotLastDailyBonus!.toIso8601String());
     }
+    await prefs.setInt(_loginStreakKey, _loginStreak);
     if (_lastOutfitDismiss != null) {
       await prefs.setString(_lastOutfitDismissKey, _lastOutfitDismiss!.toIso8601String());
     }
@@ -513,7 +520,9 @@ class PigioAppState extends ChangeNotifier {
             if (v is String) _activeOutfit[slot] = v;
           });
         }
-      } catch (_) {}
+      } catch (e) {
+        log.warn('AppState', 'Failed to decode active outfit', e);
+      }
     }
 
     _unlockedClothing = prefs.getStringList(_unlockedClothingKey) ?? [];
@@ -523,7 +532,9 @@ class PigioAppState extends ChangeNotifier {
       try {
         final decoded = jsonDecode(presetsRaw) as List;
         _outfitPresets = decoded.map((e) => OutfitPreset.fromMap(e as Map<String, dynamic>)).toList();
-      } catch (_) {}
+      } catch (e) {
+        log.warn('AppState', 'Failed to decode outfit presets', e);
+      }
     }
 
     // Wishes — read from secure storage; migrate from SharedPreferences on first run
@@ -641,7 +652,9 @@ class PigioAppState extends ChangeNotifier {
           await _secureWrite(key: _profileKey, value: profileRaw);
           await prefs.remove(_profileKey);
         }
-      } catch (_) {}
+      } catch (e) {
+        log.warn('AppState', 'Failed to decode user profile', e);
+      }
     }
 
     _unseenLogsCount = prefs.getInt(_unseenLogsKey) ?? 0;
@@ -711,7 +724,9 @@ class PigioAppState extends ChangeNotifier {
         if (decoded is Map<String, dynamic>) {
           _outfitColors = decoded.map((k, v) => MapEntry(k, v as int));
         }
-      } catch (_) {}
+      } catch (e) {
+        log.warn('AppState', 'Failed to decode outfit colors', e);
+      }
     }
     
     // Fetch current weather continuously in background without blocking init
@@ -745,11 +760,14 @@ class PigioAppState extends ChangeNotifier {
       try {
         final decoded = jsonDecode(memoriesRaw) as List;
         _mascotMemories = decoded.map((e) => MascotMemory.fromMap(e as Map<String, dynamic>)).toList();
-      } catch (_) {}
+      } catch (e) {
+        log.warn('AppState', 'Failed to decode mascot memories', e);
+      }
     }
     // Load daily bonus timestamp
     final dailyBonusRaw = prefs.getString(_mascotLastDailyBonusKey);
     if (dailyBonusRaw != null) _mascotLastDailyBonus = DateTime.tryParse(dailyBonusRaw);
+    _loginStreak = prefs.getInt(_loginStreakKey) ?? 0;
     // Load outfit dismiss timestamp
     final outfitDismissRaw = prefs.getString(_lastOutfitDismissKey);
     if (outfitDismissRaw != null) _lastOutfitDismiss = DateTime.tryParse(outfitDismissRaw);
@@ -794,7 +812,9 @@ class PigioAppState extends ChangeNotifier {
           await _secureWrite(key: _personalityProfileKey, value: personalityRaw);
           await prefs.remove(_personalityProfileKey);
         }
-      } catch (_) {}
+      } catch (e) {
+        log.warn('AppState', 'Failed to decode personality profile', e);
+      }
     }
 
     // Wizz history
@@ -805,7 +825,9 @@ class PigioAppState extends ChangeNotifier {
         if (decoded is Map<String, dynamic>) {
           _wizzHistory = decoded.cast<String, String>();
         }
-      } catch (_) {}
+      } catch (e) {
+        log.warn('AppState', 'Failed to decode Wizz history', e);
+      }
     }
 
     final wizzEffectRaw = prefs.getString(_wizzEffectModeKey);
@@ -896,12 +918,12 @@ class PigioAppState extends ChangeNotifier {
   }
 
   /// Refreshes the current weather and holds it in state.
-  /// Retries once after 30 s if the first attempt fails (e.g. cold start, no network).
+  /// Skips the call entirely when offline. Retries once after 5 s on failure.
   Future<void> fetchWeather() async {
+    if (!ConnectivityService.instance.isOnline) return;
     var wData = await WeatherService.fetchCurrent();
-    if (wData == null) {
-      // Retry after a short delay — network may not be ready at cold start.
-      await Future<void>.delayed(const Duration(seconds: 30));
+    if (wData == null && ConnectivityService.instance.isOnline) {
+      await Future<void>.delayed(const Duration(seconds: 5));
       wData = await WeatherService.fetchCurrent();
     }
     if (wData != null && wData != _currentWeather) {
