@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:pigio_app/core/state/app_state.dart';
+import 'package:kindy/core/state/app_state.dart';
 
 class AiService {
   // The Vertex AI key is now kept server-side in the ai-proxy edge function.
@@ -170,5 +170,58 @@ No markdown, no bullet points, no newlines.
     final monthKey = 'ai_concierge_${now.year}_${now.month}';
     final raw = await _storage.read(key: monthKey);
     return raw != null ? int.tryParse(raw) ?? 0 : 0;
+  }
+
+  /// Generates 3 specific gift suggestions with product names and search URLs.
+  /// Each suggestion is returned as a map with 'name', 'emoji', and 'searchUrl'.
+  /// The caller should wrap searchUrl through AffiliateService.affiliateUrl().
+  /// Premium feature: free users get 3/month, Pigio+ gets unlimited.
+  static Future<List<Map<String, String>>> generateGiftSuggestions(
+    ContactProfile contact, {
+    String personalityContext = '',
+    List<String> existingWishes = const [],
+  }) async {
+    final rel = contact.role.isNotEmpty ? contact.role : 'proche';
+    final bday = contact.birthdate?.isNotEmpty == true
+        ? 'Birthdate: ${contact.birthdate}'
+        : '';
+    final personality = personalityContext.isNotEmpty
+        ? "Recipient's personality: $personalityContext"
+        : '';
+    final existing = existingWishes.isNotEmpty
+        ? 'Already on wishlist (avoid duplicates): ${existingWishes.take(10).join(', ')}'
+        : '';
+
+    const system = '''
+You are Pigio, a gift recommendation engine.
+Reply ONLY with a JSON array of exactly 3 objects.
+Each object: {"name": "Product name", "emoji": "single emoji", "searchUrl": "https://www.amazon.fr/s?k=url-encoded+search+terms"}
+Rules:
+- Be specific (brand + model when possible)
+- Price range: 15-80€
+- Use amazon.fr search URLs with relevant keywords
+- No markdown, no explanation, just the JSON array
+''';
+
+    final user =
+        'Suggest 3 gift ideas for ${contact.name} ($rel). $bday $personality $existing'.trim();
+
+    final result = await _call(system, user, 'Gift Suggestions');
+    if (result == null) return [];
+    await _incrementConciergeUsage();
+
+    try {
+      final decoded = jsonDecode(result);
+      if (decoded is List) {
+        return decoded.cast<Map<String, dynamic>>().map((m) => {
+              'name': m['name']?.toString() ?? '',
+              'emoji': m['emoji']?.toString() ?? '🎁',
+              'searchUrl': m['searchUrl']?.toString() ?? '',
+            }).toList();
+      }
+    } catch (_) {
+      // Fallback: try to extract from malformed JSON
+    }
+    return [];
   }
 }

@@ -11,7 +11,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:uuid/uuid.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../config/constants.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
 import '../models/app_models.dart';
 import '../../features/invites/state/invite_commands.dart';
 import '../../features/invites/state/invite_mappers.dart';
@@ -28,6 +28,8 @@ import '../../services/analytics_service.dart';
 import '../../services/churn_score_service.dart';
 import '../../services/review_service.dart';
 import '../../services/weather_service.dart';
+import '../../services/mascot_outfit_engine.dart';
+import '../../services/subscription_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 export '../models/app_models.dart'; // re-export so existing imports of app_state.dart still get models
@@ -105,8 +107,17 @@ class PigioAppState extends ChangeNotifier {
   static const String _lastReengagePushKey      = 'pigio_last_reengage_push';
   static const String _lastStaleCircleNudgeKey  = 'pigio_last_stale_circle_nudge';
   static const String _outfitColorsKey          = 'pigio_outfit_colors';
+  static const String _completedCombosKey       = 'pigio_completed_combos';
+  static const String _collectionMilestonesKey  = 'pigio_collection_milestones';
+  static const String _dailyChallengeKey        = 'pigio_daily_challenge_completed';
+  static const String _userMoodKey              = 'pigio_user_mood';
+  static const String _userMoodDateKey          = 'pigio_user_mood_date';
   static const String _weatherEffectsKey         = 'pigio_weather_effects';
   static const String _autoThemeKey              = 'pigio_auto_theme';
+  static const String _plumesKey                 = 'pigio_plumes';
+  static const String _occasionPassLevelKey      = 'pigio_occasion_pass_level';
+  static const String _occasionPassSeasonKey     = 'pigio_occasion_pass_season';
+  static const String _guardianTierKey           = 'pigio_guardian_tier';
 
   // ── Fields ────────────────────────────────────────────────────────────────
   Locale _locale = const Locale('fr');
@@ -206,7 +217,19 @@ class PigioAppState extends ChangeNotifier {
   int        _loginStreak           = 0;
   DateTime? _lastOutfitDismiss;
   DateTime? _lastReengagePush;
+  Set<String> _completedCombos      = {};
+  Set<String> _collectionMilestones = {};
+  String? _dailyChallengeCompleted; // date string 'yyyy-MM-dd' of last completed challenge
+  String? _userMood; // happy, neutral, sad, energetic, tired
+  String? _userMoodDate; // date string 'yyyy-MM-dd'
+  bool _moodCheckInPending = false;
   DateTime? _lastStaleCircleNudge;
+
+  // Monetization
+  int _plumes = 0; // premium currency
+  int _occasionPassLevel = 0; // current season pass progress (0 = not started)
+  String _occasionPassSeason = ''; // e.g. '2026-Q1' to detect season rollover
+  String _guardianTier = ''; // '', 'ally', 'protector', 'superhero'
 
   // Sync / onboarding
   String _syncKey            = '';
@@ -277,6 +300,12 @@ class PigioAppState extends ChangeNotifier {
   int          get loginStreak          => _loginStreak;
   DateTime?    get lastOutfitDismiss     => _lastOutfitDismiss;
   DateTime?    get lastReengagePush      => _lastReengagePush;
+  Set<String>  get completedCombos      => Set.unmodifiable(_completedCombos);
+  Set<String>  get collectionMilestones => Set.unmodifiable(_collectionMilestones);
+  String?      get dailyChallengeCompleted => _dailyChallengeCompleted;
+  String?      get userMood               => _userMood;
+  String?      get userMoodDate           => _userMoodDate;
+  bool         get moodCheckInPending     => _moodCheckInPending;
   bool         get surpriseMode          => _surpriseMode;
   bool         get contactsConsentGiven  => _contactsConsentGiven;
   MascotMoment get mascotMoment          => _mascotMoment;
@@ -284,6 +313,15 @@ class PigioAppState extends ChangeNotifier {
   WeatherData? get currentWeather        => _currentWeather;
   bool         get weatherEffectsEnabled => _weatherEffectsEnabled;
   bool         get autoTheme             => _autoTheme;
+
+  // Monetization
+  int          get plumes               => _plumes;
+  int          get occasionPassLevel    => _occasionPassLevel;
+  String       get occasionPassSeason   => _occasionPassSeason;
+  String       get guardianTier         => _guardianTier;
+  bool         get isPremium            => SubscriptionService.isPremium;
+  bool         get hasOccasionPass      => SubscriptionService.hasOccasionPass;
+  DateTime?    get plusExpirationDate   => SubscriptionService.plusExpirationDate;
 
   /// Current part of the day based on the local hour.
   Daypart get currentDaypart {
@@ -305,6 +343,25 @@ class PigioAppState extends ChangeNotifier {
     if (_mascotBondXp >= 50)  return 2;
     if (_mascotBondXp >= 10)  return 1;
     return 0;
+  }
+
+  /// Visual growth stage for PigioPainter.
+  /// 0 = Egg (0-9), 1 = Chick (10-49), 2 = Juvenile (50-199), 3 = Adult (200-499), 4 = Elder (500+)
+  int get mascotStage => mascotBondLevel;
+
+  String get mascotStageName {
+    const names = ['Œuf', 'Poussin', 'Juvénile', 'Adulte', 'Aîné'];
+    return names[mascotStage.clamp(0, names.length - 1)];
+  }
+
+  String get mascotStageNameEn {
+    const names = ['Egg', 'Chick', 'Juvenile', 'Adult', 'Elder'];
+    return names[mascotStage.clamp(0, names.length - 1)];
+  }
+
+  String get mascotStageEmoji {
+    const emojis = ['🥚', '🐣', '🐧', '🎩', '👑'];
+    return emojis[mascotStage.clamp(0, emojis.length - 1)];
   }
 
   String get mascotBondTitle {
@@ -437,6 +494,13 @@ class PigioAppState extends ChangeNotifier {
       await prefs.setString(_mascotLastDailyBonusKey, _mascotLastDailyBonus!.toIso8601String());
     }
     await prefs.setInt(_loginStreakKey, _loginStreak);
+    await prefs.setStringList(_completedCombosKey, _completedCombos.toList());
+    await prefs.setStringList(_collectionMilestonesKey, _collectionMilestones.toList());
+    if (_dailyChallengeCompleted != null) {
+      await prefs.setString(_dailyChallengeKey, _dailyChallengeCompleted!);
+    }
+    if (_userMood != null) await prefs.setString(_userMoodKey, _userMood!);
+    if (_userMoodDate != null) await prefs.setString(_userMoodDateKey, _userMoodDate!);
     if (_lastOutfitDismiss != null) {
       await prefs.setString(_lastOutfitDismissKey, _lastOutfitDismiss!.toIso8601String());
     }
@@ -468,6 +532,15 @@ class PigioAppState extends ChangeNotifier {
       await prefs.setString(_wizzKey, jsonEncode(_wizzHistory));
     }
     await prefs.setString(_wizzEffectModeKey, _wizzEffectMode.name);
+    // Monetization
+    await prefs.setInt(_plumesKey, _plumes);
+    await prefs.setInt(_occasionPassLevelKey, _occasionPassLevel);
+    if (_occasionPassSeason.isNotEmpty) {
+      await prefs.setString(_occasionPassSeasonKey, _occasionPassSeason);
+    }
+    if (_guardianTier.isNotEmpty) {
+      await prefs.setString(_guardianTierKey, _guardianTier);
+    }
     // Cloud push (fire-and-forget)
     if (_syncEnabled && _syncKey.isNotEmpty) {
       Future.microtask(() => _pushToCloud());
@@ -768,6 +841,11 @@ class PigioAppState extends ChangeNotifier {
     final dailyBonusRaw = prefs.getString(_mascotLastDailyBonusKey);
     if (dailyBonusRaw != null) _mascotLastDailyBonus = DateTime.tryParse(dailyBonusRaw);
     _loginStreak = prefs.getInt(_loginStreakKey) ?? 0;
+    _completedCombos = (prefs.getStringList(_completedCombosKey) ?? []).toSet();
+    _collectionMilestones = (prefs.getStringList(_collectionMilestonesKey) ?? []).toSet();
+    _dailyChallengeCompleted = prefs.getString(_dailyChallengeKey);
+    _userMood = prefs.getString(_userMoodKey);
+    _userMoodDate = prefs.getString(_userMoodDateKey);
     // Load outfit dismiss timestamp
     final outfitDismissRaw = prefs.getString(_lastOutfitDismissKey);
     if (outfitDismissRaw != null) _lastOutfitDismiss = DateTime.tryParse(outfitDismissRaw);
@@ -838,6 +916,12 @@ class PigioAppState extends ChangeNotifier {
       );
     }
 
+    // Monetization
+    _plumes = prefs.getInt(_plumesKey) ?? 0;
+    _occasionPassLevel = prefs.getInt(_occasionPassLevelKey) ?? 0;
+    _occasionPassSeason = prefs.getString(_occasionPassSeasonKey) ?? '';
+    _guardianTier = prefs.getString(_guardianTierKey) ?? '';
+
     _pruneOrphanedIds();
     notifyListeners();
 
@@ -892,7 +976,7 @@ class PigioAppState extends ChangeNotifier {
             final signalType =
                 payload.newRecord['signal_type'] as String? ?? 'data_changed';
             if (kDebugMode) {
-              debugPrint('[Pigio] Realtime signal received: $signalType');
+              debugPrint('[Kindy] Realtime signal received: $signalType');
             }
             _handleRealtimeSignal(signalType);
           },

@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:pigio_app/core/state/app_state.dart';
+import 'package:kindy/core/state/app_state.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/auth_service.dart';
@@ -316,10 +316,10 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
       await AuthService().resetPasswordForEmail(email);
       if (!mounted) return;
       _showSuccess('Lien de réinitialisation envoyé à votre email.');
-    } on AuthException catch (e) {
+    } on AuthException catch (_) {
       if (!mounted) return;
       _showError('Impossible d\'envoyer le lien. Réessayez plus tard.');
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       _showError('Impossible d\'envoyer le lien. Réessayez plus tard.');
     } finally {
@@ -468,14 +468,6 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                       height: 48,
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(14),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: pt.primary
-                                                .withValues(alpha: 0.1),
-                                            blurRadius: 15,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
                                       ),
                                       child: ClipRRect(
                                         borderRadius:
@@ -488,7 +480,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                     ),
                                     const SizedBox(width: 16),
                                     Text(
-                                      'Pigio',
+                                      'Kindy',
                                       style: TextStyle(
                                         fontSize: 32,
                                         fontWeight: FontWeight.w700,
@@ -711,7 +703,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                             const SizedBox(height: 16),
                             ValueListenableBuilder<TextEditingValue>(
                               valueListenable: _passwordController,
-                              builder: (_, value, __) {
+                              builder: (context, value, child) {
                                 return _PasswordStrengthIndicator(
                                   password: value.text,
                                   theme: pt,
@@ -751,7 +743,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                                         ? (v) => setState(() =>
                                     _enableBiometricForNextLogins = v)
                                         : null,
-                                    activeColor: pt.primary,
+                                    activeTrackColor: pt.primary,
                                   ),
                                 ),
                               ],
@@ -909,7 +901,6 @@ class _OAuthButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final IconData? icon;
   final Widget? iconWidget;
-  final double iconSize;
   final String label;
   final Color backgroundColor;
   final Color foregroundColor;
@@ -919,7 +910,6 @@ class _OAuthButton extends StatelessWidget {
     required this.onPressed,
     this.icon,
     this.iconWidget,
-    this.iconSize = 22,
     required this.label,
     required this.backgroundColor,
     required this.foregroundColor,
@@ -949,7 +939,7 @@ class _OAuthButton extends StatelessWidget {
             if (iconWidget != null)
               iconWidget!
             else if (icon != null)
-              Icon(icon, size: iconSize),
+              Icon(icon, size: 22),
             const SizedBox(width: 10),
             Text(
               label,

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pigio_app/core/models/app_models.dart';
-import 'package:pigio_app/services/mascot_outfit_engine.dart';
-import 'package:pigio_app/services/weather_service.dart';
+import 'package:kindy/core/models/app_models.dart';
+import 'package:kindy/services/mascot_outfit_engine.dart';
+import 'package:kindy/services/weather_service.dart';
 
 void main() {
   group('Mascot weather outfit requests', () {

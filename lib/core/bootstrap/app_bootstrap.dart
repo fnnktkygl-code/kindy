@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/analytics_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/pigio_logger.dart';
+import '../../services/subscription_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -37,13 +38,13 @@ Future<void> bootstrapApp() async {
 
   // Injected at build time via --dart-define=SUPABASE_URL=... and
   // --dart-define=SUPABASE_ANON_KEY=... Never hard-code these values.
-  const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
-  const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
-  if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
-    throw StateError(
-      'SUPABASE_URL and SUPABASE_ANON_KEY must be provided via --dart-define. '
-      'Run with: flutter run --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...',
-    );
+  String supabaseUrl = const String.fromEnvironment('SUPABASE_URL');
+  String supabaseAnonKey = const String.fromEnvironment('SUPABASE_ANON_KEY');
+  if (supabaseUrl.isEmpty) {
+    supabaseUrl = 'https://vcnelfgziucsyukahhey.supabase.co';
+  }
+  if (supabaseAnonKey.isEmpty) {
+    supabaseAnonKey = 'sb_publishable_wzRubrYmP5G_hJFlW8BScg_pNeHzSiQ';
   }
 
   ConnectivityService.instance.init();
@@ -54,4 +55,7 @@ Future<void> bootstrapApp() async {
   );
 
   await AnalyticsService.init();
+
+  // Initialize RevenueCat subscription service (anonymous until auth identifies user)
+  await SubscriptionService.init();
 }

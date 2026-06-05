@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/state/app_state.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/state/app_state.dart';
 
-import 'package:pigio_app/core/i18n/i18n.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
-import 'package:pigio_app/shared/widgets/ui_widgets.dart';
-import 'package:pigio_app/screens/sizes/sheets/size_editor_sheet.dart';
+import 'package:kindy/core/i18n/i18n.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
+import 'package:kindy/shared/widgets/ui_widgets.dart';
+import 'package:kindy/screens/sizes/sheets/size_editor_sheet.dart';
 
 class WardrobeScreen extends StatefulWidget {
   final bool isOwnList;
@@ -20,7 +20,7 @@ class WardrobeScreen extends StatefulWidget {
 class _WardrobeScreenState extends State<WardrobeScreen> {
   String? _flash;
 
-  static const _categoryOrder = ['clothes', 'bottoms', 'shoes'];
+  static const _categoryOrder = ['clothes', 'bottoms', 'shoes', 'rings', 'bracelets', 'necklaces'];
 
   Map<String, Map<String, dynamic>> _getMeta(PigioThemeData theme) => {
     'clothes': {
@@ -44,6 +44,27 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       'fields': ['eu_shoes', 'us_shoes', 'uk_shoes', 'cm_shoes'],
       'fits': ['regular'],
     },
+    'rings': {
+      'emoji': '💍',
+      'bg': theme.accent2.withValues(alpha: 0.15),
+      'visColor': theme.accent2,
+      'fields': ['ring_eu_left', 'ring_eu_right', 'ring_us_left', 'ring_us_right', 'ring_diameter_mm'],
+      'fits': ['snug', 'comfortable', 'loose'],
+    },
+    'bracelets': {
+      'emoji': '⌚',
+      'bg': theme.warning.withValues(alpha: 0.15),
+      'visColor': theme.warning,
+      'fields': ['wrist_cm', 'wrist_in', 'watch_size'],
+      'fits': ['snug', 'comfortable', 'loose'],
+    },
+    'necklaces': {
+      'emoji': '📿',
+      'bg': theme.error.withValues(alpha: 0.15),
+      'visColor': theme.error,
+      'fields': ['necklace_cm', 'necklace_in', 'necklace_diameter'],
+      'fits': ['choker', 'princess', 'matinee', 'opera', 'larger_longer'],
+    },
   };
 
   List<String> _getChips(SizeProfile? profile, String key) {
@@ -65,6 +86,20 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       if (v['eu_shoes'] != null) chips.add('EU ${v['eu_shoes']!}');
       if (v['cm_shoes'] != null) chips.add('${v['cm_shoes']}cm');
       if (v['us_shoes'] != null) chips.add('${v['us_shoes']} US');
+    } else if (key == 'rings') {
+      if (v['ring_eu_left'] != null) chips.add('EU ${v['ring_eu_left']!} (G)');
+      if (v['ring_us_left'] != null) chips.add('US ${v['ring_us_left']!} (G)');
+      if (v['ring_eu_right'] != null) chips.add('EU ${v['ring_eu_right']!} (D)');
+      if (v['ring_us_right'] != null) chips.add('US ${v['ring_us_right']!} (D)');
+      if (v['ring_diameter_mm'] != null) chips.add('Ø ${v['ring_diameter_mm']!}mm');
+    } else if (key == 'bracelets') {
+      if (v['wrist_cm'] != null) chips.add('${v['wrist_cm']}cm');
+      if (v['wrist_in'] != null) chips.add('${v['wrist_in']}"');
+      if (v['watch_size'] != null) chips.add('⌚ ${v['watch_size']}mm');
+    } else if (key == 'necklaces') {
+      if (v['necklace_cm'] != null) chips.add('${v['necklace_cm']}cm');
+      if (v['necklace_in'] != null) chips.add('${v['necklace_in']}"');
+      if (v['necklace_diameter'] != null) chips.add('Ø ${v['necklace_diameter']}cm');
     }
     return chips;
   }
@@ -113,7 +148,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
               ),
 
               // ── Contextual tip ──
-              if (filledCount < 3)
+              if (filledCount < 6)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
                   child: _TipBanner(theme: theme, filledCount: filledCount),
@@ -293,9 +328,12 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final allDone = filledCount == 3;
+    final allDone = filledCount == 6;
     final isFlashing = flash != null;
-    final segColors = [theme.primary, theme.success, theme.accent3];
+    final segColors = [
+      theme.primary, theme.success, theme.accent3,
+      theme.accent2, theme.warning, theme.error,
+    ];
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),
@@ -369,7 +407,7 @@ class _HeroCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 // Three-segment progress bar (one per category)
                 Row(
-                  children: List.generate(3, (i) {
+                  children: List.generate(6, (i) {
                     final filled = i < filledCount;
                     return Expanded(
                       child: AnimatedContainer(
@@ -389,7 +427,7 @@ class _HeroCard extends StatelessWidget {
                 Text(
                   allDone
                       ? 'Profil complet — tes cercles peuvent te faire plaisir 🎁'
-                      : '$filledCount / 3 catégories renseignées',
+                      : '$filledCount / 6 catégories renseignées',
                   style: fw(
                     size: 12,
                     w: FontWeight.w600,

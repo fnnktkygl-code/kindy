@@ -5,7 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../../services/analytics_service.dart';
 import '../../services/fcm_service.dart';
-import 'package:pigio_app/core/state/app_state.dart';
+import 'package:kindy/core/state/app_state.dart';
 
 class FcmCoordinator {
   final List<StreamSubscription> _subscriptions = [];

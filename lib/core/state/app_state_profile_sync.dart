@@ -79,7 +79,7 @@ extension ProfileSyncExtension on PigioAppState {
           reservations: reservationsForContact,
         );
       } catch (e) {
-        if (kDebugMode) debugPrint('[Pigio] Profile push to ${entry.value} failed: $e');
+        if (kDebugMode) debugPrint('[Kindy] Profile push to ${entry.value} failed: $e');
       }
     }
   }
@@ -165,7 +165,7 @@ extension ProfileSyncExtension on PigioAppState {
           }
         }
       } catch (e) {
-        if (kDebugMode) debugPrint('[Pigio] Profile pull for ${contact.id} failed: $e');
+        if (kDebugMode) debugPrint('[Kindy] Profile pull for ${contact.id} failed: $e');
       }
     }
 
@@ -223,7 +223,7 @@ extension ProfileSyncExtension on PigioAppState {
         _saveData();
       }
     } catch (e) {
-      if (kDebugMode) debugPrint('[Pigio] refreshContactData error for $contactId: $e');
+      if (kDebugMode) debugPrint('[Kindy] refreshContactData error for $contactId: $e');
     }
   }
 

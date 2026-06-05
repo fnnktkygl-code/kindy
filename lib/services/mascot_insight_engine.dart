@@ -1,7 +1,8 @@
 import 'dart:math' as math;
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/shared/widgets/pigio_painter.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/shared/widgets/pigio_painter.dart';
 import 'ai_service.dart';
+import 'mascot_outfit_engine.dart';
 
 // ─── INSIGHT MODEL ───────────────────────────────────────────────────────────
 
@@ -179,23 +180,26 @@ class MascotInsightEngine {
     if (state.mascotMoment == MascotMoment.bondLevelUp) {
       final emoji = state.mascotBondEmoji;
       final title = state.mascotBondTitle;
+      final stageEmoji = state.mascotStageEmoji;
+      final stageFr = state.mascotStageName;
+      final stageEn = state.mascotStageNameEn;
       return _pick([
         MascotInsight(
           mood: PigMood.celebrating,
-          fr: "LEVEL UP ! $emoji On est maintenant « $title » ! 🎉",
-          en: "LEVEL UP! $emoji We're now \"$title\"! 🎉",
+          fr: "ÉVOLUTION ! $stageEmoji Je suis maintenant $stageFr ! $emoji « $title » 🎉",
+          en: "EVOLUTION! $stageEmoji I'm now $stageEn! $emoji \"$title\" 🎉",
           postAction: state.clearMascotMoment,
         ),
         MascotInsight(
           mood: PigMood.love,
-          fr: "Notre lien grandit ! $emoji $title — ça me rend trop heureux ! 💛",
-          en: "Our bond is growing! $emoji $title — this makes me so happy! 💛",
+          fr: "$stageEmoji $stageFr ! Notre lien grandit — $emoji $title ! 💛",
+          en: "$stageEmoji $stageEn! Our bond is growing — $emoji $title! 💛",
           postAction: state.clearMascotMoment,
         ),
         MascotInsight(
           mood: PigMood.excited,
-          fr: "$emoji $title ! Nouveau palier atteint ! 🚀",
-          en: "$emoji $title! New level reached! 🚀",
+          fr: "$stageEmoji $stageFr ! Regarde comme j'ai changé ! $emoji $title 🚀",
+          en: "$stageEmoji $stageEn! Look how I've changed! $emoji $title 🚀",
           postAction: state.clearMascotMoment,
         ),
       ]);
@@ -562,16 +566,36 @@ class MascotInsightEngine {
       ...greetings,
       // Streak celebrations
       if (streak == 7)
-        MascotInsight(mood: PigMood.celebrating, fr: "Une semaine ensemble$n ! 🏆", en: "A week together$n! 🏆"),
+        MascotInsight(mood: PigMood.celebrating, fr: "Une semaine ensemble$n ! 🏆 Tu as débloqué le Trophée doré !", en: "A week together$n! 🏆 You unlocked the Golden Trophy!"),
       if (streak == 30)
-        MascotInsight(mood: PigMood.celebrating, fr: "Un mois$n ! 🏅 Merci d'être là.", en: "One month$n! 🏅 Thanks for being here."),
+        MascotInsight(mood: PigMood.celebrating, fr: "Un mois$n ! ⭐ Tu as débloqué les Lunettes étoile !", en: "One month$n! ⭐ You unlocked the Star Glasses!"),
       if (contactCount > 0)
         MascotInsight(mood: PigMood.love, fr: "Ton réseau compte $contactCount proches 💛 C'est chouette !", en: "Your network has $contactCount people 💛 That's awesome!"),
       if (wishCount > 3)
         MascotInsight(mood: PigMood.thumbsUp, fr: "$wishCount envies sur ta liste 🎯 Tu sais ce que tu veux !", en: "$wishCount wishes on your list 🎯 You know what you want!"),
+      MascotInsight(
+        mood: PigMood.excited,
+        fr: "J'ai préparé ta tenue du jour ! 👔 Va voir dans la garde-robe.",
+        en: "I prepared your outfit of the day! 👔 Check the wardrobe.",
+        actionKey: 'wardrobe',
+      ),
+      // Limited-time drop awareness
+      if (MascotOutfitEngine.seasonalDrops(DateTime.now()).isNotEmpty)
+        MascotInsight(mood: PigMood.excited, fr: "Il y a des objets en édition limitée dans la garde-robe ! ⏳", en: "There are limited-edition items in the wardrobe! ⏳", actionKey: 'wardrobe'),
+      if (MascotOutfitEngine.expiringSoon(DateTime.now()).isNotEmpty)
+        MascotInsight(mood: PigMood.searching, fr: "Dépêche-toi$n ! Des objets limités expirent bientôt ! 🔥", en: "Hurry$n! Limited items expiring soon! 🔥", actionKey: 'wardrobe'),
       MascotInsight(mood: PigMood.thinking, fr: "Un cadeau à trouver$n ? Je peux t'aider ! 🎁", en: "Need to find a gift$n? I can help! 🎁"),
       MascotInsight(mood: PigMood.waving, fr: "Hey$n ! 🐧 Quoi de beau aujourd'hui ?", en: "Hey$n! 🐧 What's good today?"),
       MascotInsight(mood: PigMood.excited, fr: "Bonne humeur$n ! 🌈 Belle journée en vue.", en: "Good vibes$n! 🌈 Looks like a great day."),
+      // Mood-aware messages
+      if (state.userMood == 'sad')
+        MascotInsight(mood: PigMood.love, fr: "💛 Je suis là pour toi$n. Un câlin virtuel ?", en: "💛 I'm here for you$n. Virtual hug?"),
+      if (state.userMood == 'tired')
+        MascotInsight(mood: PigMood.sleeping, fr: "😴 Repose-toi$n. Tu le mérites.", en: "😴 Take it easy$n. You deserve it."),
+      if (state.userMood == 'energetic')
+        MascotInsight(mood: PigMood.excited, fr: "⚡ On est en feu$n ! Habille-moi pour l'aventure !", en: "⚡ We're on fire$n! Dress me for adventure!", actionKey: 'wardrobe'),
+      if (state.userMood == 'happy')
+        MascotInsight(mood: PigMood.celebrating, fr: "😊 Top$n ! Profitons de cette belle énergie !", en: "😊 Awesome$n! Let's ride this good energy!"),
     ];
   }
 

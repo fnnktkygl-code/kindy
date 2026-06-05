@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
-import 'package:pigio_app/core/state/app_state.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
+import 'package:kindy/core/state/app_state.dart';
 
 // Paper tints matching WishCard style
 Color _getPotPaperColor(PigioThemeData theme, String id) {

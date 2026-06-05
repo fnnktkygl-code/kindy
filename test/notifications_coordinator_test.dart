@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pigio_app/features/notifications/state/notifications_coordinator.dart';
-import 'package:pigio_app/services/notification_service.dart';
+import 'package:kindy/features/notifications/state/notifications_coordinator.dart';
+import 'package:kindy/services/notification_service.dart';
 
 void main() {
   late NotificationsCoordinator coordinator;

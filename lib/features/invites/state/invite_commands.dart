@@ -1,4 +1,4 @@
-import 'package:pigio_app/core/models/app_models.dart';
+import 'package:kindy/core/models/app_models.dart';
 
 class InviteCommands {
   static bool expirePendingInvites(List<PendingInvite> pendingInvites) {

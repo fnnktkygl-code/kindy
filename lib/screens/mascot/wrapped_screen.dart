@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
-import 'package:pigio_app/shared/widgets/ui_widgets.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
+import 'package:kindy/shared/widgets/ui_widgets.dart';
 
 /// Year-end "Pigio Wrapped" summary screen — shows the user's gifting
 /// stats for the current year alongside an AI-generated quip from Pigio.

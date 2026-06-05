@@ -394,7 +394,7 @@ extension InvitesExtension on PigioAppState {
       pendingEntries.map((e) => _invitationService
           .getTokenStatus(e.value.tokenId)
           .catchError((err) {
-        if (kDebugMode) debugPrint('[Pigio] Sync invite ${e.value.tokenId} failed: $err');
+        if (kDebugMode) debugPrint('[Kindy] Sync invite ${e.value.tokenId} failed: $err');
         return null as dynamic;
       })),
     );
@@ -456,7 +456,7 @@ extension InvitesExtension on PigioAppState {
           _contacts.add(ContactProfile(
             id: newCid,
             name: accepterName,
-            role: 'Contact Pigio',
+            role: 'Contact Kindy',
             avatarName: accepterName,
             color: fallbackColor,
             trustLevel: TrustLevel.friend,
@@ -614,7 +614,7 @@ extension InvitesExtension on PigioAppState {
       _contacts.add(ContactProfile(
         id: contactId,
         name: inviterDisplay,
-        role: 'Contact Pigio',
+        role: 'Contact Kindy',
         avatarName: inviterDisplay,
         color: fallbackColor,
         trustLevel: TrustLevel.friend,

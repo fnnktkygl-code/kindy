@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
-import 'package:pigio_app/core/i18n/i18n.dart';
-import 'package:pigio_app/screens/mascot/mascot_settings_screen.dart';
-import 'package:pigio_app/screens/auth/splash_screen.dart';
-import 'package:pigio_app/services/pigio_logger.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
+import 'package:kindy/core/i18n/i18n.dart';
+import 'package:kindy/screens/mascot/mascot_settings_screen.dart';
+import 'package:kindy/screens/settings/pigio_plus_screen.dart';
+import 'package:kindy/screens/auth/splash_screen.dart';
+import 'package:kindy/services/pigio_logger.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -75,6 +76,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ],
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // ── Pigio+ ──────────────────────────────────────────────────
+            _buildSectionTitle(context, "PIGIO+", theme),
+            GestureDetector(
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PigioPlusScreen())),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.primary,
+                  borderRadius: BorderRadius.circular(PigioDesign.radiusMedium),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.star, color: Colors.white, size: 22),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            state.isPremium
+                                ? (state.locale.languageCode == 'fr' ? 'Pigio+ Actif' : 'Pigio+ Active')
+                                : 'Pigio+',
+                            style: fw(size: 16, w: FontWeight.w800, color: Colors.white),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            state.isPremium
+                                ? '${state.plumes} Plumes'
+                                : (state.locale.languageCode == 'fr' ? 'Débloquez les avantages premium' : 'Unlock premium perks'),
+                            style: fw(size: 12, color: Colors.white70),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: Colors.white70),
+                  ],
+                ),
               ),
             ),
 
@@ -236,12 +287,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: theme.card,
-        title: Text(t(context, 'settings_sign_out_title'), style: fw(size: 20, w: FontWeight.w800, color: theme.ink)),
-        content: Text(t(context, 'settings_sign_out_confirm'), style: fw(size: 14, color: theme.mid)),
+        title: Text(t(context, 'settings_sign_out_title', listen: false), style: fw(size: 20, w: FontWeight.w800, color: theme.ink)),
+        content: Text(t(context, 'settings_sign_out_confirm', listen: false), style: fw(size: 14, color: theme.mid)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text(t(context, 'cancel'), style: fw(size: 16, color: theme.mid)),
+            child: Text(t(context, 'cancel', listen: false), style: fw(size: 16, color: theme.mid)),
           ),
           TextButton(
             onPressed: () async {
@@ -253,7 +304,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 (route) => false,
               );
             },
-            child: Text(t(context, 'settings_sign_out'), style: fw(size: 16, w: FontWeight.w800, color: theme.error)),
+            child: Text(t(context, 'settings_sign_out', listen: false), style: fw(size: 16, w: FontWeight.w800, color: theme.error)),
           ),
         ],
       ),
@@ -263,21 +314,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Account deletion with confirmation + loading ─────────────────────────
   void _confirmAccountDelete(BuildContext context, PigioAppState state, PigioThemeData theme) {
     final TextEditingController confirmCtrl = TextEditingController();
-    final keyword = t(context, 'settings_delete_keyword');
+    final keyword = t(context, 'settings_delete_keyword', listen: false);
     showDialog(
       context: context,
       builder: (c) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           return AlertDialog(
             backgroundColor: theme.card,
-            title: Text(t(context, 'settings_delete_title'), style: fw(size: 20, w: FontWeight.w800, color: theme.error)),
+            title: Text(t(context, 'settings_delete_title', listen: false), style: fw(size: 20, w: FontWeight.w800, color: theme.error)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(t(context, 'settings_delete_body'), style: fw(size: 14, color: theme.mid)),
+                Text(t(context, 'settings_delete_body', listen: false), style: fw(size: 14, color: theme.mid)),
                 const SizedBox(height: 16),
-                Text(t(context, 'settings_delete_hint'), style: fw(size: 12, w: FontWeight.w700, color: theme.error)),
+                Text(t(context, 'settings_delete_hint', listen: false), style: fw(size: 12, w: FontWeight.w700, color: theme.error)),
                 const SizedBox(height: 8),
                 TextField(
                   controller: confirmCtrl,
@@ -293,7 +344,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(c), child: Text(t(context, 'cancel'), style: fw(size: 16, color: theme.mid))),
+              TextButton(onPressed: () => Navigator.pop(c), child: Text(t(context, 'cancel', listen: false), style: fw(size: 16, color: theme.mid))),
               TextButton(
                 onPressed: confirmCtrl.text == keyword ? () async {
                   Navigator.pop(c);
@@ -331,13 +382,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     if (!mounted) return;
                     setState(() => _isDeleting = false);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(t(context, 'settings_delete_error'))),
+                      SnackBar(content: Text(t(context, 'settings_delete_error', listen: false))),
                     );
                   }
                 } : null,
                 child: _isDeleting
                     ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: theme.error))
-                    : Text(t(context, 'settings_delete_btn'), style: fw(size: 16, w: FontWeight.w800, color: confirmCtrl.text == keyword ? theme.error : theme.light)),
+                    : Text(t(context, 'settings_delete_btn', listen: false), style: fw(size: 16, w: FontWeight.w800, color: confirmCtrl.text == keyword ? theme.error : theme.light)),
               ),
             ],
           );

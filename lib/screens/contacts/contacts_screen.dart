@@ -1,14 +1,14 @@
-import 'package:pigio_app/core/theme/pigio_theme.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/shared/widgets/ui_widgets.dart';
-import 'package:pigio_app/shared/widgets/invite_bottom_sheet.dart';
-import 'package:pigio_app/screens/contacts/sheets/add_profile_sheet.dart';
-import 'package:pigio_app/features/contacts/presentation/contact_profile_screen.dart';
-import 'package:pigio_app/features/circles/presentation/circles_screen.dart';
-import 'package:pigio_app/screens/wishes/sheets/wizz_sheet.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/shared/widgets/ui_widgets.dart';
+import 'package:kindy/shared/widgets/invite_bottom_sheet.dart';
+import 'package:kindy/screens/contacts/sheets/add_profile_sheet.dart';
+import 'package:kindy/features/contacts/presentation/contact_profile_screen.dart';
+import 'package:kindy/features/circles/presentation/circles_screen.dart';
+import 'package:kindy/screens/wishes/sheets/wizz_sheet.dart';
 
 class _ContactCardData {
   final ContactProfile contact;

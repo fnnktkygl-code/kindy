@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:pigio_app/core/state/app_state.dart';
+import 'package:kindy/core/state/app_state.dart';
 import 'auth_screen.dart';
 
 /// Shown after sign-up when Supabase requires email confirmation.

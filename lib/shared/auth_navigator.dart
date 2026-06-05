@@ -5,10 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/app_shell/main_shell.dart';
-import 'package:pigio_app/screens/auth/onboarding/onboarding_shell.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/app_shell/main_shell.dart';
+import 'package:kindy/screens/auth/onboarding/onboarding_shell.dart';
 
 /// Shared auth navigation helpers — eliminates duplicate code across
 /// auth_screen.dart and auth_welcome_screen.dart.

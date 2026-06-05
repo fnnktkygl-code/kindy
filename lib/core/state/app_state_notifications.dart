@@ -63,7 +63,7 @@ extension NotificationsExtension on PigioAppState {
         notification: notif,
       );
     } catch (e) {
-      if (kDebugMode) debugPrint('[Pigio] Single notification push failed for $contactId: $e');
+      if (kDebugMode) debugPrint('[Kindy] Single notification push failed for $contactId: $e');
     }
 
     final fcmToken = contact.fcmToken;
@@ -131,7 +131,7 @@ extension NotificationsExtension on PigioAppState {
           notification: notif,
         );
       } catch (e) {
-        if (kDebugMode) debugPrint('[Pigio] Notification push to $key failed: $e');
+        if (kDebugMode) debugPrint('[Kindy] Notification push to $key failed: $e');
       }
     }
     // Real FCM push notification to contacts that have an FCM token
@@ -196,7 +196,7 @@ extension NotificationsExtension on PigioAppState {
           changed = true;
         }
       } catch (e) {
-        if (kDebugMode) debugPrint('[Pigio] Notification pull from $key failed: $e');
+        if (kDebugMode) debugPrint('[Kindy] Notification pull from $key failed: $e');
       }
     }
     if (changed) {

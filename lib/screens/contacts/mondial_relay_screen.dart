@@ -1,12 +1,12 @@
-import 'package:pigio_app/core/theme/pigio_theme.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/shared/widgets/ui_widgets.dart';
-import 'package:pigio_app/core/i18n/i18n.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/shared/widgets/ui_widgets.dart';
+import 'package:kindy/core/i18n/i18n.dart';
 
 class MondialRelayScreen extends StatefulWidget {
   const MondialRelayScreen({super.key});

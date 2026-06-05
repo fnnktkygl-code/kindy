@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppMeta {
-  static const String name = 'Pigio';
+  static const String name = 'Kindy';
   static const String version = '2.0.0';
 }
 

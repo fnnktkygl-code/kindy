@@ -1,14 +1,14 @@
-import 'package:pigio_app/core/theme/pigio_theme.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/services/tooltip_service.dart';
-import 'package:pigio_app/shared/widgets/contextual_tip.dart';
-import 'package:pigio_app/shared/widgets/ui_widgets.dart';
-import 'package:pigio_app/shared/widgets/pigio_painter.dart';
-import 'package:pigio_app/screens/events/sheets/add_event_sheet.dart';
-import 'package:pigio_app/features/contacts/presentation/contact_profile_screen.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/services/tooltip_service.dart';
+import 'package:kindy/shared/widgets/contextual_tip.dart';
+import 'package:kindy/shared/widgets/ui_widgets.dart';
+import 'package:kindy/shared/widgets/pigio_painter.dart';
+import 'package:kindy/screens/events/sheets/add_event_sheet.dart';
+import 'package:kindy/features/contacts/presentation/contact_profile_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});

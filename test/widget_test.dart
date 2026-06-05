@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:pigio_app/core/state/app_state.dart';
+import 'package:kindy/core/state/app_state.dart';
 
 void main() {
   test('PigioAppState persists wishes family and sizes', () async {

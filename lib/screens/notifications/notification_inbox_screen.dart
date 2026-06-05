@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
-import 'package:pigio_app/shared/widgets/ui_widgets.dart';
-import 'package:pigio_app/services/notification_service.dart';
-import 'package:pigio_app/core/i18n/i18n.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
+import 'package:kindy/shared/widgets/ui_widgets.dart';
+import 'package:kindy/services/notification_service.dart';
+import 'package:kindy/core/i18n/i18n.dart';
 
 // ─── Notification Inbox Screen ────────────────────────────────────────────────
 class NotificationInboxScreen extends StatelessWidget {

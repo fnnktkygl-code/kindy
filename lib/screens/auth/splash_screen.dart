@@ -7,7 +7,7 @@ import '../../app_shell/main_shell.dart';
 import 'auth_screen.dart';
 import 'onboarding/onboarding_shell.dart';
 import 'package:provider/provider.dart';
-import 'package:pigio_app/core/state/app_state.dart';
+import 'package:kindy/core/state/app_state.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -220,13 +220,6 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: pt.primary.withValues(alpha: 0.12),
-                          blurRadius: 32,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(24),
@@ -248,7 +241,7 @@ class _SplashScreenState extends State<SplashScreen>
                 child: SlideTransition(
                   position: _textSlide,
                   child: Text(
-                    'Pigio',
+                    'Kindy',
                     style: TextStyle(
                       fontSize: 34,
                       fontWeight: FontWeight.w700,

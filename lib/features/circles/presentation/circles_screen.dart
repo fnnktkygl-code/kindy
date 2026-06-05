@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../shared/widgets/pigio_painter.dart';
 import '../../../shared/widgets/ui_widgets.dart';
-import 'package:pigio_app/screens/groups/sheets/add_group_sheet.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
+import 'package:kindy/screens/groups/sheets/add_group_sheet.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
 import 'widgets/group_detail_sheet.dart';
 
 class CirclesScreen extends StatefulWidget {

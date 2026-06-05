@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/core/i18n/i18n.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/core/i18n/i18n.dart';
 
 import '../../services/auth_service.dart';
 import 'onboarding/onboarding_shell.dart';

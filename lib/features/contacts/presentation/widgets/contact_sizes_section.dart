@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/i18n/i18n.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/i18n/i18n.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
 
 typedef ContactSizeCardBuilder = Widget Function(
   String key,

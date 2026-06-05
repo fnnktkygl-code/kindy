@@ -1,13 +1,13 @@
-import 'package:pigio_app/core/theme/pigio_theme.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/shared/widgets/ui_widgets.dart';
-import 'package:pigio_app/shared/widgets/pigio_painter.dart';
-import 'package:pigio_app/screens/mascot/mascot_wardrobe_screen.dart';
-import 'package:pigio_app/screens/mascot/know_thyself_screen.dart';
-import 'package:pigio_app/screens/mascot/mascot_memories_screen.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/shared/widgets/ui_widgets.dart';
+import 'package:kindy/shared/widgets/pigio_painter.dart';
+import 'package:kindy/screens/mascot/mascot_wardrobe_screen.dart';
+import 'package:kindy/screens/mascot/know_thyself_screen.dart';
+import 'package:kindy/screens/mascot/mascot_memories_screen.dart';
 
 class MascotSettingsScreen extends StatelessWidget {
   const MascotSettingsScreen({super.key});
@@ -20,7 +20,7 @@ class MascotSettingsScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: theme.scaffold,
-      appBar: PigioAppBar(title: "Pigio", showNotification: false),
+      appBar: PigioAppBar(title: "Kindy", showNotification: false),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),

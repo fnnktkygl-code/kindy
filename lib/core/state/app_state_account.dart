@@ -21,22 +21,64 @@ extension AccountExtension on PigioAppState {
 
     // Restore per-user onboarding flag so returning users skip onboarding.
     final perUserKey = '${PigioAppState._onboardingCompletedKey}_$userId';
-    final wasCompleted = prefs.getBool(perUserKey) ?? false;
+    final wasCompletedLocally = prefs.getBool(perUserKey) ?? false;
+    
+    final session = Supabase.instance.client.auth.currentSession;
+    final wasCompletedCloud = session?.user.userMetadata?['onboarding_completed'] == true;
+
+    final wasCompleted = wasCompletedLocally || wasCompletedCloud;
+    
     if (wasCompleted && !_onboardingCompleted) {
       _onboardingCompleted = true;
+      if (!wasCompletedLocally) {
+        prefs.setBool(perUserKey, true);
+        prefs.setBool(PigioAppState._onboardingCompletedKey, true);
+      }
+    }
+    
+    // Migrate local completion status to cloud if missing
+    if (wasCompletedLocally && !wasCompletedCloud && session != null) {
+      Supabase.instance.client.auth.updateUser(
+        UserAttributes(data: {'onboarding_completed': true}),
+      );
     }
 
     // Restore per-user profile (name, avatar, etc.)
     final perUserProfileKey = '${PigioAppState._profileKey}_$userId';
     final savedProfile = prefs.getString(perUserProfileKey);
+    bool loadedLocally = false;
+    
     if (savedProfile != null && savedProfile.isNotEmpty) {
       try {
         final decoded = jsonDecode(savedProfile) as Map<String, dynamic>;
         _profile = UserProfile.fromMap(decoded);
+        loadedLocally = true;
       } catch (e) {
         log.warn('Account', 'Failed to decode saved user profile for $userId', e);
       }
     }
+    
+    // If not found locally, try to restore from cloud metadata
+    if (!loadedLocally) {
+      final cloudProfile = session?.user.userMetadata?['profile'];
+      if (cloudProfile is Map) {
+        _profile = UserProfile.fromMap(Map<String, dynamic>.from(cloudProfile));
+        // Save back to local storage
+        await prefs.setString(perUserProfileKey, jsonEncode(_profile.toMap()));
+      }
+    }
+    
+    // Migrate local profile to cloud if not in cloud
+    if (loadedLocally && session?.user.userMetadata?['profile'] == null && session != null) {
+      Supabase.instance.client.auth.updateUser(
+        UserAttributes(data: {'profile': _profile.toMap()}),
+      );
+    }
+
+    // Identify user with RevenueCat for subscription management
+    await identifySubscription(userId);
+    // Claim monthly Plumes stipend if applicable
+    Future.microtask(() => claimMonthlyPlumeStipend());
 
     notifyListeners();
   }
@@ -47,6 +89,9 @@ extension AccountExtension on PigioAppState {
     } catch (e) {
       log.warn('Account', 'Remote sign-out failed, continuing cleanup', e);
     }
+
+    // Reset RevenueCat to anonymous user
+    await logoutSubscription();
 
     // Clear biometric credentials so the next user can't re-auth as this user.
     try {
@@ -85,6 +130,10 @@ extension AccountExtension on PigioAppState {
 
     _activeOutfit.clear();
     _unlockedClothing.clear();
+    _plumes = 0;
+    _occasionPassLevel = 0;
+    _occasionPassSeason = '';
+    _guardianTier = '';
     _syncEnabled = false;
     _syncKey = '';
     _onboardingCompleted = false;

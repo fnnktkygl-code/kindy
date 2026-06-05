@@ -4,9 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
 import 'ui_widgets.dart';
 
 class InviteBottomSheet extends StatefulWidget {
@@ -131,7 +131,7 @@ class _InviteBottomSheetState extends State<InviteBottomSheet> {
       if (channel == InviteChannel.copyLink) {
         await Clipboard.setData(ClipboardData(text: link));
       } else if (channel == InviteChannel.whatsApp) {
-        final message = 'Rejoins-moi sur Pigio 🐣 : $link';
+        final message = 'Rejoins-moi sur Kindy 🐣 : $link';
         final encoded = Uri.encodeComponent(message);
         final directUri = Uri.parse('whatsapp://send?text=$encoded');
         final webUri = Uri.parse('https://wa.me/?text=$encoded');
@@ -144,15 +144,15 @@ class _InviteBottomSheetState extends State<InviteBottomSheet> {
           await SharePlus.instance.share(
             ShareParams(
               text: message,
-              title: 'Invitation Pigio',
+              title: 'Invitation Kindy',
             ),
           );
         }
       } else {
         await SharePlus.instance.share(
           ShareParams(
-            text: 'Invitation Pigio: $link',
-            title: 'Invitation Pigio',
+            text: 'Invitation Kindy: $link',
+            title: 'Invitation Kindy',
           ),
         );
       }

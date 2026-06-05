@@ -1,4 +1,4 @@
-import 'package:pigio_app/core/state/app_state.dart';
+import 'package:kindy/core/state/app_state.dart';
 
 /// Simple client-side churn risk scoring.
 ///

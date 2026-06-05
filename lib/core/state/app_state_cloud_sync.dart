@@ -57,7 +57,7 @@ extension CloudSyncExtension on PigioAppState {
         giftPots: _giftPots.map((p) => p.toMap()).toList(),
       );
     } catch (e) {
-      if (kDebugMode) debugPrint('[Pigio] Cloud push failed: $e');
+      if (kDebugMode) debugPrint('[Kindy] Cloud push failed: $e');
     }
   }
 
@@ -122,7 +122,7 @@ extension CloudSyncExtension on PigioAppState {
       notifyListeners();
       return true;
     } catch (e) {
-      if (kDebugMode) debugPrint('[Pigio] Cloud pull failed: $e');
+      if (kDebugMode) debugPrint('[Kindy] Cloud pull failed: $e');
       return false;
     }
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pigio_app/services/notification_service.dart';
-import 'package:pigio_app/core/models/app_models.dart';
+import 'package:kindy/services/notification_service.dart';
+import 'package:kindy/core/models/app_models.dart';
 
 void main() {
   group('Wish', () {

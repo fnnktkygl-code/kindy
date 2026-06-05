@@ -8,21 +8,21 @@ import '../shared/widgets/mascot_overlay.dart';
 import '../shared/widgets/ui_widgets.dart';
 import '../core/deeplink/deeplink_coordinator.dart';
 import '../core/notifications/fcm_coordinator.dart';
-import 'package:pigio_app/screens/activity/activity_history_screen.dart';
-import 'package:pigio_app/screens/events/calendar_screen.dart';
-import 'package:pigio_app/screens/contacts/contacts_screen.dart';
-import 'package:pigio_app/features/home/presentation/home_screen.dart';
-import 'package:pigio_app/screens/profile/profile_screen.dart';
-import 'package:pigio_app/screens/settings/settings_screen.dart';
-import 'package:pigio_app/screens/auth/splash_screen.dart';
-import 'package:pigio_app/screens/mascot/wrapped_screen.dart';
-import 'package:pigio_app/screens/sizes/wardrobe_screen.dart';
-import 'package:pigio_app/screens/wishes/wishes_screen.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/i18n/i18n.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
-import 'package:pigio_app/services/notification_service.dart';
+import 'package:kindy/screens/activity/activity_history_screen.dart';
+import 'package:kindy/screens/events/calendar_screen.dart';
+import 'package:kindy/screens/contacts/contacts_screen.dart';
+import 'package:kindy/features/home/presentation/home_screen.dart';
+import 'package:kindy/screens/profile/profile_screen.dart';
+import 'package:kindy/screens/settings/settings_screen.dart';
+import 'package:kindy/screens/auth/splash_screen.dart';
+import 'package:kindy/screens/mascot/wrapped_screen.dart';
+import 'package:kindy/screens/sizes/wardrobe_screen.dart';
+import 'package:kindy/screens/wishes/wishes_screen.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/i18n/i18n.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
+import 'package:kindy/services/notification_service.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -366,11 +366,7 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
           Container(
             padding: const EdgeInsets.fromLTRB(24, 80, 24, 32),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [theme.primary.withValues(alpha: 0.05), theme.navBar],
-              ),
+              color: theme.navBar,
             ),
             child: Row(
               children: [

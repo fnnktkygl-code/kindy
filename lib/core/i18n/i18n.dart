@@ -3,15 +3,15 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 
 // Helper to get translation
-String t(BuildContext context, String key) {
-  final state = Provider.of<PigioAppState>(context, listen: true);
+String t(BuildContext context, String key, {bool listen = true}) {
+  final state = Provider.of<PigioAppState>(context, listen: listen);
   return translations[state.locale.languageCode]?[key] ?? key;
 }
 
 // Translations Map
 const Map<String, Map<String, String>> translations = {
   'fr': {
-    'app_name': 'Pigio',
+    'app_name': 'Kindy',
     // Nav
     'nav_home': "Accueil", 'nav_wishes': "Envies", 'nav_sizes': "Tailles",
     'nav_family': "Contacts", 'nav_profile': "Profil",
@@ -124,8 +124,15 @@ const Map<String, Map<String, String>> translations = {
     'size_alert': "🔔 Alerte changement de taille",
     'size_alert_sub': "Notifier mes contacts si je mets à jour",
     'clothes': "Hauts", 'bottoms': "Bas", 'shoes': "Chaussures", 'accessories': "Accessoires",
+    'rings': "Bagues", 'bracelets': "Bracelets", 'necklaces': "Colliers",
     'field_size': 'Taille', 'field_chest': 'Poitrine', 'field_waist': 'Tour de taille', 'field_inseam': 'Entrejambe',
     'field_eu': 'EU', 'field_us': 'US', 'field_hat': 'Casquette', 'field_ring': 'Bague',
+    'fmt_international': "International", 'fmt_europe': "Europe", 'fmt_us': "US", 'fmt_uk': "UK",
+    'fmt_cm': "Longueur (cm)", 'fmt_us_waist': "Taille US (W)", 'fmt_us_length': "Longueur US (L)",
+    'fmt_ring_l_eu': "Gauche (EU)", 'fmt_ring_r_eu': "Droite (EU)", 'fmt_ring_l_us': "Gauche (US)",
+    'fmt_ring_r_us': "Droite (US)", 'fmt_ring_diam': "Diamètre int. (mm)", 'fmt_wrist_cm': "Poignet (cm)",
+    'fmt_wrist_in': "Poignet (pouces)", 'fmt_watch_size': "Montre (boîtier mm)", 'fmt_necklace_cm': "Longueur (cm)",
+    'fmt_necklace_in': "Longueur (pouces)", 'fmt_necklace_diam': "Diamètre rigide (cm)", 'fmt_size': "Taille",
     'standard': "Standard", 'eu_clothes': "Europe", 'eu_shoes': "Europe", 'us_shoes': "US", 'uk_shoes': "UK", 'eu_bottoms': "Europe", 'us_waist': "US Waist",
     'slim': "Ajusté", 'regular': "Normal", 'oversized': "Oversize",
     'skinny': "Slim", 'straight': "Droit", 'relaxed': "Décontracté",
@@ -300,7 +307,7 @@ const Map<String, Map<String, String>> translations = {
     'settings_confirm': "Confirmer",
   },
   'en': {
-    'app_name': 'Pigio',
+    'app_name': 'Kindy',
     'nav_home': "Home", 'nav_wishes': "Wishes", 'nav_sizes': "Sizes",
     'nav_family': "Family", 'nav_profile': "Profile",
     'welcome_skip': "Skip →",
@@ -408,8 +415,15 @@ const Map<String, Map<String, String>> translations = {
     'size_alert': "🔔 Size change alert",
     'size_alert_sub': "Notify my family when I update",
     'clothes': "Tops", 'bottoms': "Bottoms", 'shoes': "Footwear", 'accessories': "Accessories",
+    'rings': "Rings", 'bracelets': "Bracelets", 'necklaces': "Necklaces",
     'field_size': 'Size', 'field_chest': 'Chest', 'field_waist': 'Waist', 'field_inseam': 'Inseam',
     'field_eu': 'EU', 'field_us': 'US', 'field_hat': 'Hat', 'field_ring': 'Ring',
+    'fmt_international': "International", 'fmt_europe': "Europe", 'fmt_us': "US", 'fmt_uk': "UK",
+    'fmt_cm': "Length (cm)", 'fmt_us_waist': "US Waist (W)", 'fmt_us_length': "US Length (L)",
+    'fmt_ring_l_eu': "Left (EU)", 'fmt_ring_r_eu': "Right (EU)", 'fmt_ring_l_us': "Left (US)",
+    'fmt_ring_r_us': "Right (US)", 'fmt_ring_diam': "Inner Diam. (mm)", 'fmt_wrist_cm': "Wrist (cm)",
+    'fmt_wrist_in': "Wrist (inches)", 'fmt_watch_size': "Watch (case mm)", 'fmt_necklace_cm': "Length (cm)",
+    'fmt_necklace_in': "Length (inches)", 'fmt_necklace_diam': "Rigid diam. (cm)", 'fmt_size': "Size",
     'standard': "Standard", 'eu_clothes': "Europe", 'eu_shoes': "Europe", 'us_shoes': "US", 'uk_shoes': "UK", 'eu_bottoms': "Europe", 'us_waist': "US Waist",
     'slim': "Slim", 'regular': "Regular", 'oversized': "Oversized",
     'skinny': "Skinny", 'straight': "Straight", 'relaxed': "Relaxed",

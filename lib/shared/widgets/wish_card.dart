@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
-import 'package:pigio_app/core/state/app_state.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
+import 'package:kindy/core/state/app_state.dart';
 
 // EN-2: Smart Masonry Grid - Balances columns by estimated height, avoiding visual gaps
 class SmartMasonryGrid extends StatelessWidget {

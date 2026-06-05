@@ -60,15 +60,15 @@ class FcmService {
 
         // 4xx = client error, don't retry (bad token, malformed request, etc.)
         if (response.statusCode < 500) {
-          if (kDebugMode) debugPrint('[Pigio] FCM push failed (${response.statusCode}): ${response.body}');
+          if (kDebugMode) debugPrint('[Kindy] FCM push failed (${response.statusCode}): ${response.body}');
           return;
         }
 
         // 5xx = server error, retry
-        if (kDebugMode) debugPrint('[Pigio] FCM push 5xx (attempt ${attempt + 1}/${_maxRetries + 1})');
+        if (kDebugMode) debugPrint('[Kindy] FCM push 5xx (attempt ${attempt + 1}/${_maxRetries + 1})');
       } catch (e) {
         // Timeout or network error — retry
-        if (kDebugMode) debugPrint('[Pigio] FCM push error (attempt ${attempt + 1}/${_maxRetries + 1}): $e');
+        if (kDebugMode) debugPrint('[Kindy] FCM push error (attempt ${attempt + 1}/${_maxRetries + 1}): $e');
       }
 
       if (attempt < _maxRetries) {

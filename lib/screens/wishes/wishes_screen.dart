@@ -3,19 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/core/i18n/i18n.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
-import 'package:pigio_app/shared/widgets/ui_widgets.dart';
-import 'package:pigio_app/shared/widgets/wish_card.dart';
-import 'package:pigio_app/shared/widgets/gift_pot_card.dart';
-import 'package:pigio_app/screens/wishes/sheets/wish_editor_sheet.dart';
-import 'package:pigio_app/screens/wishes/sheets/gift_pot_editor_sheet.dart';
-import 'package:pigio_app/screens/wishes/sheets/gift_pot_detail_sheet.dart';
-import 'package:pigio_app/services/tooltip_service.dart';
-import 'package:pigio_app/services/wishlist_share_service.dart';
-import 'package:pigio_app/shared/widgets/contextual_tip.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/core/i18n/i18n.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
+import 'package:kindy/shared/widgets/ui_widgets.dart';
+import 'package:kindy/shared/widgets/wish_card.dart';
+import 'package:kindy/shared/widgets/gift_pot_card.dart';
+import 'package:kindy/screens/wishes/sheets/wish_editor_sheet.dart';
+import 'package:kindy/screens/wishes/sheets/gift_pot_editor_sheet.dart';
+import 'package:kindy/screens/wishes/sheets/gift_pot_detail_sheet.dart';
+import 'package:kindy/services/tooltip_service.dart';
+import 'package:kindy/services/wishlist_share_service.dart';
+import 'package:kindy/shared/widgets/contextual_tip.dart';
 
 // ─── Dotted paper background painter ──────────────────────────────────────────
 class _DottedPaperPainter extends CustomPainter {

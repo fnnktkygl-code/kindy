@@ -24,6 +24,9 @@ enum MascotMoment {
   quizCompleted,
   bondLevelUp,
   achievementUnlocked,
+  comboCompleted,
+  limitedDropAvailable,
+  challengeCompleted,
 }
 enum ContactStatus { local, invited, pending, joined }
 
@@ -59,6 +62,13 @@ class ClothingItem {
   final List<String> tags;
   /// If non-null, this item is only available until this date (limited-time).
   final DateTime? expiresAt;
+  /// If non-null, this item can be purchased with Plumes (premium currency).
+  final int? plumeCost;
+  /// If true, requires Pigio+ subscription to purchase/equip.
+  final bool premiumOnly;
+  /// Path to the item thumbnail image asset (e.g. 'assets/wardrobe/hats/hat_winter.png').
+  /// When non-null, the wardrobe grid shows this image instead of the emoji.
+  final String? imageAsset;
 
   const ClothingItem({
     required this.id,
@@ -71,10 +81,19 @@ class ClothingItem {
     this.season,
     this.tags = const [],
     this.expiresAt,
+    this.plumeCost,
+    this.premiumOnly = false,
+    this.imageAsset,
   });
 
   /// Whether this limited-time item is still available.
   bool get isAvailable => expiresAt == null || DateTime.now().isBefore(expiresAt!);
+
+  /// Whether this item requires Plumes to unlock.
+  bool get isPlumeItem => plumeCost != null && plumeCost! > 0;
+
+  /// Whether this item has a premium image asset.
+  bool get hasImage => imageAsset != null && imageAsset!.isNotEmpty;
 }
 
 class ClothingRequest {
@@ -126,6 +145,32 @@ class OutfitPreset {
       outfit: outfit,
     );
   }
+}
+
+// ─── Occasion Pass (Battle Pass) ─────────────────────────────────────────────
+
+/// A single tier reward in the Occasion Pass.
+class OccasionPassTier {
+  final int level;
+  final String emoji;
+  final String nameFr;
+  final String nameEn;
+  /// Plumes awarded on reaching this tier. 0 if reward is an item.
+  final int plumes;
+  /// Wardrobe item ID unlocked at this tier (null if reward is Plumes).
+  final String? unlockItemId;
+  /// If true, only Pigio+ subscribers can claim this tier.
+  final bool premiumTrack;
+
+  const OccasionPassTier({
+    required this.level,
+    required this.emoji,
+    required this.nameFr,
+    required this.nameEn,
+    this.plumes = 0,
+    this.unlockItemId,
+    this.premiumTrack = false,
+  });
 }
 
 // ─── Mascot Memory ───────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import 'core/bootstrap/app_bootstrap.dart';
-import 'package:pigio_app/core/state/app_state.dart';
+import 'package:kindy/core/state/app_state.dart';
 import 'screens/auth/splash_screen.dart';
 
 void main() async {
@@ -28,7 +28,7 @@ class PigioApp extends StatelessWidget {
         final pt = state.currentTheme;
 
         return MaterialApp(
-          title: 'Pigio',
+          title: 'Kindy',
           theme: ThemeData(
             colorScheme: pt.isDark
                 ? ColorScheme.dark(

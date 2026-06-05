@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/widgets/ui_widgets.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
 
 class HomeHeader extends StatelessWidget {
   final String displayName;

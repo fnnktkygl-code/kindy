@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
 
 class HomeQuickActionsSection extends StatelessWidget {
   final PigioThemeData theme;

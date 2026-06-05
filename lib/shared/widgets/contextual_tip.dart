@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
-import 'package:pigio_app/services/tooltip_service.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
+import 'package:kindy/services/tooltip_service.dart';
 
 /// A dismissible contextual tip banner for progressive disclosure.
 /// Shows once per tooltip key, then never again.

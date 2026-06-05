@@ -5,16 +5,16 @@ import 'package:provider/provider.dart';
 import 'dart:math' as math;
 import 'dart:async';
 import 'package:sensors_plus/sensors_plus.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/state/app_state.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/state/app_state.dart';
 import 'pigio_painter.dart';
 import 'ui_widgets.dart';
-import 'package:pigio_app/screens/mascot/mascot_settings_screen.dart';
-import 'package:pigio_app/screens/mascot/mascot_wardrobe_screen.dart';
-import 'package:pigio_app/screens/mascot/know_thyself_screen.dart';
-import 'package:pigio_app/screens/wishes/sheets/wish_editor_sheet.dart';
-import 'package:pigio_app/shared/widgets/invite_bottom_sheet.dart';
+import 'package:kindy/screens/mascot/mascot_settings_screen.dart';
+import 'package:kindy/screens/mascot/mascot_wardrobe_screen.dart';
+import 'package:kindy/screens/mascot/know_thyself_screen.dart';
+import 'package:kindy/screens/wishes/sheets/wish_editor_sheet.dart';
+import 'package:kindy/shared/widgets/invite_bottom_sheet.dart';
 import '../../services/ai_service.dart';
 import '../../services/mascot_insight_engine.dart';
 import '../../services/mascot_outfit_engine.dart';
@@ -184,9 +184,11 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
     if (!_seededPosition) {
       _seededPosition = true;
       final width = MediaQuery.of(context).size.width;
-        left = state.mascotDefaultCorner == 'right'
-          ? ((width - 94).clamp(0.0, width)).toDouble()
-          : 14;
+      final safeBottom = MediaQuery.of(context).padding.bottom;
+      left = state.mascotDefaultCorner == 'right'
+        ? ((width - 94).clamp(0.0, width)).toDouble()
+        : 14;
+      bottom = (safeBottom + 70.0).clamp(110.0, 500.0);
     }
 
     if (_reducedMotion != state.mascotReducedMotion) {
@@ -310,9 +312,19 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
         }
       }
 
-      // Check birthday-proximity and re-engagement pushes (once per session)
+      // Show mood check-in after daily bonus message
+      if (state.moodCheckInPending) {
+        Future.delayed(const Duration(seconds: 6), () {
+          if (mounted && state.moodCheckInPending) {
+            _showMoodCheckIn(state);
+          }
+        });
+      }
+
+      // Check birthday-proximity, re-engagement, and wardrobe pushes (once per session)
       state.checkBirthdayProximityPush();
       state.checkReengagementPush();
+      state.checkWardrobePushes();
 
       _triggerWiggle();
       _lastBubbleTime = DateTime.now();
@@ -623,6 +635,81 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
     });
   }
 
+  void _showMoodCheckIn(PigioAppState state) {
+    final isFr = state.locale.languageCode == 'fr';
+    final theme = context.pt;
+    const moods = [
+      ('happy', '😊', 'Content', 'Happy'),
+      ('neutral', '😐', 'Neutre', 'Neutral'),
+      ('sad', '😢', 'Triste', 'Sad'),
+      ('energetic', '⚡', 'Énergique', 'Energetic'),
+      ('tired', '😴', 'Fatigué', 'Tired'),
+    ];
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: theme.sheet,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isFr ? 'Comment tu te sens aujourd\'hui ?' : 'How are you feeling today?',
+              style: fw(size: 18, w: FontWeight.w800, color: theme.ink),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: moods.map((m) {
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context);
+                    state.submitMoodCheckIn(m.$1);
+                    HapticFeedback.mediumImpact();
+                    final isNeg = m.$1 == 'sad' || m.$1 == 'tired';
+                    setState(() {
+                      _dynamicMsg = isNeg
+                          ? (isFr ? '💛 Je suis là pour toi. +5 XP' : '💛 I\'m here for you. +5 XP')
+                          : (isFr ? '${m.$2} Bonne journée !' : '${m.$2} Have a great day!');
+                      bubble = true;
+                    });
+                    Future.delayed(const Duration(seconds: 4), () {
+                      if (mounted) setState(() => bubble = false);
+                    });
+                  },
+                  child: Column(
+                    children: [
+                      Text(m.$2, style: const TextStyle(fontSize: 32)),
+                      const SizedBox(height: 4),
+                      Text(
+                        isFr ? m.$3 : m.$4,
+                        style: fw(size: 11, w: FontWeight.w600, color: theme.mid),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                state.dismissMoodCheckIn();
+              },
+              child: Text(
+                isFr ? 'Plus tard' : 'Maybe later',
+                style: fw(size: 14, w: FontWeight.w600, color: theme.mid),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _runInsightAction(
     MascotInsight insight,
     PigioAppState state,
@@ -873,8 +960,13 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
               }
               _lastDragDx = d.delta.dx;
               setState(() {
+                final safeBottom = MediaQuery.of(context).padding.bottom;
+                final safeTop = MediaQuery.of(context).padding.top;
                 left = (left + d.delta.dx).clamp(0.0, size.width - 80);
-                bottom = (bottom - d.delta.dy).clamp(76.0, size.height - 200);
+                bottom = (bottom - d.delta.dy).clamp(
+                  8.0, // Just above the bottom nav bar
+                  size.height - safeTop - 164.0 // Just below the top header
+                );
               });
             },
             onPanEnd: (d) {
@@ -1073,6 +1165,7 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
                         lookOffsetX: _dragGlobalPos != null
                           ? (((_dragGlobalPos!.dx - left - 40) / 100).clamp(-1.0, 1.0))
                           : (left < size.width / 2 ? 0.5 : -0.5),
+                        stage: state.mascotStage,
                       ),
                     ),
                   ),
@@ -1102,19 +1195,41 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
     );
   }
 
+  double? _miniLeft;
+  double? _miniBottom;
+
   Widget _buildMiniRestorer() {
     final theme = context.pt;
     final state = context.watch<PigioAppState>();
     final width = MediaQuery.of(context).size.width;
+    final height = MediaQuery.of(context).size.height;
+    
+    // Initial calculate if null
+    final defaultLeft = state.mascotDefaultCorner == 'left' ? 14.0 : (width - 72.0);
+    
     return Positioned(
-      bottom: 86,
-      right: state.mascotDefaultCorner == 'right' ? 14 : null,
-      left: state.mascotDefaultCorner == 'left' ? 14 : null,
+      bottom: _miniBottom ?? 110,
+      left: _miniLeft ?? (state.mascotDefaultCorner == 'left' ? 14 : null),
+      right: _miniLeft != null ? null : (state.mascotDefaultCorner == 'right' ? 14 : null),
       child: GestureDetector(
+        onPanUpdate: (d) {
+          setState(() {
+            final safeBottom = MediaQuery.of(context).padding.bottom;
+            final safeTop = MediaQuery.of(context).padding.top;
+            _miniLeft = (_miniLeft ?? defaultLeft) + d.delta.dx;
+            _miniLeft = _miniLeft!.clamp(0.0, width - 60.0);
+            _miniBottom = (_miniBottom ?? 110) - d.delta.dy;
+            _miniBottom = _miniBottom!.clamp(
+              8.0, // Just above nav bar
+              height - safeTop - 161.0 // Just below header
+            );
+          });
+        },
         onTap: () {
           setState(() {
+            final safeBottom = MediaQuery.of(context).padding.bottom;
             hidden = false;
-            bottom = 90;
+            bottom = (safeBottom + 70.0).clamp(110.0, height);
             left = state.mascotDefaultCorner == 'right'
                 ? ((width - 94).clamp(0.0, width)).toDouble()
                 : 14;
@@ -1140,7 +1255,7 @@ class _DraggableMascotState extends State<DraggableMascot> with TickerProviderSt
               ),
             ),
             const SizedBox(height: 4),
-            Text("Pigio", style: fw(size: 9, w: FontWeight.w800, color: theme.mid)),
+            Text("Kindy", style: fw(size: 9, w: FontWeight.w800, color: theme.mid)),
           ],
         ),
       ),

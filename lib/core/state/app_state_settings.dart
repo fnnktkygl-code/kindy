@@ -36,20 +36,34 @@ extension SettingsExtension on PigioAppState {
     }
 
     if (mascotBondLevel > previousLevel) {
-      final titlesFr = ['Nouvelle rencontre', 'On se connait mieux', 'On devient amis', 'Lien tres fort'];
-      final titlesEn = ['New connection', 'Getting closer', 'We are becoming friends', 'Strong bond unlocked'];
+      final stageEmoji = mascotStageEmoji;
+      final stageFr = mascotStageName;
+      final stageEn = mascotStageNameEn;
+      final titlesFr = [
+        'Kindy a éclos ! $stageEmoji → $stageFr',
+        'Kindy grandit ! $stageEmoji Stade $stageFr',
+        'Kindy mûrit ! $stageEmoji Stade $stageFr',
+        'Kindy rayonne ! $stageEmoji Stade $stageFr',
+      ];
+      final titlesEn = [
+        'Kindy hatched! $stageEmoji → $stageEn',
+        'Kindy is growing! $stageEmoji Stage: $stageEn',
+        'Kindy matured! $stageEmoji Stage: $stageEn',
+        'Kindy is radiant! $stageEmoji Stage: $stageEn',
+      ];
       final levelIndex = (mascotBondLevel - 1).clamp(0, titlesFr.length - 1);
       _mascotMemories.insert(
         0,
         MascotMemory(
           id: _newId(),
-          emoji: mascotBondEmoji,
+          emoji: stageEmoji,
           titleFr: titlesFr[levelIndex],
           titleEn: titlesEn[levelIndex],
           timestamp: DateTime.now(),
         ),
       );
       _mascotMoment = MascotMoment.bondLevelUp;
+      HapticFeedback.heavyImpact();
       ReviewService.tryPrompt(); // High-value moment: bond grew stronger
     }
 
@@ -191,7 +205,35 @@ extension SettingsExtension on PigioAppState {
       titleEn: 'Daily bonus claimed! +10 XP',
     );
     if (_loginStreak == 7) ReviewService.tryPrompt(); // 7-day streak = engaged user
+    // Advance Occasion Pass on daily login
+    advanceOccasionPass();
+    // Trigger mood check-in if not yet done today
+    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    if (_userMoodDate != todayStr) {
+      _moodCheckInPending = true;
+    }
     return true;
+  }
+
+  void submitMoodCheckIn(String mood) {
+    final now = DateTime.now();
+    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    _userMood = mood;
+    _userMoodDate = todayStr;
+    _moodCheckInPending = false;
+    // Negative moods get a comfort bonus
+    final isNegative = mood == 'sad' || mood == 'tired';
+    if (isNegative) {
+      awardMascotProgress(5, emoji: '💛', titleFr: 'Kindy est là pour toi. +5 XP', titleEn: 'Kindy is here for you. +5 XP');
+    }
+    AnalyticsService.log('mood_check_in', {'mood': mood});
+    notifyListeners();
+    _saveData();
+  }
+
+  void dismissMoodCheckIn() {
+    _moodCheckInPending = false;
+    notifyListeners();
   }
 
   // ── Mascot Memories ────────────────────────────────────────────────────────
@@ -256,8 +298,8 @@ extension SettingsExtension on PigioAppState {
       final lang = _locale.languageCode;
       title = PigioVoice.bondGreeting(mascotBondLevel, lang: lang);
       body = lang == 'fr'
-          ? 'Pigio est là quand tu veux ! 🐧💛'
-          : 'Pigio is here whenever you want! 🐧💛';
+          ? 'Kindy est là quand tu veux ! 🐧💛'
+          : 'Kindy is here whenever you want! 🐧💛';
       type = 'mascot_reengage';
     }
 
@@ -380,6 +422,37 @@ extension SettingsExtension on PigioAppState {
     }
   }
 
+  void markComboCompleted(String comboNameFr) {
+    if (_completedCombos.contains(comboNameFr)) return;
+    _completedCombos.add(comboNameFr);
+    awardMascotProgress(25, emoji: '🎨', titleFr: 'Combo "$comboNameFr" complété !', titleEn: 'Combo "$comboNameFr" completed!');
+    _mascotMoment = MascotMoment.comboCompleted;
+    AnalyticsService.log('combo_completed', {'combo': comboNameFr});
+    notifyListeners();
+    _saveData();
+  }
+
+  void claimCollectionMilestone(String milestoneKey, {required int percent}) {
+    if (_collectionMilestones.contains(milestoneKey)) return;
+    _collectionMilestones.add(milestoneKey);
+    awardMascotProgress(15, emoji: '📊', titleFr: 'Collection $percent% complétée !', titleEn: 'Collection $percent% complete!');
+    AnalyticsService.log('collection_milestone', {'percent': percent});
+    notifyListeners();
+    _saveData();
+  }
+
+  void completeDailyChallenge() {
+    final today = DateTime.now();
+    final key = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    if (_dailyChallengeCompleted == key) return;
+    _dailyChallengeCompleted = key;
+    awardMascotProgress(15, emoji: '🎯', titleFr: 'Défi du jour relevé !', titleEn: 'Daily challenge completed!');
+    _mascotMoment = MascotMoment.challengeCompleted;
+    AnalyticsService.log('daily_challenge_completed', {'date': key});
+    notifyListeners();
+    _saveData();
+  }
+
   void setClothingRequest(ClothingRequest? req) {
     _currentClothingRequest = req;
     notifyListeners();
@@ -459,17 +532,34 @@ extension SettingsExtension on PigioAppState {
     _saveData();
     // Also persist per-user so returning users skip onboarding after sign-out.
     _savePerUserState();
+    
+    // Sync onboarding state to cloud
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      Supabase.instance.client.auth.updateUser(
+        UserAttributes(data: {'onboarding_completed': true}),
+      );
+    }
   }
 
   /// Persist onboarding flag + profile data keyed by user ID so they survive sign-out.
   Future<void> _savePerUserState() async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
-    if (userId == null) return;
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('${PigioAppState._onboardingCompletedKey}_$userId', true);
+    await prefs.setBool('${PigioAppState._onboardingCompletedKey}_${user.id}', true);
+    final profileMap = _profile.toMap();
     await prefs.setString(
-      '${PigioAppState._profileKey}_$userId',
-      jsonEncode(_profile.toMap()),
+      '${PigioAppState._profileKey}_${user.id}',
+      jsonEncode(profileMap),
+    );
+    
+    // Also sync the core properties to Supabase auth metadata to survive uninstalls
+    Supabase.instance.client.auth.updateUser(
+      UserAttributes(data: {
+        'onboarding_completed': true,
+        'profile': profileMap,
+      }),
     );
   }
 
@@ -555,6 +645,295 @@ extension SettingsExtension on PigioAppState {
             message,
           ));
       logActivity('Wizz envoyé à ${contact.name} ($wizzObject)', '⚡', contactId: contactId);
+    }
+  }
+
+  // ── Wardrobe Push Notifications ───────────────────────────────────────────
+
+  /// Send push for limited-time seasonal drops, streak-at-risk, or daily challenge.
+  /// Deduplicates per type per day.
+  Future<void> checkWardrobePushes() async {
+    final token = _profile.fcmToken;
+    if (token == null || token.isEmpty) return;
+    if (_mascotPrivacyMode || _mascotSilent) return;
+
+    final now = DateTime.now();
+    final prefs = await SharedPreferences.getInstance();
+    final lang = _locale.languageCode;
+    final todayKey = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+    // 1. Limited-time drop alert (once per season start)
+    final seasonal = MascotOutfitEngine.seasonalDrops(now);
+    if (seasonal.isNotEmpty) {
+      final seasonKey = 'pigio_season_push_${seasonal.first.id}_${now.year}';
+      if (prefs.getBool(seasonKey) != true) {
+        await prefs.setBool(seasonKey, true);
+        try {
+          await FcmService.sendPush(
+            baseUrl: _apiBaseUrl,
+            fcmToken: token,
+            title: lang == 'fr' ? '🌟 Nouvel objet saisonnier !' : '🌟 New seasonal item!',
+            body: lang == 'fr'
+                ? '${seasonal.first.emoji} ${seasonal.first.name} est disponible en édition limitée !'
+                : '${seasonal.first.emoji} ${seasonal.first.name} is available as a limited drop!',
+            type: 'seasonal_drop',
+            userJwt: Supabase.instance.client.auth.currentSession?.accessToken,
+          );
+        } catch (_) {}
+      }
+    }
+
+    // 2. Streak-at-risk reminder (if streak >= 3 and last bonus was yesterday)
+    if (_loginStreak >= 3 && _mascotLastDailyBonus != null) {
+      final lastDay = DateTime(_mascotLastDailyBonus!.year, _mascotLastDailyBonus!.month, _mascotLastDailyBonus!.day);
+      final yesterday = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 1));
+      if (lastDay == yesterday) {
+        final streakKey = 'pigio_streak_push_$todayKey';
+        if (prefs.getBool(streakKey) != true) {
+          await prefs.setBool(streakKey, true);
+          try {
+            await FcmService.sendPush(
+              baseUrl: _apiBaseUrl,
+              fcmToken: token,
+              title: lang == 'fr' ? '🔥 Série en danger !' : '🔥 Streak at risk!',
+              body: lang == 'fr'
+                  ? 'Tu as $_loginStreak jours de suite ! Ouvre Pigio pour continuer.'
+                  : 'You\'re on a $_loginStreak-day streak! Open Pigio to keep it going.',
+              type: 'streak_risk',
+              userJwt: Supabase.instance.client.auth.currentSession?.accessToken,
+            );
+          } catch (_) {}
+        }
+      }
+    }
+
+    // 3. Daily challenge reminder (late afternoon if not completed)
+    if (now.hour >= 16 && _dailyChallengeCompleted != todayKey) {
+      final challengeKey = 'pigio_challenge_push_$todayKey';
+      if (prefs.getBool(challengeKey) != true) {
+        await prefs.setBool(challengeKey, true);
+        final challenge = MascotOutfitEngine.todaysChallenge(now);
+        try {
+          await FcmService.sendPush(
+            baseUrl: _apiBaseUrl,
+            fcmToken: token,
+            title: lang == 'fr' ? '🎯 Défi du jour' : '🎯 Daily Challenge',
+            body: lang == 'fr'
+                ? '${challenge.titleFr} — 15 XP t\'attendent !'
+                : '${challenge.titleEn} — 15 XP awaits!',
+            type: 'daily_challenge',
+            userJwt: Supabase.instance.client.auth.currentSession?.accessToken,
+          );
+        } catch (_) {}
+      }
+    }
+  }
+
+  // ── Monetization ─────────────────────────────────────────────────────────
+
+  /// Add Plumes (premium currency). Used for purchases, stipends, bonuses.
+  void addPlumes(int amount, {String? reason}) {
+    if (amount <= 0) return;
+    _plumes += amount;
+    if (reason != null) {
+      AnalyticsService.log('plumes_earned', {'amount': amount, 'reason': reason});
+    }
+    notifyListeners();
+    _saveData();
+  }
+
+  /// Spend Plumes. Returns true if the user had enough, false otherwise.
+  bool spendPlumes(int amount) {
+    if (amount <= 0 || _plumes < amount) return false;
+    _plumes -= amount;
+    AnalyticsService.log('plumes_spent', {'amount': amount, 'balance': _plumes});
+    notifyListeners();
+    _saveData();
+    return true;
+  }
+
+  /// Called after auth to identify the user with RevenueCat.
+  Future<void> identifySubscription(String userId) async {
+    await SubscriptionService.identify(userId);
+    notifyListeners();
+  }
+
+  /// Called on sign-out to reset RevenueCat to anonymous.
+  Future<void> logoutSubscription() async {
+    await SubscriptionService.logout();
+    notifyListeners();
+  }
+
+  /// Restore purchases (e.g. after reinstall). Call from settings screen.
+  Future<void> restorePurchases() async {
+    await SubscriptionService.restorePurchases();
+    notifyListeners();
+  }
+
+  /// Claim the monthly Plumes stipend for Pigio+ subscribers.
+  /// Awards 50 Plumes once per calendar month. Deduplicated via SharedPreferences.
+  Future<void> claimMonthlyPlumeStipend() async {
+    if (!SubscriptionService.isPremium) return;
+    final now = DateTime.now();
+    final key = 'pigio_plume_stipend_${now.year}_${now.month}';
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(key) == true) return;
+    await prefs.setBool(key, true);
+    addPlumes(50, reason: 'monthly_stipend');
+    addMemory(
+      emoji: '💎',
+      titleFr: 'Allocation mensuelle : +50 Plumes !',
+      titleEn: 'Monthly stipend: +50 Plumes!',
+    );
+  }
+
+  /// Purchase a wardrobe item with Plumes. Returns true if successful.
+  bool purchaseWithPlumes(String itemId) {
+    final item = MascotOutfitEngine.catalog.where((i) => i.id == itemId).firstOrNull;
+    if (item == null || !item.isPlumeItem) return false;
+    if (_unlockedClothing.contains(itemId)) return false; // already owned
+    if (item.premiumOnly && !SubscriptionService.isPremium) return false;
+    if (!spendPlumes(item.plumeCost!)) return false;
+    unlockClothing(itemId);
+    addMemory(
+      emoji: item.emoji,
+      titleFr: '${item.name} acheté avec des Plumes !',
+      titleEn: '${item.name} purchased with Plumes!',
+    );
+    return true;
+  }
+
+  /// Purchase a Plumes IAP pack via RevenueCat.
+  Future<bool> purchasePlumePack(String productId) async {
+    final ok = await SubscriptionService.purchasePlumes(productId);
+    if (!ok) return false;
+    // Map product IDs to Plumes amounts
+    int amount;
+    switch (productId) {
+      case SubscriptionService.kPlumes100:
+        amount = 100;
+      case SubscriptionService.kPlumes500:
+        amount = 500;
+      case SubscriptionService.kPlumes1200:
+        amount = 1200;
+      default:
+        amount = 100;
+    }
+    addPlumes(amount, reason: 'iap_$productId');
+    addMemory(
+      emoji: '💎',
+      titleFr: '+$amount Plumes achetées !',
+      titleEn: '+$amount Plumes purchased!',
+    );
+    return true;
+  }
+
+  // ── Occasion Pass (Battle Pass) ──────────────────────────────────────────
+
+  /// Advance the Occasion Pass by 1 level. Awards the tier reward automatically.
+  /// Called when the user completes a qualifying action (daily login, wish added, etc.).
+  void advanceOccasionPass() {
+    final season = MascotOutfitEngine.currentSeason();
+    // Reset progress if season changed
+    if (_occasionPassSeason != season) {
+      _occasionPassSeason = season;
+      _occasionPassLevel = 0;
+    }
+    final maxLevel = MascotOutfitEngine.occasionPassTiers.length;
+    if (_occasionPassLevel >= maxLevel) return; // already maxed
+
+    _occasionPassLevel++;
+    final tier = MascotOutfitEngine.occasionPassTiers[_occasionPassLevel - 1];
+
+    // Award free-track rewards (Plumes) to everyone
+    if (tier.plumes > 0) {
+      addPlumes(tier.plumes, reason: 'occasion_pass_lv${tier.level}');
+    }
+
+    // Award premium-track rewards only to Pigio+ / Occasion Pass holders
+    if (tier.premiumTrack && tier.unlockItemId != null) {
+      if (SubscriptionService.isPremium || SubscriptionService.hasOccasionPass) {
+        unlockClothing(tier.unlockItemId!);
+      }
+    }
+
+    addMemory(
+      emoji: tier.emoji,
+      titleFr: 'Occasion Pass niv. ${tier.level} : ${tier.nameFr}',
+      titleEn: 'Occasion Pass lv. ${tier.level}: ${tier.nameEn}',
+    );
+    AnalyticsService.log('occasion_pass_advance', {'level': _occasionPassLevel, 'season': season});
+    notifyListeners();
+    _saveData();
+  }
+
+  /// Purchase the Occasion Pass (standalone, without full Pigio+).
+  Future<bool> purchaseOccasionPass() async {
+    final ok = await SubscriptionService.purchaseOccasionPass();
+    if (!ok) return false;
+    // Retroactively unlock any premium tiers already reached
+    for (int i = 0; i < _occasionPassLevel; i++) {
+      final tier = MascotOutfitEngine.occasionPassTiers[i];
+      if (tier.premiumTrack && tier.unlockItemId != null) {
+        unlockClothing(tier.unlockItemId!);
+      }
+    }
+    notifyListeners();
+    return true;
+  }
+
+  // ── Altruistic Gifting & Guardian System ──────────────────────────────────
+
+  /// Gift a 1-month Pigio+ subscription to another user via RevenueCat IAP.
+  /// Returns true if the purchase succeeded.
+  Future<bool> giftPigioPlus() async {
+    final ok = await SubscriptionService.purchaseGiftSubscription();
+    if (!ok) return false;
+    _updateGuardianTier();
+    addMemory(
+      emoji: '🎁',
+      titleFr: 'Pigio+ offert à un proche !',
+      titleEn: 'Pigio+ gifted to a loved one!',
+    );
+    awardMascotProgress(20, emoji: '💛', titleFr: 'Cadeau généreux ! +20 XP', titleEn: 'Generous gift! +20 XP');
+    AnalyticsService.log('gift_pigio_plus', {});
+    return true;
+  }
+
+  /// Guardian tiers based on number of gifts given.
+  /// '', 'ally' (1+ gifts), 'protector' (3+ gifts), 'superhero' (10+ gifts)
+  void _updateGuardianTier() async {
+    final prefs = await SharedPreferences.getInstance();
+    final giftsKey = 'pigio_gifts_given_count';
+    final count = (prefs.getInt(giftsKey) ?? 0) + 1;
+    await prefs.setInt(giftsKey, count);
+
+    String newTier;
+    if (count >= 10) {
+      newTier = 'superhero';
+    } else if (count >= 3) {
+      newTier = 'protector';
+    } else if (count >= 1) {
+      newTier = 'ally';
+    } else {
+      newTier = '';
+    }
+
+    if (_guardianTier != newTier) {
+      _guardianTier = newTier;
+      if (newTier.isNotEmpty) {
+        final tierEmojis = {'ally': '🛡️', 'protector': '⚔️', 'superhero': '🦸'};
+        final tierNamesFr = {'ally': 'Allié', 'protector': 'Protecteur', 'superhero': 'Super-héros'};
+        final tierNamesEn = {'ally': 'Ally', 'protector': 'Protector', 'superhero': 'Superhero'};
+        addMemory(
+          emoji: tierEmojis[newTier] ?? '🛡️',
+          titleFr: 'Nouveau rang Guardian : ${tierNamesFr[newTier]} !',
+          titleEn: 'New Guardian rank: ${tierNamesEn[newTier]}!',
+        );
+      }
+      AnalyticsService.log('guardian_tier_changed', {'tier': newTier, 'gifts': count});
+      notifyListeners();
+      _saveData();
     }
   }
 

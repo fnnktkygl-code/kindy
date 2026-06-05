@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/core/i18n/i18n.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/core/i18n/i18n.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
 import '../../../shared/widgets/ui_widgets.dart';
-import 'package:pigio_app/screens/sizes/sheets/size_editor_sheet.dart';
-import 'package:pigio_app/screens/contacts/sheets/add_profile_sheet.dart';
-import 'package:pigio_app/screens/wishes/sheets/wish_editor_sheet.dart';
-import 'package:pigio_app/screens/groups/sheets/add_group_sheet.dart';
-import 'package:pigio_app/screens/wishes/sheets/wizz_sheet.dart';
-import 'package:pigio_app/screens/wishes/sheets/wish_detail_sheet.dart';
+import 'package:kindy/screens/sizes/sheets/size_editor_sheet.dart';
+import 'package:kindy/screens/contacts/sheets/add_profile_sheet.dart';
+import 'package:kindy/screens/wishes/sheets/wish_editor_sheet.dart';
+import 'package:kindy/screens/groups/sheets/add_group_sheet.dart';
+import 'package:kindy/screens/wishes/sheets/wizz_sheet.dart';
+import 'package:kindy/screens/wishes/sheets/wish_detail_sheet.dart';
 import '../../../shared/widgets/wish_card.dart';
 import '../../../shared/widgets/invite_bottom_sheet.dart';
 import 'widgets/contact_profile_header.dart';
@@ -18,6 +18,7 @@ import 'widgets/contact_sizes_section.dart';
 import 'widgets/contact_delivery_section.dart';
 import 'widgets/contact_wishes_history_section.dart';
 import 'widgets/contact_danger_zone.dart';
+import '../../../shared/widgets/ai_gift_suggestions.dart';
 import 'widgets/contact_invite_status_section.dart';
 
 class ContactProfileScreen extends StatefulWidget {
@@ -171,6 +172,16 @@ class _ContactProfileScreenState extends State<ContactProfileScreen>
                 canEditProfile: canEditProfile,
                 theme: theme,
                 onEditProfile: () => _showProfileEditor(state, contact),
+              ),
+
+              // AI Gift Suggestions with affiliate links
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                child: AiGiftSuggestions(
+                  contact: contact,
+                  state: state,
+                  theme: theme,
+                ),
               ),
 
               ContactWishesHistorySection(

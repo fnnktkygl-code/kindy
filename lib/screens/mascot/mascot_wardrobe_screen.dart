@@ -3,13 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/core/theme/pigio_theme.dart';
-import 'package:pigio_app/shared/widgets/ui_widgets.dart';
-import 'package:pigio_app/shared/widgets/pigio_painter.dart';
-import 'package:pigio_app/services/mascot_outfit_engine.dart';
-import 'package:pigio_app/services/mascot_share_service.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
+import 'package:kindy/shared/widgets/ui_widgets.dart';
+import 'package:kindy/shared/widgets/pigio_painter.dart';
+import 'package:kindy/services/mascot_outfit_engine.dart';
+import 'package:kindy/services/mascot_share_service.dart';
+import 'mascot_photobooth_screen.dart';
 
 // Per-slot accent colors — used in filter chips, slot dots, and item cards.
 const _kSlotAccents = <ClothingSlot?, Color>{
@@ -17,6 +18,7 @@ const _kSlotAccents = <ClothingSlot?, Color>{
   ClothingSlot.hat: Color(0xFFE63950),
   ClothingSlot.glasses: Color(0xFF4A6FE3),
   ClothingSlot.top: Color(0xFF1B8A4C), // Fixed: was 0xFF2ECC71 (WCAG AA fail)
+  ClothingSlot.scarf: Color(0xFFE6A817),
   ClothingSlot.shoes: Color(0xFFFF9500),
   ClothingSlot.accessory: Color(0xFF9C6FE3),
 };
@@ -39,11 +41,32 @@ const _kItemColors = <Color>[
   Color(0xFF66BB6A), // Green
 ];
 
+/// Zoom focus rectangles per slot, in PigioPainter's 100x130 coordinate space.
+/// The preview will auto-zoom to show this region when the slot's filter is selected.
+const _kSlotZoomRegions = <ClothingSlot, Rect>{
+  ClothingSlot.hat:       Rect.fromLTWH(15, -5, 70, 45),   // head + hat
+  ClothingSlot.glasses:   Rect.fromLTWH(18, 8, 64, 48),    // face / eyes
+  ClothingSlot.top:       Rect.fromLTWH(8, 38, 84, 70),    // torso
+  ClothingSlot.scarf:     Rect.fromLTWH(15, 30, 70, 50),   // neck area
+  ClothingSlot.shoes:     Rect.fromLTWH(10, 82, 80, 50),   // feet
+  ClothingSlot.accessory: Rect.fromLTWH(0, 0, 100, 130),   // full view
+};
+
+/// Lerp between two Matrix4 values element-by-element.
+Matrix4 _lerpMatrix4(Matrix4 a, Matrix4 b, double t) {
+  final result = Matrix4.zero();
+  for (int i = 0; i < 16; i++) {
+    result[i] = a[i] + (b[i] - a[i]) * t;
+  }
+  return result;
+}
+
 const _kSlotFilters = <({String labelFr, String labelEn, String emoji, ClothingSlot? slot})>[
   (labelFr: 'Tout', labelEn: 'All', emoji: '✨', slot: null),
   (labelFr: 'Têtes', labelEn: 'Hats', emoji: '🎩', slot: ClothingSlot.hat),
   (labelFr: 'Lunettes', labelEn: 'Glasses', emoji: '👓', slot: ClothingSlot.glasses),
   (labelFr: 'Hauts', labelEn: 'Tops', emoji: '👕', slot: ClothingSlot.top),
+  (labelFr: 'Écharpes', labelEn: 'Scarves', emoji: '🧣', slot: ClothingSlot.scarf),
   (labelFr: 'Chaussures', labelEn: 'Shoes', emoji: '👟', slot: ClothingSlot.shoes),
   (labelFr: 'Accessoires', labelEn: 'Accessories', emoji: '🎀', slot: ClothingSlot.accessory),
 ];
@@ -59,8 +82,19 @@ class MascotWardrobeScreen extends StatefulWidget {
 class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
     with TickerProviderStateMixin {
   ClothingSlot? _selectedSlot;
+  String? _lastEquippedItemId;
+  bool _showLimited = false;
   late final AnimationController _previewBounce;
   late final AnimationController _staggerCtrl;
+
+  // ── Auto-zoom per slot ──
+  late final AnimationController _zoomCtrl;
+  Matrix4 _zoomFrom = Matrix4.identity();
+  Matrix4 _zoomTo = Matrix4.identity();
+
+  // ── 360° rotation ──
+  PigViewAngle _viewAngle = PigViewAngle.front;
+  double _rotateProgress = 0.0; // 0=front, 0.25=3/4R, 0.5=back, 0.75=3/4L
 
   @override
   void initState() {
@@ -74,6 +108,10 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     )..forward();
+    _zoomCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 450),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final state = Provider.of<PigioAppState>(context, listen: false);
@@ -81,15 +119,15 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
         final req = await MascotOutfitEngine.evaluateContext(state);
         if (mounted && req != null) state.setClothingRequest(req);
       }
-      // Check for newly unlocked achievements and offer to share rare+ items
+      // Check for newly unlocked achievements and celebrate
       if (mounted) {
         final newUnlocks = MascotOutfitEngine.checkAchievements(state);
-        final shareableItem = newUnlocks
+        final celebrateItem = newUnlocks
             .map((id) => MascotOutfitEngine.getItem(id))
-            .where((item) => item != null && (item.rarity == ItemRarity.rare || item.rarity == ItemRarity.legendary))
+            .whereType<ClothingItem>()
             .firstOrNull;
-        if (shareableItem != null && mounted) {
-          _showSharePrompt(shareableItem.id, state);
+        if (celebrateItem != null && mounted) {
+          _showCelebration(celebrateItem, state);
         }
       }
     });
@@ -99,6 +137,7 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
   void dispose() {
     _previewBounce.dispose();
     _staggerCtrl.dispose();
+    _zoomCtrl.dispose();
     super.dispose();
   }
 
@@ -107,10 +146,67 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
     HapticFeedback.lightImpact();
     if (isEquipped) {
       state.unequipClothing(item.slot);
+      setState(() => _lastEquippedItemId = null);
     } else {
       state.equipClothing(item.slot, item.id);
+      setState(() => _lastEquippedItemId = item.id);
       _previewBounce.forward(from: 0).then((_) => _previewBounce.reverse());
+      // Check for newly completed outfit combos
+      final newCombos = MascotOutfitEngine.checkCompletedCombos(state);
+      for (final combo in newCombos) {
+        state.markComboCompleted(combo.nameFr);
+        _showComboCompletedSheet(combo, state);
+      }
+      // Check daily challenge completion
+      final challenge = MascotOutfitEngine.todaysChallenge(DateTime.now());
+      final today = DateTime.now();
+      final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      if (state.dailyChallengeCompleted != todayStr && MascotOutfitEngine.isChallengeMet(challenge, state)) {
+        state.completeDailyChallenge();
+      }
     }
+  }
+
+  void _showComboCompletedSheet(OutfitCombo combo, PigioAppState state) {
+    final isFr = state.locale.languageCode == 'fr';
+    final theme = context.pt;
+    HapticFeedback.heavyImpact();
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: theme.sheet,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('🎨', style: const TextStyle(fontSize: 48)),
+            const SizedBox(height: 12),
+            Text(
+              isFr ? 'Combo complété !' : 'Combo completed!',
+              style: fw(size: 20, w: FontWeight.w800, color: theme.ink),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              isFr ? combo.nameFr : combo.nameEn,
+              style: fw(size: 16, w: FontWeight.w600, color: theme.mid),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '+25 XP',
+              style: fw(size: 14, w: FontWeight.w700, color: const Color(0xFFFFAA00)),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              combo.itemIds.map((id) => MascotOutfitEngine.getItem(id)?.emoji ?? '').join(' '),
+              style: const TextStyle(fontSize: 28),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _onRandomOutfit(PigioAppState state) {
@@ -129,19 +225,167 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
     _previewBounce.forward(from: 0).then((_) => _previewBounce.reverse());
   }
 
+  /// Compute a zoom Matrix4 that scales+translates to focus on a region.
+  /// Region is in PigioPainter's 100x130 coordinate space.
+  /// Widget display size is 130x169 (130 * 1.3).
+  Matrix4 _zoomMatrixForSlot(ClothingSlot? slot) {
+    if (slot == null) return Matrix4.identity();
+    final region = _kSlotZoomRegions[slot];
+    if (region == null) return Matrix4.identity();
+    // Full coordinate space: 100 wide, 130 tall (+ 5 translate)
+    const coordW = 100.0, coordH = 130.0;
+    // Scale factor to fill preview with the region
+    final sx = coordW / region.width;
+    final sy = coordH / region.height;
+    final s = math.min(sx, sy).clamp(1.0, 2.8);
+    if (s <= 1.05) return Matrix4.identity(); // No meaningful zoom
+    // Center the region
+    final regionCx = region.left + region.width / 2;
+    final regionCy = region.top + region.height / 2;
+    // ignore: deprecated_member_use
+    return Matrix4.identity()
+      ..translate(coordW / 2 * (130 / coordW), coordH / 2 * (169 / coordH)) // ignore: deprecated_member_use
+      ..scale(s, s) // ignore: deprecated_member_use
+      ..translate(-regionCx * (130 / coordW), -regionCy * (169 / coordH));
+  }
+
   void _onSlotTap(ClothingSlot? slot) {
     HapticFeedback.selectionClick();
+    _zoomFrom = _zoomTo;
+    _zoomTo = _zoomMatrixForSlot(slot);
+    _zoomCtrl.forward(from: 0);
     setState(() => _selectedSlot = slot);
     _staggerCtrl.forward(from: 0);
   }
 
-  void _showSharePrompt(String itemId, PigioAppState state) {
-    final item = MascotOutfitEngine.getItem(itemId);
-    if (item == null) return;
+  PigViewAngle _angleFromProgress(double p) {
+    final norm = p % 1.0;
+    if (norm < 0.125 || norm >= 0.875) return PigViewAngle.front;
+    if (norm < 0.375) return PigViewAngle.threeQuarterRight;
+    if (norm < 0.625) return PigViewAngle.back;
+    return PigViewAngle.threeQuarterLeft;
+  }
+
+  void _showCelebration(ClothingItem item, PigioAppState state) {
     final isFr = state.locale.languageCode == 'fr';
-    final theme = context.pt;
+    final rarityColor = _kRarityColors[item.rarity] ?? const Color(0xFF8B90B0);
 
     HapticFeedback.heavyImpact();
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) HapticFeedback.mediumImpact();
+    });
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'celebration',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 400),
+      transitionBuilder: (ctx, a1, a2, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: a1, curve: Curves.elasticOut),
+          child: FadeTransition(opacity: a1, child: child),
+        );
+      },
+      // ignore: unnecessary_underscores
+      pageBuilder: (ctx, _, __) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 300,
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: context.pt.card,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [BoxShadow(color: rarityColor.withValues(alpha: 0.3), blurRadius: 40, spreadRadius: 4)],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 100,
+                    height: 130,
+                    child: PigioWidget(mood: PigMood.celebrating, outfit: state.activeOutfit, outfitColors: state.outfitColors, scarfColor: state.mascotScarfColor),
+                  ),
+                  const SizedBox(height: 16),
+                  if (item.hasImage)
+                    Image.asset(item.imageAsset!, width: 64, height: 64, fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => Text(item.emoji, style: const TextStyle(fontSize: 52)))
+                  else
+                    Text(item.emoji, style: const TextStyle(fontSize: 52)),
+                  const SizedBox(height: 8),
+                  Text(
+                    isFr ? 'Nouvel objet débloqué !' : 'New item unlocked!',
+                    style: fw(size: 20, w: FontWeight.w800, color: context.pt.ink),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(item.name, style: fw(size: 16, w: FontWeight.w600, color: context.pt.mid)),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: rarityColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      item.rarity.name.toUpperCase(),
+                      style: fw(size: 11, w: FontWeight.w900, color: rarityColor),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _showFormatPicker(item.id, state);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: rarityColor),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(isFr ? 'Partager' : 'Share', style: fw(size: 14, w: FontWeight.w700, color: rarityColor)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            state.equipClothing(item.slot, item.id);
+                            _previewBounce.forward(from: 0).then((_) => _previewBounce.reverse());
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: rarityColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: Text(isFr ? 'Essayer' : 'Try it', style: const TextStyle(fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showFormatPicker(String itemId, PigioAppState state) {
+    final isFr = state.locale.languageCode == 'fr';
+    final theme = context.pt;
+    const formats = ShareFormat.values;
+    const icons = [Icons.phone_android_rounded, Icons.crop_square_rounded, Icons.credit_card_rounded];
+    const subtitles = ['1080×1920', '1080×1080', '600×800'];
+
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: theme.sheet,
@@ -153,61 +397,34 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(item.emoji, style: const TextStyle(fontSize: 48)),
-            const SizedBox(height: 12),
             Text(
-              isFr ? 'Nouvel objet débloqué !' : 'New item unlocked!',
-              style: fw(size: 20, w: FontWeight.w800, color: theme.ink),
+              isFr ? 'Format de partage' : 'Share format',
+              style: fw(size: 18, w: FontWeight.w800, color: theme.ink),
             ),
-            const SizedBox(height: 6),
-            Text(
-              item.name,
-              style: fw(size: 16, w: FontWeight.w600, color: theme.mid),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: _kRarityColors[item.rarity]?.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                item.rarity.name.toUpperCase(),
-                style: fw(size: 11, w: FontWeight.w900, color: _kRarityColors[item.rarity] ?? theme.mid),
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                icon: const Icon(Icons.share_rounded, size: 18),
-                label: Text(
-                  isFr ? 'Partager ma réussite' : 'Share my achievement',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                onPressed: () {
-                  Navigator.pop(context);
-                  MascotShareService.shareAchievementCard(
-                    context: context,
-                    itemId: itemId,
-                    state: state,
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                isFr ? 'Plus tard' : 'Maybe later',
-                style: fw(size: 14, w: FontWeight.w600, color: theme.mid),
-              ),
+            const SizedBox(height: 16),
+            Row(
+              children: List.generate(formats.length, (i) {
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(left: i == 0 ? 0 : 8),
+                    child: _FormatOption(
+                      icon: icons[i],
+                      label: formats[i].label,
+                      subtitle: subtitles[i],
+                      color: theme.primary,
+                      onTap: () {
+                        Navigator.pop(context);
+                        MascotShareService.shareAchievementCard(
+                          context: context,
+                          itemId: itemId,
+                          state: state,
+                          format: formats[i],
+                        );
+                      },
+                    ),
+                  ),
+                );
+              }),
             ),
           ],
         ),
@@ -219,7 +436,9 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
   Widget build(BuildContext context) {
     final theme = context.pt;
     final state = context.watch<PigioAppState>();
+    final limitedDrops = MascotOutfitEngine.seasonalDrops(DateTime.now());
     final items = MascotOutfitEngine.catalog.where((c) {
+      if (_showLimited) return c.expiresAt != null && c.isAvailable;
       if (_selectedSlot == null) return true;
       return c.slot == _selectedSlot;
     }).toList();
@@ -241,6 +460,33 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
               selectedSlot: _selectedSlot,
               bounce: _previewBounce,
               onSlotTap: _onSlotTap,
+              zoomCtrl: _zoomCtrl,
+              zoomFrom: _zoomFrom,
+              zoomTo: _zoomTo,
+              viewAngle: _viewAngle,
+              onRotateDelta: (dx) {
+                setState(() {
+                  _rotateProgress = (_rotateProgress + dx / 200) % 1.0;
+                  if (_rotateProgress < 0) _rotateProgress += 1.0;
+                  _viewAngle = _angleFromProgress(_rotateProgress);
+                });
+              },
+              onRotateEnd: () {
+                // Snap to nearest discrete angle
+                const snaps = [0.0, 0.25, 0.5, 0.75];
+                double nearest = 0.0;
+                double minDist = 1.0;
+                for (final s in snaps) {
+                  final dist = ((_rotateProgress - s) % 1.0).abs();
+                  final distWrap = (1.0 - dist).abs();
+                  final d = math.min(dist, distWrap);
+                  if (d < minDist) { minDist = d; nearest = s; }
+                }
+                setState(() {
+                  _rotateProgress = nearest;
+                  _viewAngle = _angleFromProgress(nearest);
+                });
+              },
             ),
           ),
 
@@ -285,9 +531,36 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
             ),
           ),
 
+          // ── 1.8. Outfit of the day ──
+          SliverToBoxAdapter(
+            child: _OutfitOfTheDayCard(
+              state: state,
+              theme: theme,
+              onApply: () {
+                HapticFeedback.mediumImpact();
+                final ootd = MascotOutfitEngine.suggestOutfitOfTheDay(state, weather: state.currentWeather);
+                state.clearOutfit();
+                for (final entry in ootd.entries) {
+                  state.equipClothing(entry.key, entry.value);
+                }
+                _previewBounce.forward(from: 0).then((_) => _previewBounce.reverse());
+              },
+            ),
+          ),
+
+          // ── 1.9. Daily challenge banner ──
+          SliverToBoxAdapter(
+            child: _DailyChallengeBanner(state: state, theme: theme),
+          ),
+
           // ── 2. Outfit presets carousel ──
           SliverToBoxAdapter(
             child: _PresetCarousel(state: state, theme: theme),
+          ),
+
+          // ── 2.5. Collection progress ──
+          SliverToBoxAdapter(
+            child: _CollectionProgressCard(state: state, theme: theme),
           ),
 
           // ── 3. Suggestion banner ──
@@ -309,14 +582,23 @@ class _MascotWardrobeScreenState extends State<MascotWardrobeScreen>
               selected: _selectedSlot,
               theme: theme,
               lang: state.locale.languageCode,
-              onSelect: _onSlotTap,
+              onSelect: (slot) {
+                _onSlotTap(slot);
+                if (_showLimited) setState(() => _showLimited = false);
+              },
+              showLimited: _showLimited,
+              limitedCount: limitedDrops.length,
+              onToggleLimited: () => setState(() {
+                _showLimited = !_showLimited;
+                if (_showLimited) _selectedSlot = null;
+              }),
             ),
           ),
           
           // ── 5.5 Item colour pickers ──
           SliverToBoxAdapter(
             child: _ItemColorPicker(
-                state: state, theme: theme, selectedSlot: _selectedSlot),
+                state: state, theme: theme, selectedSlot: _selectedSlot, lastEquippedItemId: _lastEquippedItemId),
           ),
 
           // ── 6. 2-column item grid ──
@@ -386,11 +668,13 @@ class _ItemColorPicker extends StatelessWidget {
   final PigioAppState state;
   final PigioThemeData theme;
   final ClothingSlot? selectedSlot;
+  final String? lastEquippedItemId;
 
   const _ItemColorPicker({
     required this.state,
     required this.theme,
     required this.selectedSlot,
+    this.lastEquippedItemId,
   });
 
   /// Items that should not show a color picker (flag keeps national colors).
@@ -398,11 +682,18 @@ class _ItemColorPicker extends StatelessWidget {
 
   ({String id, String label, String emoji})? _getTargetItem() {
     if (selectedSlot == null) {
+      // "All" tab: show color picker for the last equipped item, or fall back to scarf
+      if (lastEquippedItemId != null && !_noTint.contains(lastEquippedItemId)) {
+        final meta = MascotOutfitEngine.getItem(lastEquippedItemId!);
+        if (meta != null) {
+          return (id: lastEquippedItemId!, label: meta.name, emoji: meta.emoji);
+        }
+      }
       return (id: 'scarf', label: 'Écharpe', emoji: '🧣');
     }
     final equippedId = state.activeOutfit[selectedSlot];
     if (equippedId == null || _noTint.contains(equippedId)) return null;
-    
+
     final meta = MascotOutfitEngine.getItem(equippedId);
     return (
       id: equippedId,
@@ -507,6 +798,12 @@ class _MascotHeaderDelegate extends SliverPersistentHeaderDelegate {
   final ClothingSlot? selectedSlot;
   final AnimationController bounce;
   final void Function(ClothingSlot?) onSlotTap;
+  final AnimationController zoomCtrl;
+  final Matrix4 zoomFrom;
+  final Matrix4 zoomTo;
+  final PigViewAngle viewAngle;
+  final ValueChanged<double> onRotateDelta;
+  final VoidCallback onRotateEnd;
 
   _MascotHeaderDelegate({
     required this.state,
@@ -515,6 +812,12 @@ class _MascotHeaderDelegate extends SliverPersistentHeaderDelegate {
     required this.selectedSlot,
     required this.bounce,
     required this.onSlotTap,
+    required this.zoomCtrl,
+    required this.zoomFrom,
+    required this.zoomTo,
+    required this.viewAngle,
+    required this.onRotateDelta,
+    required this.onRotateEnd,
   });
 
   @override
@@ -589,38 +892,80 @@ class _MascotHeaderDelegate extends SliverPersistentHeaderDelegate {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Bouncing mascot
+                  // Bouncing mascot with zoom + rotation
                   Flexible(
                     child: Center(
-                      child: Transform.scale(
-                        scale: mascotScale,
-                        child: AnimatedBuilder(
-                          animation: bounce,
-                          builder: (ctx, child) => Transform.scale(
-                            scale: 1.0 + bounce.value * 0.08,
-                            child: child,
-                          ),
-                          child: PigioWidget(
-                            key: ValueKey(Object.hash(
-                              Object.hashAll(state.activeOutfit.values),
-                              Object.hashAll(state.outfitColors.values),
-                              state.mascotScarfColor,
-                            )),
-                            mood: equippedCount > 0 ? PigMood.excited : PigMood.normal,
-                            size: 130, // Base size
-                            scarfColor: state.mascotScarfColor,
-                            outfit: state.activeOutfit,
-                            outfitColors: state.outfitColors,
+                      child: GestureDetector(
+                        onHorizontalDragUpdate: (d) => onRotateDelta(d.delta.dx),
+                        onHorizontalDragEnd: (_) => onRotateEnd(),
+                        onDoubleTap: () => onSlotTap(null), // Double-tap = zoom out
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Transform.scale(
+                            scale: mascotScale,
+                            child: AnimatedBuilder(
+                              animation: Listenable.merge([bounce, zoomCtrl]),
+                              builder: (ctx, child) {
+                                final t = Curves.easeInOutCubic.transform(zoomCtrl.value);
+                                // Interpolate zoom matrices
+                                final zoom = _lerpMatrix4(zoomFrom, zoomTo, t);
+                                return Transform(
+                                  transform: zoom,
+                                  alignment: Alignment.center,
+                                  child: Transform.scale(
+                                    scale: 1.0 + bounce.value * 0.08,
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: PigioWidget(
+                                key: ValueKey(Object.hash(
+                                  Object.hashAll(state.activeOutfit.values),
+                                  Object.hashAll(state.outfitColors.values),
+                                  state.mascotScarfColor,
+                                  viewAngle,
+                                )),
+                                mood: PigMood.normal,
+                                size: 130,
+                                scarfColor: state.mascotScarfColor,
+                                outfit: state.activeOutfit,
+                                outfitColors: state.outfitColors,
+                                viewAngle: viewAngle,
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
 
+                  // Rotation angle indicator dots
+                  if (progress < 0.6)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: PigViewAngle.values.map((a) {
+                          final isActive = viewAngle == a;
+                          return Container(
+                            width: isActive ? 8 : 5,
+                            height: isActive ? 8 : 5,
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isActive
+                                  ? theme.primary
+                                  : theme.mid.withValues(alpha: 0.3),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+
                   Offstage(
                     offstage: progress >= 0.8,
                     child: Padding(
-                      padding: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.only(top: 8),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: _kSlotFilters
@@ -718,29 +1063,63 @@ class _ActionSection extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _ActionButton(
+                  label: 'Photo',
+                  emoji: '📸',
+                  color: const Color(0xFF9C6FE3),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MascotPhotoboothScreen()),
+                    );
+                  },
+                ),
+              ),
             ],
           ),
 
           if (equippedCount > 0) ...[
             const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: onSavePreset,
-                icon: const Text('✅', style: TextStyle(fontSize: 13)),
-                label: Text("Valider ce look",
-                  style: fw(size: 12, w: FontWeight.w800, color: theme.ink)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.surface,
-                  foregroundColor: theme.ink,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    side: BorderSide(color: theme.divider),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: onSavePreset,
+                    icon: const Text('✅', style: TextStyle(fontSize: 13)),
+                    label: Text("Valider ce look",
+                      style: fw(size: 12, w: FontWeight.w800, color: theme.ink)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.surface,
+                      foregroundColor: theme.ink,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: BorderSide(color: theme.divider),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () => MascotShareService.shareOutfitCard(
+                    context: context,
+                    state: state,
+                  ),
+                  icon: const Text('📤', style: TextStyle(fontSize: 13)),
+                  label: Text("Partager",
+                    style: fw(size: 12, w: FontWeight.w800, color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                ),
+              ],
             ),
           ],
 
@@ -958,6 +1337,364 @@ class _PresetCarousel extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Outfit of the Day Card
+// ─────────────────────────────────────────────────────────────
+
+class _OutfitOfTheDayCard extends StatelessWidget {
+  final PigioAppState state;
+  final PigioThemeData theme;
+  final VoidCallback onApply;
+
+  const _OutfitOfTheDayCard({
+    required this.state,
+    required this.theme,
+    required this.onApply,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final ootd = MascotOutfitEngine.suggestOutfitOfTheDay(state, weather: state.currentWeather);
+    if (ootd.isEmpty) return const SizedBox.shrink();
+
+    final isFr = state.locale.languageCode == 'fr';
+    final emojis = ootd.values
+        .map((id) => MascotOutfitEngine.getItem(id)?.emoji ?? '')
+        .where((e) => e.isNotEmpty)
+        .join(' ');
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF4A6FE3), Color(0xFF9C6FE3)],
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isFr ? 'Tenue du jour' : 'Outfit of the Day',
+                    style: fw(size: 13, w: FontWeight.w700, color: Colors.white70),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(emojis, style: const TextStyle(fontSize: 22)),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: onApply,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  isFr ? 'Appliquer' : 'Apply',
+                  style: fw(size: 13, w: FontWeight.w700, color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Daily Challenge Banner
+// ─────────────────────────────────────────────────────────────
+
+class _DailyChallengeBanner extends StatelessWidget {
+  final PigioAppState state;
+  final PigioThemeData theme;
+
+  const _DailyChallengeBanner({required this.state, required this.theme});
+
+  @override
+  Widget build(BuildContext context) {
+    final isFr = state.locale.languageCode == 'fr';
+    final challenge = MascotOutfitEngine.todaysChallenge(DateTime.now());
+    final today = DateTime.now();
+    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final isCompleted = state.dailyChallengeCompleted == todayStr;
+    final isMet = MascotOutfitEngine.isChallengeMet(challenge, state);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isCompleted
+              ? const Color(0xFF1B8A4C).withValues(alpha: 0.08)
+              : const Color(0xFFFFAA00).withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isCompleted
+                ? const Color(0xFF1B8A4C).withValues(alpha: 0.25)
+                : const Color(0xFFFFAA00).withValues(alpha: 0.25),
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(
+              isCompleted ? '✅' : '🎯',
+              style: const TextStyle(fontSize: 28),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isFr ? 'Défi du jour' : 'Daily Challenge',
+                    style: fw(size: 11, w: FontWeight.w700, color: theme.mid, letterSpacing: 1),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isFr ? challenge.titleFr : challenge.titleEn,
+                    style: fw(
+                      size: 13,
+                      w: FontWeight.w700,
+                      color: isCompleted ? const Color(0xFF1B8A4C) : theme.ink,
+                    ),
+                  ),
+                  if (isCompleted)
+                    Text(
+                      '+15 XP',
+                      style: fw(size: 11, w: FontWeight.w700, color: const Color(0xFF1B8A4C)),
+                    )
+                  else if (isMet)
+                    Text(
+                      isFr ? 'Presque ! Continue...' : 'Almost there! Keep going...',
+                      style: fw(size: 11, w: FontWeight.w600, color: const Color(0xFFFFAA00)),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Collection Progress Card
+// ─────────────────────────────────────────────────────────────
+
+class _CollectionProgressCard extends StatelessWidget {
+  final PigioAppState state;
+  final PigioThemeData theme;
+
+  const _CollectionProgressCard({required this.state, required this.theme});
+
+  @override
+  Widget build(BuildContext context) {
+    final unlocked = MascotOutfitEngine.unlockedCount(state);
+    final total = MascotOutfitEngine.totalItemCount;
+    final combosCompleted = MascotOutfitEngine.completedComboCount(state);
+    final combosTotal = MascotOutfitEngine.totalComboCount;
+    final breakdown = MascotOutfitEngine.rarityBreakdown(state);
+    final progress = total > 0 ? unlocked / total : 0.0;
+    final isFr = state.locale.languageCode == 'fr';
+
+    // Check collection milestones
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      MascotOutfitEngine.checkCollectionMilestones(state);
+    });
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: theme.divider),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                // Circular progress
+                SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        value: progress,
+                        strokeWidth: 4,
+                        backgroundColor: theme.divider,
+                        color: const Color(0xFFFFAA00),
+                      ),
+                      Text(
+                        '$unlocked',
+                        style: fw(size: 14, w: FontWeight.w800, color: theme.ink),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isFr ? 'Collection' : 'Collection',
+                        style: fw(size: 15, w: FontWeight.w700, color: theme.ink),
+                      ),
+                      Text(
+                        '$unlocked/$total ${isFr ? 'objets' : 'items'} · $combosCompleted/$combosTotal combos',
+                        style: fw(size: 12, w: FontWeight.w500, color: theme.mid),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Rarity breakdown bars
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                for (final rarity in ItemRarity.values)
+                  _RarityBadge(
+                    rarity: rarity,
+                    unlocked: breakdown[rarity]!.unlocked,
+                    total: breakdown[rarity]!.total,
+                    theme: theme,
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RarityBadge extends StatelessWidget {
+  final ItemRarity rarity;
+  final int unlocked;
+  final int total;
+  final PigioThemeData theme;
+
+  const _RarityBadge({
+    required this.rarity,
+    required this.unlocked,
+    required this.total,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _kRarityColors[rarity] ?? theme.mid;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$unlocked/$total ${rarity.name}',
+        style: fw(size: 11, w: FontWeight.w700, color: color),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Share Format Option
+// ─────────────────────────────────────────────────────────────
+
+class _FormatOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _FormatOption({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.pt;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: theme.card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: theme.divider),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 28, color: color),
+            const SizedBox(height: 8),
+            Text(label, style: fw(size: 13, w: FontWeight.w700, color: theme.ink)),
+            const SizedBox(height: 2),
+            Text(subtitle, style: fw(size: 10, w: FontWeight.w500, color: theme.mid)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Countdown Badge (limited-time items)
+// ─────────────────────────────────────────────────────────────
+
+class _CountdownBadge extends StatelessWidget {
+  final DateTime expiresAt;
+  const _CountdownBadge({required this.expiresAt});
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = expiresAt.difference(DateTime.now());
+    final days = remaining.inDays;
+    final label = days > 30 ? '${(days / 30).round()}mo' : '${days}d';
+    final urgent = days <= 7;
+    final color = urgent ? const Color(0xFFE63950) : const Color(0xFFFF6B35);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.timer_rounded, size: 10, color: color),
+          const SizedBox(width: 2),
+          Text(label, style: fw(size: 9, w: FontWeight.w800, color: color)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // Suggestion Banner
 // ─────────────────────────────────────────────────────────────
 
@@ -1076,12 +1813,18 @@ class _FilterBarDelegate extends SliverPersistentHeaderDelegate {
   final PigioThemeData theme;
   final String lang;
   final void Function(ClothingSlot?) onSelect;
+  final bool showLimited;
+  final int limitedCount;
+  final VoidCallback onToggleLimited;
 
   _FilterBarDelegate({
     required this.selected,
     required this.theme,
     required this.lang,
     required this.onSelect,
+    this.showLimited = false,
+    this.limitedCount = 0,
+    required this.onToggleLimited,
   });
 
   @override
@@ -1097,57 +1840,94 @@ class _FilterBarDelegate extends SliverPersistentHeaderDelegate {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
         child: Row(
-          children: _kSlotFilters.map((f) {
-            final isSelected = selected == f.slot;
-            final accent = _kSlotAccents[f.slot] ?? theme.primary;
-            final count = MascotOutfitEngine.countForSlot(f.slot);
-            return Semantics(
-              label: "${lang == 'fr' ? f.labelFr : f.labelEn}, $count ${lang == 'fr' ? 'articles' : 'items'}",
-              selected: isSelected,
-              button: true,
-              child: GestureDetector(
-                onTap: () => onSelect(f.slot),
+          children: [
+            ..._kSlotFilters.map((f) {
+              final isSelected = !showLimited && selected == f.slot;
+              final accent = _kSlotAccents[f.slot] ?? theme.primary;
+              final count = MascotOutfitEngine.countForSlot(f.slot);
+              return Semantics(
+                label: "${lang == 'fr' ? f.labelFr : f.labelEn}, $count ${lang == 'fr' ? 'articles' : 'items'}",
+                selected: isSelected,
+                button: true,
+                child: GestureDetector(
+                  onTap: () => onSelect(f.slot),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? accent : theme.surface,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: isSelected ? accent : theme.divider,
+                        width: 1.0,
+                      ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: accent.withValues(alpha: 0.25),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              )
+                            ]
+                          : [],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(f.emoji, style: const TextStyle(fontSize: 14)),
+                        const SizedBox(width: 5),
+                        Text(
+                          "${lang == 'fr' ? f.labelFr : f.labelEn} ($count)",
+                          style: fw(
+                            size: 13,
+                            w: isSelected ? FontWeight.w800 : FontWeight.w600,
+                            color: isSelected ? Colors.white : theme.mid,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+            if (limitedCount > 0)
+              GestureDetector(
+                onTap: onToggleLimited,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeOut,
                   margin: const EdgeInsets.only(right: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: isSelected ? accent : theme.surface,
+                    color: showLimited ? const Color(0xFFFF6B35) : theme.surface,
                     borderRadius: BorderRadius.circular(22),
                     border: Border.all(
-                      color: isSelected ? accent : theme.divider,
-                      width: 1.0,
+                      color: showLimited ? const Color(0xFFFF6B35) : theme.divider,
                     ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: accent.withValues(alpha: 0.25),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            )
-                          ]
+                    boxShadow: showLimited
+                        ? [BoxShadow(color: const Color(0xFFFF6B35).withValues(alpha: 0.25), blurRadius: 10, offset: const Offset(0, 3))]
                         : [],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(f.emoji, style: const TextStyle(fontSize: 14)),
+                      const Text('⏳', style: TextStyle(fontSize: 14)),
                       const SizedBox(width: 5),
                       Text(
-                        "${lang == 'fr' ? f.labelFr : f.labelEn} ($count)",
+                        "${lang == 'fr' ? 'Limité' : 'Limited'} ($limitedCount)",
                         style: fw(
                           size: 13,
-                          w: isSelected ? FontWeight.w800 : FontWeight.w600,
-                          color: isSelected ? Colors.white : theme.mid,
+                          w: showLimited ? FontWeight.w800 : FontWeight.w600,
+                          color: showLimited ? Colors.white : theme.mid,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-            );
-          }).toList(),
+          ],
         ),
       ),
     );
@@ -1155,7 +1935,7 @@ class _FilterBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(_FilterBarDelegate old) =>
-      old.selected != selected || old.theme != theme || old.lang != lang;
+      old.selected != selected || old.theme != theme || old.lang != lang || old.showLimited != showLimited || old.limitedCount != limitedCount;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1291,10 +2071,16 @@ class _WardrobeItemCardState extends State<_WardrobeItemCard>
                 // Main content area
                 Column(
                   children: [
-                    // ── Preview area with large emoji ──
+                    // ── Preview area with image or emoji ──
                     Expanded(
                       child: Center(
-                        child: Text(item.emoji, style: const TextStyle(fontSize: 48)),
+                        child: item.hasImage
+                            ? Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: Image.asset(item.imageAsset!, fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) => Text(item.emoji, style: const TextStyle(fontSize: 48))),
+                              )
+                            : Text(item.emoji, style: const TextStyle(fontSize: 48)),
                       ),
                     ),
 
@@ -1395,6 +2181,13 @@ class _WardrobeItemCardState extends State<_WardrobeItemCard>
                         size: 16,
                       ),
                     ),
+                  ),
+
+                // ── Countdown badge (limited-time items) ──
+                if (item.expiresAt != null && item.isAvailable && !isLocked)
+                  Positioned(
+                    top: 8, right: isEquipped ? 40 : 8,
+                    child: _CountdownBadge(expiresAt: item.expiresAt!),
                   ),
 
                 // ── Lock overlay (locked items) ──

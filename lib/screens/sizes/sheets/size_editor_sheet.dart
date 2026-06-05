@@ -1,9 +1,9 @@
-import 'package:pigio_app/core/theme/pigio_theme.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
 import 'package:flutter/material.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/core/i18n/i18n.dart';
-import 'package:pigio_app/shared/widgets/ui_widgets.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/core/i18n/i18n.dart';
+import 'package:kindy/shared/widgets/ui_widgets.dart';
 
 class SizeEditorSheet extends StatefulWidget {
   final PigioAppState state;
@@ -39,6 +39,17 @@ class _SizeEditorSheetState extends State<SizeEditorSheet> {
     'eu_bottoms': ['-', '32', '34', '36', '38', '40', '42', '44', '46', '48', '50', '52', '54'],
     'us_waist': ['-', '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '36', '38', '40', '42'],
     'us_length': ['-', '28', '30', '32', '34', '36'],
+    'ring_eu_left': ['-', '44', '45', '46', '47', '48', '49', '50', '51', '52', '53', '54', '55', '56', '57', '58', '59', '60', '61', '62', '63', '64', '65', '66', '67', '68', '69', '70'],
+    'ring_eu_right': ['-', '44', '45', '46', '47', '48', '49', '50', '51', '52', '53', '54', '55', '56', '57', '58', '59', '60', '61', '62', '63', '64', '65', '66', '67', '68', '69', '70'],
+    'ring_us_left': ['-', '3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '12.5', '13'],
+    'ring_us_right': ['-', '3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '12.5', '13'],
+    'ring_diameter_mm': ['-', '14', '14.5', '15', '15.5', '16', '16.5', '17', '17.5', '18', '18.5', '19', '19.5', '20', '20.5', '21', '21.5', '22'],
+    'wrist_cm': ['-', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'],
+    'wrist_in': ['-', '5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9'],
+    'watch_size': ['-', '36', '38', '40', '42', '44', '46', '49'],
+    'necklace_cm': ['-', '35', '40', '42', '45', '50', '55', '60', '65', '70', '80'],
+    'necklace_in': ['-', '14', '16', '17', '18', '20', '22', '24', '26', '28', '32'],
+    'necklace_diameter': ['-', '12', '13', '14', '15', '16', '17', '18'],
   };
 
   @override
@@ -62,11 +73,24 @@ class _SizeEditorSheetState extends State<SizeEditorSheet> {
   }
 
   Map<String, String> get _availableFormats {
+    final isEn = widget.state.locale.languageCode == 'en';
     switch (_currentCategory) {
-      case 'clothes': return {'standard': 'International', 'eu_clothes': 'Europe'};
-      case 'shoes': return {'eu_shoes': 'Europe', 'us_shoes': 'US', 'uk_shoes': 'UK', 'cm_shoes': 'Longueur (cm)'};
-      case 'bottoms': return {'eu_bottoms': 'Europe', 'us_waist': 'Taille US (W)', 'us_length': 'Longueur US (L)', 'standard': 'International'};
-      default: return {'standard': 'Taille'};
+      case 'clothes': return {'standard': 'fmt_international', 'eu_clothes': 'fmt_europe'};
+      case 'shoes': return {'eu_shoes': 'fmt_europe', 'us_shoes': 'fmt_us', 'uk_shoes': 'fmt_uk', 'cm_shoes': 'fmt_cm'};
+      case 'bottoms': return {'eu_bottoms': 'fmt_europe', 'us_waist': 'fmt_us_waist', 'us_length': 'fmt_us_length', 'standard': 'fmt_international'};
+      case 'rings': 
+        return isEn 
+            ? {'ring_us_left': 'fmt_ring_l_us', 'ring_us_right': 'fmt_ring_r_us', 'ring_diameter_mm': 'fmt_ring_diam'}
+            : {'ring_eu_left': 'fmt_ring_l_eu', 'ring_eu_right': 'fmt_ring_r_eu', 'ring_diameter_mm': 'fmt_ring_diam'};
+      case 'bracelets': 
+        return isEn 
+            ? {'wrist_in': 'fmt_wrist_in', 'watch_size': 'fmt_watch_size'}
+            : {'wrist_cm': 'fmt_wrist_cm', 'watch_size': 'fmt_watch_size'};
+      case 'necklaces': 
+        return isEn 
+            ? {'necklace_in': 'fmt_necklace_in', 'necklace_diameter': 'fmt_necklace_diam'}
+            : {'necklace_cm': 'fmt_necklace_cm', 'necklace_diameter': 'fmt_necklace_diam'};
+      default: return {'standard': 'fmt_size'};
     }
   }
 
@@ -193,7 +217,7 @@ class _SizeEditorSheetState extends State<SizeEditorSheet> {
                           children: [
                             Padding(
                               padding: const EdgeInsets.only(bottom: 8),
-                              child: Text(entry.value, style: fw(size: 12, w: FontWeight.w700, color: theme.mid)),
+                              child: Text(t(context, entry.value), style: fw(size: 12, w: FontWeight.w700, color: theme.mid)),
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 16),

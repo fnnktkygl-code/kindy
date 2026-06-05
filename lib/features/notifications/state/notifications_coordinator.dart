@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../services/notification_service.dart';
-import 'package:pigio_app/core/models/app_models.dart';
+import 'package:kindy/core/models/app_models.dart';
 
 class NotificationsCoordinator {
   NotificationsCoordinator({
@@ -185,7 +185,7 @@ class NotificationsCoordinator {
       type: type,
       userJwt: userJwt,
     ).catchError((error) {
-      if (kDebugMode) debugPrint('[Pigio] FCM push failed: $error');
+      if (kDebugMode) debugPrint('[Kindy] FCM push failed: $error');
     });
   }
 }

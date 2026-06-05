@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:pigio_app/core/state/app_state.dart';
+import 'package:kindy/core/state/app_state.dart';
 import 'analytics_service.dart';
 
 /// Generates and shares a wishlist link that doubles as a growth loop.
@@ -9,7 +9,7 @@ class WishlistShareService {
   WishlistShareService._();
 
   /// Share the user's own wishlist as a link.
-  /// The link routes to pigio.app/wishlist/<syncKey> which shows the user's
+  /// The link routes to pigio.app/wishlist/[syncKey] which shows the user's
   /// public wishes and prompts non-users to install the app.
   static Future<void> shareMyWishlist({
     required BuildContext context,

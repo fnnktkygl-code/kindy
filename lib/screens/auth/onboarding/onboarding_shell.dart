@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:pigio_app/core/state/app_state.dart';
-import 'package:pigio_app/core/config/constants.dart';
-import 'package:pigio_app/screens/auth/auth_screen.dart';
-import 'package:pigio_app/services/analytics_service.dart';
+import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/core/config/constants.dart';
+import 'package:kindy/core/theme/pigio_theme.dart';
+import 'package:kindy/screens/auth/auth_screen.dart';
+import 'package:kindy/services/analytics_service.dart';
 import '../../../app_shell/main_shell.dart';
 
 class OnboardingShell extends StatefulWidget {
@@ -19,24 +22,19 @@ class _OnboardingShellState extends State<OnboardingShell> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   
-  // Total steps: Name → Avatar → First Contact → Wish = 4
+  // Total steps: Name → Avatar → Invite → Wish = 4
   static const _totalSteps = 4;
 
   // Collected onboarding data
   final _nameController = TextEditingController();
   String? _selectedAvatarIcon;
   Color? _selectedAvatarColor;
-  final _contactNameController = TextEditingController();
-  final _contactBirthdayController = TextEditingController();
-  String _contactRole = 'Ami';
   bool _addedContact = false;
   final _wishController = TextEditingController();
 
   @override
   void dispose() {
     _nameController.dispose();
-    _contactNameController.dispose();
-    _contactBirthdayController.dispose();
     _wishController.dispose();
     _pageController.dispose();
     super.dispose();
@@ -81,18 +79,7 @@ class _OnboardingShellState extends State<OnboardingShell> {
       );
     }
 
-    // Save first contact if provided
-    final contactName = _contactNameController.text.trim();
-    if (contactName.isNotEmpty) {
-      state.addContact(
-        name: contactName,
-        role: _contactRole,
-        birthdate: _contactBirthdayController.text.trim().isEmpty
-            ? null
-            : _contactBirthdayController.text.trim(),
-      );
-      _addedContact = true;
-    }
+
 
     // Save first wish if provided
     final wish = _wishController.text.trim();
@@ -193,10 +180,7 @@ class _OnboardingShellState extends State<OnboardingShell> {
                       _selectedAvatarColor = color;
                     },
                   ),
-                  _StepContactScreen(
-                    nameController: _contactNameController,
-                    birthdayController: _contactBirthdayController,
-                    onRoleChanged: (role) => _contactRole = role,
+                  _StepInviteScreen(
                     onNext: _nextPage,
                   ),
                   _StepWishScreen(
@@ -223,61 +207,68 @@ class _StepNameScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pt = context.watch<PigioAppState>().currentTheme;
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text('👋', style: TextStyle(fontSize: 80), textAlign: TextAlign.center),
-          const SizedBox(height: 32),
-          Text(
-            "Comment vous appelez-vous ?",
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: pt.ink),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          TextField(
-            controller: nameController,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            decoration: InputDecoration(
-              hintText: "Prénom",
-              filled: true,
-              fillColor: pt.card,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            ),
-            style: TextStyle(color: pt.ink, fontSize: 18),
-            onSubmitted: (_) {
-              if (nameController.text.trim().isNotEmpty) onNext();
-            },
-          ),
-          const Spacer(),
-          // Button disabled until name is entered
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: nameController,
-            builder: (_, value, child) {
-              final hasName = value.text.trim().isNotEmpty;
-              return ElevatedButton(
-                onPressed: hasName ? onNext : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: pt.primary,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: pt.primary.withValues(alpha: 0.3),
-                  disabledForegroundColor: Colors.white54,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return CustomScrollView(
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('👋', style: TextStyle(fontSize: 80), textAlign: TextAlign.center),
+                const SizedBox(height: 32),
+                Text(
+                  "Comment vous appelez-vous ?",
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: pt.ink),
+                  textAlign: TextAlign.center,
                 ),
-                child: const Text('Continuer →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              );
-            },
+                const SizedBox(height: 32),
+                TextField(
+                  controller: nameController,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: InputDecoration(
+                    hintText: "Prénom",
+                    filled: true,
+                    fillColor: pt.card,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  ),
+                  style: TextStyle(color: pt.ink, fontSize: 18),
+                  onSubmitted: (_) {
+                    if (nameController.text.trim().isNotEmpty) onNext();
+                  },
+                ),
+                const Spacer(),
+                // Button disabled until name is entered
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: nameController,
+                  builder: (_, value, child) {
+                    final hasName = value.text.trim().isNotEmpty;
+                    return ElevatedButton(
+                      onPressed: hasName ? onNext : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: pt.primary,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: pt.primary.withValues(alpha: 0.3),
+                        disabledForegroundColor: Colors.white54,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Continuer →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -496,7 +487,7 @@ class _StepContactScreen extends StatefulWidget {
 
 class _StepContactScreenState extends State<_StepContactScreen> {
   String _selectedRole = 'Ami';
-  static const _roles = ['Famille', 'Ami', 'Collègue', 'Autre'];
+  static const _roles = ['Famille', 'Ami', 'Public'];
 
   Future<void> _pickBirthday() async {
     final now = DateTime.now();
@@ -518,109 +509,310 @@ class _StepContactScreenState extends State<_StepContactScreen> {
   @override
   Widget build(BuildContext context) {
     final pt = context.watch<PigioAppState>().currentTheme;
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text('👥', style: TextStyle(fontSize: 80), textAlign: TextAlign.center),
-          const SizedBox(height: 24),
-          Text(
-            "Ajoutez un proche",
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: pt.ink),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Pour ne plus oublier ses dates importantes",
-            style: TextStyle(fontSize: 15, color: pt.ink.withValues(alpha: 0.7)),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 28),
-          // Name
-          TextField(
-            controller: widget.nameController,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            decoration: InputDecoration(
-              hintText: "Prénom du proche",
-              filled: true,
-              fillColor: pt.card,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            ),
-            style: TextStyle(color: pt.ink, fontSize: 16),
-          ),
-          const SizedBox(height: 12),
-          // Birthday (optional)
-          GestureDetector(
-            onTap: _pickBirthday,
-            child: AbsorbPointer(
-              child: TextField(
-                controller: widget.birthdayController,
-                decoration: InputDecoration(
-                  hintText: "Date de naissance (optionnel)",
-                  filled: true,
-                  fillColor: pt.card,
-                  prefixIcon: Icon(Icons.cake_outlined, color: pt.mid),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+    return CustomScrollView(
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('👥', style: TextStyle(fontSize: 80), textAlign: TextAlign.center),
+                const SizedBox(height: 24),
+                Text(
+                  "Ajoutez un proche",
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: pt.ink),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Pour ne plus oublier ses dates importantes",
+                  style: TextStyle(fontSize: 15, color: pt.ink.withValues(alpha: 0.7)),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 28),
+                // Name
+                TextField(
+                  controller: widget.nameController,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: InputDecoration(
+                    hintText: "Prénom du proche",
+                    filled: true,
+                    fillColor: pt.card,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  style: TextStyle(color: pt.ink, fontSize: 16),
                 ),
-                style: TextStyle(color: pt.ink, fontSize: 16),
-              ),
+                const SizedBox(height: 12),
+                // Birthday (optional)
+                GestureDetector(
+                  onTap: _pickBirthday,
+                  child: AbsorbPointer(
+                    child: TextField(
+                      controller: widget.birthdayController,
+                      decoration: InputDecoration(
+                        hintText: "Date de naissance (optionnel)",
+                        filled: true,
+                        fillColor: pt.card,
+                        prefixIcon: Icon(Icons.cake_outlined, color: pt.mid),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      ),
+                      style: TextStyle(color: pt.ink, fontSize: 16),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Role chips
+                Wrap(
+                  spacing: 8,
+                  children: _roles.map((role) {
+                    final selected = _selectedRole == role;
+                    return ChoiceChip(
+                      label: Text(role),
+                      selected: selected,
+                      selectedColor: pt.primary.withValues(alpha: 0.2),
+                      backgroundColor: pt.card,
+                      labelStyle: TextStyle(
+                        color: selected ? pt.primary : pt.ink,
+                        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                      onSelected: (_) {
+                        setState(() => _selectedRole = role);
+                        widget.onRoleChanged(role);
+                      },
+                    );
+                  }).toList(),
+                ),
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: widget.onNext,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: pt.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Continuer →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+                TextButton(
+                  onPressed: widget.onNext,
+                  child: Text("Passer", style: TextStyle(color: pt.ink.withValues(alpha: 0.6))),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
-          // Role chips
-          Wrap(
-            spacing: 8,
-            children: _roles.map((role) {
-              final selected = _selectedRole == role;
-              return ChoiceChip(
-                label: Text(role),
-                selected: selected,
-                selectedColor: pt.primary.withValues(alpha: 0.2),
-                backgroundColor: pt.card,
-                labelStyle: TextStyle(
-                  color: selected ? pt.primary : pt.ink,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                ),
-                onSelected: (_) {
-                  setState(() => _selectedRole = role);
-                  widget.onRoleChanged(role);
-                },
-              );
-            }).toList(),
-          ),
-          const Spacer(),
-          ElevatedButton(
-            onPressed: widget.onNext,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: pt.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Continuer →', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ),
-          TextButton(
-            onPressed: widget.onNext,
-            child: Text("Passer", style: TextStyle(color: pt.ink.withValues(alpha: 0.6))),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-// --- Step 4: Wish + Finish ---
+// --- Step 4 (New): Invite Contact ---
+class _StepInviteScreen extends StatefulWidget {
+  final VoidCallback onNext;
+
+  const _StepInviteScreen({
+    required this.onNext,
+  });
+
+  @override
+  State<_StepInviteScreen> createState() => _StepInviteScreenState();
+}
+
+class _StepInviteScreenState extends State<_StepInviteScreen> {
+  bool _isSending = false;
+
+  Future<void> _sendGenericInvite(BuildContext context, InviteChannel channel) async {
+    if (_isSending) return;
+    setState(() => _isSending = true);
+
+    final state = context.read<PigioAppState>();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
+    // Auto-consent during onboarding to reduce friction
+    if (!state.contactsConsentGiven) {
+      state.setContactsConsentGiven(true);
+    }
+
+    try {
+      final link = await state.createContactListInviteLink(channel: channel);
+      if (link == null || link.isEmpty) throw Exception('Empty link');
+
+      if (channel == InviteChannel.copyLink) {
+        await Clipboard.setData(ClipboardData(text: link));
+      } else if (channel == InviteChannel.whatsApp) {
+        final message = 'Rejoins-moi sur Kindy 🐣 : $link';
+        final encoded = Uri.encodeComponent(message);
+        final directUri = Uri.parse('whatsapp://send?text=$encoded');
+        final webUri = Uri.parse('https://wa.me/?text=$encoded');
+
+        if (await canLaunchUrl(directUri)) {
+          await launchUrl(directUri, mode: LaunchMode.externalApplication);
+        } else if (await canLaunchUrl(webUri)) {
+          await launchUrl(webUri, mode: LaunchMode.externalApplication);
+        } else {
+          await SharePlus.instance.share(ShareParams(text: message, title: 'Invitation Kindy'));
+        }
+      } else {
+        await SharePlus.instance.share(ShareParams(text: 'Invitation Kindy: $link', title: 'Invitation Kindy'));
+      }
+
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            channel == InviteChannel.copyLink
+                ? 'Lien copié dans le presse-papiers.'
+                : 'Invitation prête à être partagée.',
+          ),
+        ),
+      );
+      // Auto-proceed to next step after sending invite
+      widget.onNext();
+    } catch (e) {
+      if (!mounted) return;
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(content: Text("Impossible d'envoyer l'invitation. Réessayez.")),
+      );
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  Widget _methodTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required InviteChannel channel,
+    required PigioThemeData theme,
+  }) {
+    return GestureDetector(
+      onTap: _isSending ? null : () => _sendGenericInvite(context, channel),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: theme.divider.withValues(alpha: 0.5)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: theme.ink)),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: theme.mid)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: theme.mid, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pt = context.watch<PigioAppState>().currentTheme;
+    return CustomScrollView(
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('💌', style: TextStyle(fontSize: 80), textAlign: TextAlign.center),
+                const SizedBox(height: 24),
+                Text(
+                  "Invitez vos proches",
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: pt.ink),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Partagez l'application avec vos amis et votre famille.",
+                  style: TextStyle(fontSize: 15, color: pt.ink.withValues(alpha: 0.7)),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                _methodTile(
+                  title: 'WhatsApp',
+                  subtitle: 'Recommandé pour les proches',
+                  icon: Icons.chat_bubble_outline,
+                  color: pt.accent4,
+                  channel: InviteChannel.whatsApp,
+                  theme: pt,
+                ),
+                _methodTile(
+                  title: 'SMS & Autres',
+                  subtitle: 'Partager via l\'application native',
+                  icon: Icons.sms_outlined,
+                  color: pt.primary,
+                  channel: InviteChannel.sms,
+                  theme: pt,
+                ),
+                _methodTile(
+                  title: 'Copier le lien',
+                  subtitle: 'Pour partager manuellement',
+                  icon: Icons.link_outlined,
+                  color: pt.ink,
+                  channel: InviteChannel.copyLink,
+                  theme: pt,
+                ),
+                const Spacer(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_isSending)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: CircularProgressIndicator(color: pt.primary),
+                      ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: widget.onNext,
+                  child: Text("Passer cette étape", style: TextStyle(color: pt.ink.withValues(alpha: 0.6))),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// --- Step 5: Wish + Finish ---
 class _StepWishScreen extends StatelessWidget {
   final TextEditingController wishController;
   final VoidCallback onFinish;
@@ -630,58 +822,65 @@ class _StepWishScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pt = context.watch<PigioAppState>().currentTheme;
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text('✨', style: TextStyle(fontSize: 80), textAlign: TextAlign.center),
-          const SizedBox(height: 32),
-          Text(
-            "Qu'est-ce qui vous ferait plaisir ?",
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: pt.ink),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Ajoutez votre première envie !",
-            style: TextStyle(fontSize: 15, color: pt.ink.withValues(alpha: 0.7)),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          TextField(
-            controller: wishController,
-            decoration: InputDecoration(
-              hintText: "Ex: AirPods Pro, un bon livre...",
-              filled: true,
-              fillColor: pt.card,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    return CustomScrollView(
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('✨', style: TextStyle(fontSize: 80), textAlign: TextAlign.center),
+                const SizedBox(height: 32),
+                Text(
+                  "Qu'est-ce qui vous ferait plaisir ?",
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: pt.ink),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Ajoutez votre première envie !",
+                  style: TextStyle(fontSize: 15, color: pt.ink.withValues(alpha: 0.7)),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                TextField(
+                  controller: wishController,
+                  decoration: InputDecoration(
+                    hintText: "Ex: AirPods Pro, un bon livre...",
+                    filled: true,
+                    fillColor: pt.card,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  ),
+                  style: TextStyle(color: pt.ink),
+                  onSubmitted: (_) => onFinish(),
+                ),
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: onFinish,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: pt.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Découvrir Pigio 🎉', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+                TextButton(
+                  onPressed: onFinish,
+                  child: Text("Passer pour l'instant", style: TextStyle(color: pt.ink.withValues(alpha: 0.6))),
+                ),
+              ],
             ),
-            style: TextStyle(color: pt.ink),
-            onSubmitted: (_) => onFinish(),
           ),
-          const Spacer(),
-          ElevatedButton(
-            onPressed: onFinish,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: pt.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Découvrir Pigio 🎉', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ),
-          TextButton(
-            onPressed: onFinish,
-            child: Text("Passer pour l'instant", style: TextStyle(color: pt.ink.withValues(alpha: 0.6))),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
