@@ -32,8 +32,12 @@ Future<void> bootstrapApp() async {
   };
 
   if (Platform.isAndroid || Platform.isIOS) {
-    await Firebase.initializeApp();
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    try {
+      await Firebase.initializeApp();
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    } catch (e, st) {
+      log.error('Firebase', 'Failed to initialize Firebase (likely due to dummy google-services.json)', e, st);
+    }
   }
 
   // Injected at build time via --dart-define=SUPABASE_URL=... and
