@@ -29,6 +29,27 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Create google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "GOOGLE_SERVICES_JSON secret is empty. Using dummy config to allow build."
+            cat << 'EOF' > android/app/google-services.json
+            {
+              "project_info": { "project_number": "123456789", "project_id": "dummy-project" },
+              "client": [
+                {
+                  "client_info": { "mobilesdk_app_id": "1:123456789:android:abcdef", "android_client_info": { "package_name": "app.pigio.android" } },
+                  "api_key": [ { "current_key": "dummy_key" } ]
+                }
+              ]
+            }
+          EOF
+          else
+            echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          fi
+
       - name: Build APK
         run: flutter build apk --release
 
