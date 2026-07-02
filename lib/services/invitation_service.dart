@@ -360,6 +360,7 @@ class InvitationService {
     required List<Map<String, dynamic>> events,
     required List<Map<String, dynamic>> sizes,
     List<Map<String, dynamic>> giftPots = const [],
+    Map<String, dynamic> notificationPrefs = const {},
   }) async {
     final payload = {
       'key': syncKey,
@@ -371,6 +372,7 @@ class InvitationService {
       'events': events,
       'sizes': sizes,
       'giftPots': giftPots,
+      'notificationPrefs': notificationPrefs,
     };
     final uri = Uri.parse(_buildUrl(syncPath));
     final response = await _httpClient

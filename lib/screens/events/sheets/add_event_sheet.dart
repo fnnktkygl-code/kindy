@@ -16,6 +16,7 @@ void showAddEventSheet(
   String? initialGroupId,
   String? initialTypeEn,
   String? initialTypeFr,
+  Event? existingEvent,
 }) {
   final theme = context.ptnl;
   final navigator = Navigator.of(context, rootNavigator: false);
@@ -37,6 +38,7 @@ void showAddEventSheet(
       initialGroupId: initialGroupId,
       initialTypeEn: initialTypeEn,
       initialTypeFr: initialTypeFr,
+      existingEvent: existingEvent,
     ),
   );
 }
@@ -51,6 +53,7 @@ class AddEventSheet extends StatefulWidget {
   final String? initialGroupId;
   final String? initialTypeEn;
   final String? initialTypeFr;
+  final Event? existingEvent;
 
   const AddEventSheet({
     super.key,
@@ -63,6 +66,7 @@ class AddEventSheet extends StatefulWidget {
     this.initialGroupId,
     this.initialTypeEn,
     this.initialTypeFr,
+    this.existingEvent,
   });
 
   @override
@@ -78,18 +82,25 @@ class _AddEventSheetState extends State<AddEventSheet> {
   String? _selectedGroupId;
   late String? _fixedTypeEn;
   late String? _fixedTypeFr;
+  bool _notificationsEnabled = true;
+  List<int> _reminderThresholds = [7, 3, 1];
+
+  bool get _isEditing => widget.existingEvent != null;
 
   @override
   void initState() {
     super.initState();
-    _nameCtrl = TextEditingController(text: widget.initialTitle ?? '');
-    _emojiCtrl = TextEditingController(text: widget.initialEmoji ?? '🎉');
-    _selectedDate = widget.initialDate ?? DateTime.now().add(const Duration(days: 7));
-    _isRecurring = widget.initialRecurring;
-    _selectedContactId = widget.initialContactId;
-    _selectedGroupId = widget.initialGroupId;
-    _fixedTypeEn = widget.initialTypeEn;
-    _fixedTypeFr = widget.initialTypeFr;
+    final e = widget.existingEvent;
+    _nameCtrl = TextEditingController(text: e?.title ?? widget.initialTitle ?? '');
+    _emojiCtrl = TextEditingController(text: e?.emoji ?? widget.initialEmoji ?? '🎉');
+    _selectedDate = e?.date ?? widget.initialDate ?? DateTime.now().add(const Duration(days: 7));
+    _isRecurring = e?.isRecurring ?? widget.initialRecurring;
+    _selectedContactId = e?.contactId ?? widget.initialContactId;
+    _selectedGroupId = e?.groupId ?? widget.initialGroupId;
+    _fixedTypeEn = e?.typeEn ?? widget.initialTypeEn;
+    _fixedTypeFr = e?.typeFr ?? widget.initialTypeFr;
+    _notificationsEnabled = e?.notificationsEnabled ?? true;
+    _reminderThresholds = List.from(e?.reminderThresholds ?? [7, 3, 1]);
   }
 
   @override
@@ -101,15 +112,34 @@ class _AddEventSheetState extends State<AddEventSheet> {
 
   void _save(PigioAppState state) {
     if (_nameCtrl.text.trim().isEmpty) return;
-    state.addEvent(
-      title: _nameCtrl.text.trim(),
-      date: _selectedDate,
-      isRecurring: _isRecurring,
-      emoji: _emojiCtrl.text.trim().isEmpty ? '🎉' : _emojiCtrl.text.trim(),
-      typeFr: _fixedTypeFr ?? _nameCtrl.text.trim(),
-      typeEn: _fixedTypeEn ?? _nameCtrl.text.trim(),
-      contactId: _selectedContactId,
-    );
+    if (_isEditing) {
+      state.updateEvent(
+        id: widget.existingEvent!.id,
+        title: _nameCtrl.text.trim(),
+        date: _selectedDate,
+        isRecurring: _isRecurring,
+        emoji: _emojiCtrl.text.trim().isEmpty ? '🎉' : _emojiCtrl.text.trim(),
+        typeFr: _fixedTypeFr ?? _nameCtrl.text.trim(),
+        typeEn: _fixedTypeEn ?? _nameCtrl.text.trim(),
+        contactId: _selectedContactId,
+        groupId: _selectedGroupId,
+        notificationsEnabled: _notificationsEnabled,
+        reminderThresholds: _reminderThresholds,
+      );
+    } else {
+      state.addEvent(
+        title: _nameCtrl.text.trim(),
+        date: _selectedDate,
+        isRecurring: _isRecurring,
+        emoji: _emojiCtrl.text.trim().isEmpty ? '🎉' : _emojiCtrl.text.trim(),
+        typeFr: _fixedTypeFr ?? _nameCtrl.text.trim(),
+        typeEn: _fixedTypeEn ?? _nameCtrl.text.trim(),
+        contactId: _selectedContactId,
+        groupId: _selectedGroupId,
+        notificationsEnabled: _notificationsEnabled,
+        reminderThresholds: _reminderThresholds,
+      );
+    }
     Navigator.pop(context);
     widget.onAdded?.call();
   }
@@ -129,7 +159,10 @@ class _AddEventSheetState extends State<AddEventSheet> {
             child: Container(width: 40, height: 4, decoration: BoxDecoration(color: theme.divider, borderRadius: BorderRadius.circular(2))),
           ),
           const SizedBox(height: 20),
-          Text("Nouvel événement", style: fw(size: 22, w: FontWeight.w900, color: theme.ink)),
+          Text(
+            _isEditing ? "Modifier l'événement" : "Nouvel événement",
+            style: fw(size: 22, w: FontWeight.w900, color: theme.ink),
+          ),
           const SizedBox(height: 20),
           
           // Name
@@ -240,6 +273,62 @@ class _AddEventSheetState extends State<AddEventSheet> {
             ),
           ),
           const SizedBox(height: 12),
+
+          // Notifications toggle + thresholds
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: theme.surface, borderRadius: BorderRadius.circular(16)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.notifications_active, color: theme.mid, size: 20),
+                    const SizedBox(width: 14),
+                    Expanded(child: Text("Rappels", style: fw(size: 14, w: FontWeight.w700, color: theme.ink))),
+                    Switch(
+                      value: _notificationsEnabled,
+                      activeThumbColor: theme.primary,
+                      onChanged: (val) => setState(() => _notificationsEnabled = val),
+                    ),
+                  ],
+                ),
+                if (_notificationsEnabled) ...[
+                  const SizedBox(height: 10),
+                  Text("Rappeler à", style: fw(size: 12, w: FontWeight.w600, color: theme.mid)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [7, 3, 1].map((d) {
+                      final selected = _reminderThresholds.contains(d);
+                      return FilterChip(
+                        label: Text("${d}j avant", style: fw(size: 12, w: FontWeight.w700, color: selected ? theme.onAccent : theme.ink)),
+                        selected: selected,
+                        selectedColor: theme.primary,
+                        backgroundColor: theme.card,
+                        checkmarkColor: theme.onAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: selected ? theme.primary : theme.divider),
+                        ),
+                        onSelected: (val) {
+                          setState(() {
+                            if (val) {
+                              _reminderThresholds.add(d);
+                              _reminderThresholds.sort((a, b) => b.compareTo(a));
+                            } else {
+                              _reminderThresholds.remove(d);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           
           // Link to Contact or Group
           Container(
@@ -267,8 +356,8 @@ class _AddEventSheetState extends State<AddEventSheet> {
           const SizedBox(height: 24),
           
           PigioButton(
-            label: "Créer",
-            icon: Icons.check,
+            label: _isEditing ? "Enregistrer" : "Créer",
+            icon: _isEditing ? Icons.save : Icons.check,
             color: theme.primary,
             textColor: theme.onAccent,
             height: 52,
@@ -452,4 +541,3 @@ class _AddEventSheetState extends State<AddEventSheet> {
     );
   }
 }
-

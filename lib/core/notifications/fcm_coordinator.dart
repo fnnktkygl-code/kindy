@@ -3,12 +3,15 @@ import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
 import '../../services/analytics_service.dart';
 import '../../services/fcm_service.dart';
 import 'package:kindy/core/state/app_state.dart';
 
 class FcmCoordinator {
   final List<StreamSubscription> _subscriptions = [];
+  final FlutterLocalNotificationsPlugin _localNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   Future<void> init({
     required PigioAppState state,
@@ -22,6 +25,23 @@ class FcmCoordinator {
       alert: true,
       badge: true,
       sound: true,
+    );
+    
+    // Initialize Local Notifications for foreground display
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosInit = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+    await _localNotificationsPlugin.initialize(
+      settings: const InitializationSettings(android: androidInit, iOS: iosInit),
+      onDidReceiveNotificationResponse: (response) {
+        if (response.payload != null) {
+          // Handle tap from foreground notification
+          AnalyticsService.pushOpened(response.payload!);
+        }
+      },
     );
 
     if (!isMounted()) return;
@@ -58,6 +78,30 @@ class FcmCoordinator {
     _subscriptions.add(
       FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
         await handleIncomingMessage(message, fromNotificationTap: false);
+        
+        // Show foreground notification
+        final notification = message.notification;
+        if (notification != null && notification.title != null && notification.body != null) {
+          const androidDetails = AndroidNotificationDetails(
+            'kindy_high_importance', // id
+            'High Importance Notifications', // name
+            channelDescription: 'This channel is used for important notifications.',
+            importance: Importance.max,
+            priority: Priority.high,
+          );
+          const iosDetails = DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          );
+          await _localNotificationsPlugin.show(
+            id: notification.hashCode,
+            title: notification.title,
+            body: notification.body,
+            notificationDetails: const NotificationDetails(android: androidDetails, iOS: iosDetails),
+            payload: message.data['type'] as String?,
+          );
+        }
       }),
     );
 

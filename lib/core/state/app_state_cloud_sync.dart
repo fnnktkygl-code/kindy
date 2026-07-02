@@ -55,6 +55,7 @@ extension CloudSyncExtension on PigioAppState {
         events: _events.map((e) => e.toMap()).toList(),
         sizes: _sizes.map((s) => s.toMap()).toList(),
         giftPots: _giftPots.map((p) => p.toMap()).toList(),
+        notificationPrefs: _notificationPrefs,
       );
     } catch (e) {
       if (kDebugMode) debugPrint('[Kindy] Cloud push failed: $e');
@@ -117,6 +118,12 @@ extension CloudSyncExtension on PigioAppState {
       _mergeById<GiftPot>(_giftPots, cloudGiftPots, (p) => p.id);
 
       if (cloudProfile != null) _profile = cloudProfile;
+
+      // Notification preferences — cloud wins on pull
+      final cloudNotifPrefs = data['notificationPrefs'];
+      if (cloudNotifPrefs is Map<String, dynamic> && cloudNotifPrefs.isNotEmpty) {
+        _notificationPrefs = cloudNotifPrefs;
+      }
 
       _invalidateWishCache();
       notifyListeners();

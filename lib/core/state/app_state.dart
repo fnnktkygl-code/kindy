@@ -118,6 +118,7 @@ class PigioAppState extends ChangeNotifier {
   static const String _occasionPassLevelKey      = 'pigio_occasion_pass_level';
   static const String _occasionPassSeasonKey     = 'pigio_occasion_pass_season';
   static const String _guardianTierKey           = 'pigio_guardian_tier';
+  static const String _notificationPrefsKey       = 'pigio_notification_prefs';
 
   // ── Fields ────────────────────────────────────────────────────────────────
   Locale _locale = const Locale('fr');
@@ -241,6 +242,9 @@ class PigioAppState extends ChangeNotifier {
   Map<String, String>       _wizzHistory         = {};
   WizzEffectMode            _wizzEffectMode      = WizzEffectMode.phase1;
 
+  // Notification preferences (synced to cloud for edge function)
+  Map<String, dynamic>      _notificationPrefs   = {};
+
   // Ready signal for deep-link handling
   final Completer<void> _readyCompleter = Completer<void>();
   Future<void> get ready => _readyCompleter.future;
@@ -285,6 +289,7 @@ class PigioAppState extends ChangeNotifier {
   String?                 get inviteFocusContactId    => _inviteFocusContactId;
   List<PigioNotification> get notifications           => List.unmodifiable(_notifications);
   int                     get unseenNotificationsCount => _unseenNotificationsCount;
+  Map<String, dynamic>    get notificationPrefs     => Map.unmodifiable(_notificationPrefs);
 
   bool         get mascotVisible         => _mascotVisible;
   bool         get mascotSilent          => _mascotSilent;
@@ -471,6 +476,8 @@ class PigioAppState extends ChangeNotifier {
     // Notifications — stored in secure storage to protect message content
     await _secureWrite(key: _notificationsKey, value: jsonEncode(_notifications.map((n) => n.toMap()).toList()));
     await prefs.setInt('pigio_unseen_notifications', _unseenNotificationsCount);
+    // Notification preferences — stored encrypted
+    await _secureWrite(key: _notificationPrefsKey, value: jsonEncode(_notificationPrefs));
     // Mascot
     await prefs.setBool(_mascotVisibleKey,       _mascotVisible);
     await prefs.setBool(_mascotSilentKey,        _mascotSilent);
@@ -566,6 +573,7 @@ class PigioAppState extends ChangeNotifier {
       _secureRead(_giftPotsKey),         // [10]
       _secureRead(_pollsKey),            // [11]
       _secureRead(_personalityProfileKey), // [12]
+      _secureRead(_notificationPrefsKey),   // [13]
     ]);
 
     final localeCode = prefs.getString(_localeKey);
@@ -892,6 +900,19 @@ class PigioAppState extends ChangeNotifier {
         }
       } catch (e) {
         log.warn('AppState', 'Failed to decode personality profile', e);
+      }
+    }
+
+    // Notification preferences — read from secure storage
+    final secureNotifPrefsRaw = secureValues[13];
+    if (secureNotifPrefsRaw != null && secureNotifPrefsRaw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(secureNotifPrefsRaw);
+        if (decoded is Map<String, dynamic>) {
+          _notificationPrefs = decoded;
+        }
+      } catch (e) {
+        log.warn('AppState', 'Failed to decode notification prefs', e);
       }
     }
 

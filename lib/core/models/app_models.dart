@@ -307,6 +307,22 @@ class ContactProfile {
   bool get isFamily => trustLevel == TrustLevel.family;
   bool get isManaged => managedProfile;
 
+  /// Derives the contact's current age from their birthdate string (dd/mm/yyyy).
+  /// Returns null if birthdate is missing, incomplete, or unparseable.
+  int? get age {
+    if (birthdate == null || birthdate!.isEmpty) return null;
+    final parts = birthdate!.split('/');
+    if (parts.length < 3) return null;
+    final day = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final year = int.tryParse(parts[2]);
+    if (day == null || month == null || year == null) return null;
+    final now = DateTime.now();
+    int a = now.year - year;
+    if (now.month < month || (now.month == month && now.day < day)) a--;
+    return a;
+  }
+
   static const Object _sentinel = Object();
 
   ContactProfile({
@@ -600,6 +616,12 @@ class Event {
   final double percent;
   final String? contactId;
   final String? groupId;
+  /// Whether reminder notifications are enabled for this event.
+  final bool notificationsEnabled;
+  /// Days-before thresholds at which reminders are sent (e.g. [7, 3, 1]).
+  final List<int> reminderThresholds;
+  /// If set, notifications are muted until this date.
+  final DateTime? mutedUntil;
 
   Event({
     required this.id,
@@ -613,7 +635,56 @@ class Event {
     this.percent = 0.0,
     this.contactId,
     this.groupId,
+    this.notificationsEnabled = true,
+    this.reminderThresholds = const [7, 3, 1],
+    this.mutedUntil,
   });
+
+  /// For a recurring event, calculates how many years since the original date.
+  /// Returns null for non-recurring events.
+  int? get age {
+    if (!isRecurring) return null;
+    return DateTime.now().year - date.year;
+  }
+
+  /// Whether notifications are currently active (enabled AND not muted).
+  bool get isNotificationActive =>
+      notificationsEnabled &&
+      (mutedUntil == null || DateTime.now().isAfter(mutedUntil!));
+
+  Event copyWith({
+    String? id,
+    String? title,
+    String? typeEn,
+    String? typeFr,
+    DateTime? date,
+    bool? isRecurring,
+    String? emoji,
+    Color? color,
+    double? percent,
+    String? contactId,
+    String? groupId,
+    bool? notificationsEnabled,
+    List<int>? reminderThresholds,
+    DateTime? mutedUntil,
+  }) {
+    return Event(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      typeEn: typeEn ?? this.typeEn,
+      typeFr: typeFr ?? this.typeFr,
+      date: date ?? this.date,
+      isRecurring: isRecurring ?? this.isRecurring,
+      emoji: emoji ?? this.emoji,
+      color: color ?? this.color,
+      percent: percent ?? this.percent,
+      contactId: contactId ?? this.contactId,
+      groupId: groupId ?? this.groupId,
+      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      reminderThresholds: reminderThresholds ?? this.reminderThresholds,
+      mutedUntil: mutedUntil ?? this.mutedUntil,
+    );
+  }
 
   DateTime getOccurrenceForYear(int targetYear) {
     if (!isRecurring) return date;
@@ -650,6 +721,9 @@ class Event {
         'percent': percent,
         'contactId': contactId,
         'groupId': groupId,
+        'notificationsEnabled': notificationsEnabled,
+        'reminderThresholds': reminderThresholds,
+        'mutedUntil': mutedUntil?.toIso8601String(),
       };
 
   factory Event.fromMap(Map<String, dynamic> map) {
@@ -672,6 +746,14 @@ class Event {
       percent: (map['percent'] as num?)?.toDouble() ?? 0.0,
       contactId: map['contactId'] as String?,
       groupId: map['groupId'] as String?,
+      notificationsEnabled: map['notificationsEnabled'] as bool? ?? true,
+      reminderThresholds: (map['reminderThresholds'] as List<dynamic>?)
+              ?.map((e) => (e as num).toInt())
+              .toList() ??
+          const [7, 3, 1],
+      mutedUntil: map['mutedUntil'] != null
+          ? DateTime.tryParse(map['mutedUntil'].toString())
+          : null,
     );
   }
 }

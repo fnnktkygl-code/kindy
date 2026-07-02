@@ -8,6 +8,7 @@ import 'package:kindy/core/theme/pigio_theme.dart';
 import 'package:kindy/core/i18n/i18n.dart';
 import 'package:kindy/screens/mascot/mascot_settings_screen.dart';
 import 'package:kindy/screens/settings/pigio_plus_screen.dart';
+import 'package:kindy/screens/settings/notification_settings_screen.dart';
 import 'package:kindy/screens/auth/splash_screen.dart';
 import 'package:kindy/services/pigio_logger.dart';
 
@@ -73,6 +74,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(width: 8),
                         _LangBtn(lang: 'fr', current: state.locale.languageCode, onTap: () => state.setLocale(const Locale('fr'))),
                       ],
+                    ),
+                  ),
+                  Divider(height: 1, color: theme.divider),
+                  ListTile(
+                    leading: Icon(Icons.notifications_active, color: theme.primary, size: 22),
+                    title: Text(
+                      state.locale.languageCode == 'fr' ? 'Notifications & Rappels' : 'Notifications & Reminders',
+                      style: fw(size: 16, w: FontWeight.w700, color: theme.ink),
+                    ),
+                    trailing: Icon(Icons.chevron_right, color: theme.light),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const NotificationSettingsScreen()),
                     ),
                   ),
                 ],

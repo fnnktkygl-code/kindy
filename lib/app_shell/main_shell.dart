@@ -11,6 +11,7 @@ import '../core/notifications/fcm_coordinator.dart';
 import 'package:kindy/screens/activity/activity_history_screen.dart';
 import 'package:kindy/screens/events/calendar_screen.dart';
 import 'package:kindy/screens/contacts/contacts_screen.dart';
+import 'package:kindy/features/contacts/presentation/contact_profile_screen.dart';
 import 'package:kindy/features/home/presentation/home_screen.dart';
 import 'package:kindy/screens/profile/profile_screen.dart';
 import 'package:kindy/screens/settings/settings_screen.dart';
@@ -23,6 +24,7 @@ import 'package:kindy/core/config/constants.dart';
 import 'package:kindy/core/i18n/i18n.dart';
 import 'package:kindy/core/theme/pigio_theme.dart';
 import 'package:kindy/services/notification_service.dart';
+import 'package:kindy/services/update_service.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -52,6 +54,65 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
     WidgetsBinding.instance.addObserver(_lifecycleObserver);
     _initDeepLinkHandling();
     _initFcm();
+    _initUpdateChecker();
+  }
+
+  Future<void> _initUpdateChecker() async {
+    // Delay slightly to not interrupt the initial app render
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+
+    final updateInfo = await UpdateService.checkForUpdate();
+    if (updateInfo != null && mounted) {
+      final theme = context.read<PigioAppState>().currentTheme;
+      showDialog(
+        context: context,
+        barrierDismissible: !updateInfo.isMandatory,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: theme.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Text(
+            t(context, 'update_available'),
+            style: TextStyle(fontWeight: FontWeight.w900, color: theme.ink),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Version ${updateInfo.version} est disponible !',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: theme.ink),
+              ),
+              if (updateInfo.releaseNotes != null && updateInfo.releaseNotes!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  updateInfo.releaseNotes!,
+                  style: TextStyle(fontSize: 13, color: theme.mid),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            if (!updateInfo.isMandatory)
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Plus tard', style: TextStyle(color: theme.mid, fontWeight: FontWeight.bold)),
+              ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primary,
+                foregroundColor: theme.onAccent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              onPressed: () {
+                launchUrl(Uri.parse(updateInfo.downloadUrl), mode: LaunchMode.externalApplication);
+              },
+              child: const Text('Mettre à jour', style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   late final WidgetsBindingObserver _lifecycleObserver =
@@ -65,15 +126,53 @@ class _MainShellState extends State<MainShell> with TickerProviderStateMixin {
       await context.read<PigioAppState>().ready;
       await _deeplinkCoordinator.init(
         isMounted: () => mounted,
-        onInviteUri: _processIncomingInvite,
+        onHandledUri: _processIncomingHandledUri,
       );
     } catch (e) {
       debugPrint('[MainShell] Deep-link init failed: $e');
     }
   }
 
-  Future<void> _processIncomingInvite(Uri uri) async {
+  Future<void> _processIncomingHandledUri(Uri uri) async {
     if (!mounted) return;
+    
+    if (uri.scheme.toLowerCase() == 'pigio') {
+      final host = uri.host.toLowerCase();
+      
+      // Navigate to Calendar
+      if (host == 'event') {
+        final id = uri.queryParameters['id'];
+        if (id != null) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const CalendarScreen(),
+            ),
+          );
+          // Wait for context to mount and state to be available to open the event
+          // Future enhancement: could pass the ID to CalendarScreen directly
+          return;
+        }
+      }
+
+      // Navigate to Contact Profile
+      if (host == 'contact') {
+        final id = uri.queryParameters['id'];
+        if (id != null) {
+          final state = context.read<PigioAppState>();
+          final contact = state.contacts.where((c) => c.id == id).firstOrNull;
+          if (contact != null) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ContactProfileScreen(contact: contact),
+              ),
+            );
+          }
+          return;
+        }
+      }
+    }
+
+    // Default: handle as invite
     final state = context.read<PigioAppState>();
     final theme = context.read<PigioAppState>().currentTheme;
 
