@@ -175,6 +175,42 @@ extension SettingsExtension on PigioAppState {
     _mascotMoment = MascotMoment.none;
     notifyListeners();
   }
+  
+  void updateContextualMascotMoment() {
+    if (_mascotMoment != MascotMoment.none) return; // Don't override existing moment
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    // Check birthdays
+    for (final contact in _contacts) {
+      if (contact.birthdate != null) {
+        final parsedDate = DateTime.tryParse(contact.birthdate!);
+        if (parsedDate != null) {
+          final nextBday = DateTime(now.year, parsedDate.month, parsedDate.day);
+          final bdayThisYear = nextBday.isBefore(today) ? DateTime(now.year + 1, parsedDate.month, parsedDate.day) : nextBday;
+          final diff = bdayThisYear.difference(today).inDays;
+          if (diff >= 0 && diff <= 30) {
+            setMascotMoment(MascotMoment.birthdaySoon);
+            return;
+          }
+        }
+      }
+    }
+    
+    // Check busy month (more than 3 events in next 30 days)
+    int upcomingEvents = 0;
+    for (final event in _events) {
+      final diff = event.date.difference(today).inDays;
+      if (diff >= 0 && diff <= 30) {
+        upcomingEvents++;
+      }
+    }
+    if (upcomingEvents >= 3) {
+      setMascotMoment(MascotMoment.busyMonth);
+      return;
+    }
+  }
 
   // ── Outfit Engine ──────────────────────────────────────────────────────────
 
@@ -205,13 +241,18 @@ extension SettingsExtension on PigioAppState {
       titleEn: 'Daily bonus claimed! +10 XP',
     );
     if (_loginStreak == 7) ReviewService.tryPrompt(); // 7-day streak = engaged user
-    // Advance Occasion Pass on daily login
-    advanceOccasionPass();
     // Trigger mood check-in if not yet done today
     final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
     if (_userMoodDate != todayStr) {
       _moodCheckInPending = true;
     }
+    
+    // Check upcoming events for soft reminders
+    SoftReminderService.checkUpcomingEvents(this);
+    
+    // Update contextual mascot moment if idle
+    updateContextualMascotMoment();
+    
     return true;
   }
 
@@ -729,28 +770,7 @@ extension SettingsExtension on PigioAppState {
     }
   }
 
-  // ── Monetization ─────────────────────────────────────────────────────────
-
-  /// Add Plumes (premium currency). Used for purchases, stipends, bonuses.
-  void addPlumes(int amount, {String? reason}) {
-    if (amount <= 0) return;
-    _plumes += amount;
-    if (reason != null) {
-      AnalyticsService.log('plumes_earned', {'amount': amount, 'reason': reason});
-    }
-    notifyListeners();
-    _saveData();
-  }
-
-  /// Spend Plumes. Returns true if the user had enough, false otherwise.
-  bool spendPlumes(int amount) {
-    if (amount <= 0 || _plumes < amount) return false;
-    _plumes -= amount;
-    AnalyticsService.log('plumes_spent', {'amount': amount, 'balance': _plumes});
-    notifyListeners();
-    _saveData();
-    return true;
-  }
+  // ── Subscription Management ─────────────────────────────────────────────
 
   /// Called after auth to identify the user with RevenueCat.
   Future<void> identifySubscription(String userId) async {
@@ -770,171 +790,26 @@ extension SettingsExtension on PigioAppState {
     notifyListeners();
   }
 
-  /// Claim the monthly Plumes stipend for Pigio+ subscribers.
-  /// Awards 50 Plumes once per calendar month. Deduplicated via SharedPreferences.
-  Future<void> claimMonthlyPlumeStipend() async {
-    if (!SubscriptionService.isPremium) return;
-    final now = DateTime.now();
-    final key = 'pigio_plume_stipend_${now.year}_${now.month}';
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(key) == true) return;
-    await prefs.setBool(key, true);
-    addPlumes(50, reason: 'monthly_stipend');
-    addMemory(
-      emoji: '💎',
-      titleFr: 'Allocation mensuelle : +50 Plumes !',
-      titleEn: 'Monthly stipend: +50 Plumes!',
-    );
-  }
-
-  /// Purchase a wardrobe item with Plumes. Returns true if successful.
-  bool purchaseWithPlumes(String itemId) {
-    final item = MascotOutfitEngine.catalog.where((i) => i.id == itemId).firstOrNull;
-    if (item == null || !item.isPlumeItem) return false;
-    if (_unlockedClothing.contains(itemId)) return false; // already owned
-    if (item.premiumOnly && !SubscriptionService.isPremium) return false;
-    if (!spendPlumes(item.plumeCost!)) return false;
-    unlockClothing(itemId);
-    addMemory(
-      emoji: item.emoji,
-      titleFr: '${item.name} acheté avec des Plumes !',
-      titleEn: '${item.name} purchased with Plumes!',
-    );
-    return true;
-  }
-
-  /// Purchase a Plumes IAP pack via RevenueCat.
-  Future<bool> purchasePlumePack(String productId) async {
-    final ok = await SubscriptionService.purchasePlumes(productId);
-    if (!ok) return false;
-    // Map product IDs to Plumes amounts
-    int amount;
-    switch (productId) {
-      case SubscriptionService.kPlumes100:
-        amount = 100;
-      case SubscriptionService.kPlumes500:
-        amount = 500;
-      case SubscriptionService.kPlumes1200:
-        amount = 1200;
-      default:
-        amount = 100;
-    }
-    addPlumes(amount, reason: 'iap_$productId');
-    addMemory(
-      emoji: '💎',
-      titleFr: '+$amount Plumes achetées !',
-      titleEn: '+$amount Plumes purchased!',
-    );
-    return true;
-  }
-
-  // ── Occasion Pass (Battle Pass) ──────────────────────────────────────────
-
-  /// Advance the Occasion Pass by 1 level. Awards the tier reward automatically.
-  /// Called when the user completes a qualifying action (daily login, wish added, etc.).
-  void advanceOccasionPass() {
-    final season = MascotOutfitEngine.currentSeason();
-    // Reset progress if season changed
-    if (_occasionPassSeason != season) {
-      _occasionPassSeason = season;
-      _occasionPassLevel = 0;
-    }
-    final maxLevel = MascotOutfitEngine.occasionPassTiers.length;
-    if (_occasionPassLevel >= maxLevel) return; // already maxed
-
-    _occasionPassLevel++;
-    final tier = MascotOutfitEngine.occasionPassTiers[_occasionPassLevel - 1];
-
-    // Award free-track rewards (Plumes) to everyone
-    if (tier.plumes > 0) {
-      addPlumes(tier.plumes, reason: 'occasion_pass_lv${tier.level}');
-    }
-
-    // Award premium-track rewards only to Pigio+ / Occasion Pass holders
-    if (tier.premiumTrack && tier.unlockItemId != null) {
-      if (SubscriptionService.isPremium || SubscriptionService.hasOccasionPass) {
-        unlockClothing(tier.unlockItemId!);
-      }
-    }
-
-    addMemory(
-      emoji: tier.emoji,
-      titleFr: 'Occasion Pass niv. ${tier.level} : ${tier.nameFr}',
-      titleEn: 'Occasion Pass lv. ${tier.level}: ${tier.nameEn}',
-    );
-    AnalyticsService.log('occasion_pass_advance', {'level': _occasionPassLevel, 'season': season});
-    notifyListeners();
-    _saveData();
-  }
-
-  /// Purchase the Occasion Pass (standalone, without full Pigio+).
-  Future<bool> purchaseOccasionPass() async {
-    final ok = await SubscriptionService.purchaseOccasionPass();
-    if (!ok) return false;
-    // Retroactively unlock any premium tiers already reached
-    for (int i = 0; i < _occasionPassLevel; i++) {
-      final tier = MascotOutfitEngine.occasionPassTiers[i];
-      if (tier.premiumTrack && tier.unlockItemId != null) {
-        unlockClothing(tier.unlockItemId!);
-      }
-    }
-    notifyListeners();
-    return true;
-  }
-
-  // ── Altruistic Gifting & Guardian System ──────────────────────────────────
+  // ── Altruistic Gifting (simplified — no tiers, no public ranking) ──────
 
   /// Gift a 1-month Pigio+ subscription to another user via RevenueCat IAP.
   /// Returns true if the purchase succeeded.
   Future<bool> giftPigioPlus() async {
     final ok = await SubscriptionService.purchaseGiftSubscription();
     if (!ok) return false;
-    _updateGuardianTier();
+    // Track the gift count privately (no public ranking)
+    final prefs = await SharedPreferences.getInstance();
+    final giftsKey = 'pigio_gifts_given_count';
+    final count = (prefs.getInt(giftsKey) ?? 0) + 1;
+    await prefs.setInt(giftsKey, count);
     addMemory(
       emoji: '🎁',
       titleFr: 'Pigio+ offert à un proche !',
       titleEn: 'Pigio+ gifted to a loved one!',
     );
     awardMascotProgress(20, emoji: '💛', titleFr: 'Cadeau généreux ! +20 XP', titleEn: 'Generous gift! +20 XP');
-    AnalyticsService.log('gift_pigio_plus', {});
+    AnalyticsService.log('gift_pigio_plus', {'count': count});
     return true;
-  }
-
-  /// Guardian tiers based on number of gifts given.
-  /// '', 'ally' (1+ gifts), 'protector' (3+ gifts), 'superhero' (10+ gifts)
-  void _updateGuardianTier() async {
-    final prefs = await SharedPreferences.getInstance();
-    final giftsKey = 'pigio_gifts_given_count';
-    final count = (prefs.getInt(giftsKey) ?? 0) + 1;
-    await prefs.setInt(giftsKey, count);
-
-    String newTier;
-    if (count >= 10) {
-      newTier = 'superhero';
-    } else if (count >= 3) {
-      newTier = 'protector';
-    } else if (count >= 1) {
-      newTier = 'ally';
-    } else {
-      newTier = '';
-    }
-
-    if (_guardianTier != newTier) {
-      _guardianTier = newTier;
-      if (newTier.isNotEmpty) {
-        final tierEmojis = {'ally': '🛡️', 'protector': '⚔️', 'superhero': '🦸'};
-        final tierNamesFr = {'ally': 'Allié', 'protector': 'Protecteur', 'superhero': 'Super-héros'};
-        final tierNamesEn = {'ally': 'Ally', 'protector': 'Protector', 'superhero': 'Superhero'};
-        addMemory(
-          emoji: tierEmojis[newTier] ?? '🛡️',
-          titleFr: 'Nouveau rang Guardian : ${tierNamesFr[newTier]} !',
-          titleEn: 'New Guardian rank: ${tierNamesEn[newTier]}!',
-        );
-      }
-      AnalyticsService.log('guardian_tier_changed', {'tier': newTier, 'gifts': count});
-      notifyListeners();
-      _saveData();
-    }
   }
 
   // ── Busy Month Insight ─────────────────────────────────────────────────────

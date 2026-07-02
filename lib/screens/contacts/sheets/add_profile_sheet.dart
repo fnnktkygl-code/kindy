@@ -474,14 +474,28 @@ class _AddProfileSheetState extends State<AddProfileSheet> {
               readOnly: _isJoinedRemote,
             ),
             const SizedBox(height: 16),
-            _buildInput(
-              controller: _roleCtrl,
-              label: widget.isMyProfile ? 'Pseudo' : 'Relation',
-              hint: widget.isMyProfile ? 'Ex: @leo' : 'Ex: Petit frère, Ami...',
-              icon: widget.isMyProfile ? Icons.alternate_email : Icons.people,
-              hasError: !widget.isMyProfile && !_isJoinedRemote && _submitted && _roleCtrl.text.trim().isEmpty,
-              errorText: 'La relation est obligatoire (ex: Ami, Sœur…)',
-            ),
+            if (widget.isMyProfile)
+              _buildInput(
+                controller: _roleCtrl,
+                label: 'Pseudo',
+                hint: 'Ex: @leo',
+                icon: Icons.alternate_email,
+                hasError: false,
+              )
+            else
+              GestureDetector(
+                onTap: () => _showRelationPicker(context, theme),
+                child: AbsorbPointer(
+                  child: _buildInput(
+                    controller: _roleCtrl,
+                    label: 'Relation',
+                    hint: 'Sélectionner...',
+                    icon: Icons.people,
+                    hasError: !_isJoinedRemote && _submitted && _roleCtrl.text.trim().isEmpty,
+                    errorText: 'La relation est obligatoire',
+                  ),
+                ),
+              ),
             const SizedBox(height: 24),
 
             if (!widget.isMyProfile) ...[
@@ -701,6 +715,80 @@ class _AddProfileSheetState extends State<AddProfileSheet> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showRelationPicker(BuildContext context, PigioThemeData theme) {
+    final Map<String, List<String>> categories = {
+      "Famille proche": ["Mère", "Père", "Fille", "Fils", "Sœur", "Frère", "Conjointe / Femme", "Conjoint / Mari"],
+      "Famille élargie": ["Grand-mère", "Grand-père", "Petite-fille", "Petit-fils", "Tante", "Oncle", "Nièce", "Neveu", "Cousine", "Cousin", "Belle-mère", "Beau-père", "Belle-sœur", "Beau-frère"],
+      "Autres": ["Ami(e)", "Collègue", "Voisin(e)", "Connaissance", "Parrain", "Marraine", "Filleul(e)", "Autre"]
+    };
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.8,
+          decoration: BoxDecoration(
+            color: theme.sheet,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(width: 40, height: 5, decoration: BoxDecoration(color: theme.mid.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(10))),
+              const SizedBox(height: 16),
+              Text("Sélectionner la relation", style: fw(size: 20, w: FontWeight.w900, color: theme.ink)),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  children: categories.entries.map((entry) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Text(entry.key.toUpperCase(), style: fw(size: 13, w: FontWeight.w800, color: theme.primary, letterSpacing: 1.2)),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: theme.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: theme.divider),
+                          ),
+                          child: Column(
+                            children: entry.value.asMap().entries.map((item) {
+                              final isLast = item.key == entry.value.length - 1;
+                              return Column(
+                                children: [
+                                  ListTile(
+                                    title: Text(item.value, style: fw(size: 16, w: FontWeight.w600, color: theme.ink)),
+                                    trailing: _roleCtrl.text == item.value ? Icon(Icons.check_circle, color: theme.primary) : null,
+                                    onTap: () {
+                                      setState(() => _roleCtrl.text = item.value);
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                  if (!isLast) Divider(color: theme.divider, height: 1),
+                                ],
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

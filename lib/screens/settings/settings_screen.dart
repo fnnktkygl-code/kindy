@@ -10,6 +10,7 @@ import 'package:kindy/screens/mascot/mascot_settings_screen.dart';
 import 'package:kindy/screens/settings/pigio_plus_screen.dart';
 import 'package:kindy/screens/settings/notification_settings_screen.dart';
 import 'package:kindy/screens/auth/splash_screen.dart';
+import 'package:kindy/screens/settings/sheets/cloud_sync_sheet.dart';
 import 'package:kindy/services/pigio_logger.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -130,7 +131,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           const SizedBox(height: 2),
                           Text(
                             state.isPremium
-                                ? '${state.plumes} Plumes'
+                                ? (state.locale.languageCode == 'fr' ? 'Abonnement actif ✓' : 'Subscription active ✓')
                                 : (state.locale.languageCode == 'fr' ? 'Débloquez les avantages premium' : 'Unlock premium perks'),
                             style: fw(size: 12, color: Colors.white70),
                           ),
@@ -219,6 +220,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onTap: _isDeleting ? null : () => _confirmAccountDelete(context, state, theme),
                   ),
                 ],
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // ── Cloud Backup ─────────────────────────────────────────────
+            _buildSectionTitle(context, 'Sauvegarde', theme),
+            Container(
+              decoration: BoxDecoration(color: theme.card, borderRadius: BorderRadius.circular(PigioDesign.radiusMedium)),
+              child: ListTile(
+                leading: Icon(Icons.cloud_outlined, color: state.syncEnabled && state.backupLookupKey.isNotEmpty ? theme.success : theme.mid),
+                title: Text('Sauvegarde Cloud', style: fw(size: 16, w: FontWeight.w700, color: theme.ink)),
+                subtitle: Text(
+                  state.syncEnabled && state.backupLookupKey.isNotEmpty ? 'Chiffrement E2E activé ✓' : 'Non activée',
+                  style: fw(size: 12, color: state.syncEnabled && state.backupLookupKey.isNotEmpty ? theme.success : theme.mid),
+                ),
+                trailing: Icon(Icons.chevron_right, color: theme.mid),
+                onTap: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => const CloudSyncSheet(),
+                ),
               ),
             ),
 

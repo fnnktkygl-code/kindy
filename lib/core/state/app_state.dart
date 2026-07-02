@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:async' as async_lib show Timer;
 
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import 'package:audioplayers/audioplayers.dart';
 import '../config/constants.dart';
 import 'package:kindy/core/theme/pigio_theme.dart';
 import '../models/app_models.dart';
+import '../models/user_badge.dart';
 import '../../features/invites/state/invite_commands.dart';
 import '../../features/invites/state/invite_mappers.dart';
 import '../../features/invites/state/invite_resolution.dart';
@@ -22,9 +24,11 @@ import '../../services/invitation_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/fcm_service.dart';
 import '../../services/pigio_voice.dart';
+import '../../services/soft_reminder_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/pigio_logger.dart';
 import '../../services/analytics_service.dart';
+import '../../services/backup_service.dart';
 import '../../services/churn_score_service.dart';
 import '../../services/review_service.dart';
 import '../../services/weather_service.dart';
@@ -110,14 +114,11 @@ class PigioAppState extends ChangeNotifier {
   static const String _completedCombosKey       = 'pigio_completed_combos';
   static const String _collectionMilestonesKey  = 'pigio_collection_milestones';
   static const String _dailyChallengeKey        = 'pigio_daily_challenge_completed';
+  static const String _unlockedBadgesKey        = 'pigio_unlocked_badges';
   static const String _userMoodKey              = 'pigio_user_mood';
   static const String _userMoodDateKey          = 'pigio_user_mood_date';
   static const String _weatherEffectsKey         = 'pigio_weather_effects';
   static const String _autoThemeKey              = 'pigio_auto_theme';
-  static const String _plumesKey                 = 'pigio_plumes';
-  static const String _occasionPassLevelKey      = 'pigio_occasion_pass_level';
-  static const String _occasionPassSeasonKey     = 'pigio_occasion_pass_season';
-  static const String _guardianTierKey           = 'pigio_guardian_tier';
   static const String _notificationPrefsKey       = 'pigio_notification_prefs';
 
   // ── Fields ────────────────────────────────────────────────────────────────
@@ -131,6 +132,7 @@ class PigioAppState extends ChangeNotifier {
   // Outfit
   Map<ClothingSlot, String?> _activeOutfit = {};
   List<String> _unlockedClothing = [];
+  List<String> _unlockedBadges = [];
   ClothingRequest? _currentClothingRequest;
   final List<Map<ClothingSlot, String?>> _outfitHistory = [];
   List<String> _favoriteClothing = [];
@@ -227,15 +229,19 @@ class PigioAppState extends ChangeNotifier {
   DateTime? _lastStaleCircleNudge;
 
   // Monetization
-  int _plumes = 0; // premium currency
-  int _occasionPassLevel = 0; // current season pass progress (0 = not started)
-  String _occasionPassSeason = ''; // e.g. '2026-Q1' to detect season rollover
-  String _guardianTier = ''; // '', 'ally', 'protector', 'superhero'
+
 
   // Sync / onboarding
   String _syncKey            = '';
   bool   _syncEnabled        = false;
   bool   _onboardingCompleted = false;
+
+  // E2E Backup
+  String _backupSalt       = ''; // base64-encoded salt (non-secret, stored in SharedPrefs)
+  String _backupLookupKey  = ''; // SHA-256(phrase) used as sync_key on server
+  Uint8List? _derivedKey;         // AES-256 key — memory-only cache, never persisted
+  static const String _backupSaltKey      = 'pigio_backup_salt';
+  static const String _backupLookupKeyKey = 'pigio_backup_lookup_key';
 
   // Personality / Wizz
   Map<String, List<String>> _personalityProfile = {};
@@ -319,13 +325,8 @@ class PigioAppState extends ChangeNotifier {
   bool         get weatherEffectsEnabled => _weatherEffectsEnabled;
   bool         get autoTheme             => _autoTheme;
 
-  // Monetization
-  int          get plumes               => _plumes;
-  int          get occasionPassLevel    => _occasionPassLevel;
-  String       get occasionPassSeason   => _occasionPassSeason;
-  String       get guardianTier         => _guardianTier;
+  // Subscription
   bool         get isPremium            => SubscriptionService.isPremium;
-  bool         get hasOccasionPass      => SubscriptionService.hasOccasionPass;
   DateTime?    get plusExpirationDate   => SubscriptionService.plusExpirationDate;
 
   /// Current part of the day based on the local hour.
@@ -412,6 +413,9 @@ class PigioAppState extends ChangeNotifier {
   bool         get syncEnabled           => _syncEnabled;
   bool         get onboardingCompleted   => _onboardingCompleted;
   bool         get needsOnboarding => !_onboardingCompleted;
+  String       get backupSalt            => _backupSalt;
+  String       get backupLookupKey       => _backupLookupKey;
+  Uint8List?   get derivedKey            => _derivedKey;
   Map<String, List<String>> get personalityProfile => _personalityProfile;
   WizzEffectMode get wizzEffectMode => _wizzEffectMode;
   int            get globalWizzNonce => _globalWizzNonce;
@@ -431,12 +435,31 @@ class PigioAppState extends ChangeNotifier {
   }
 
   // Outfit getters (used by mascot & wardrobe screens)
-  Map<ClothingSlot, String?> get activeOutfit => _activeOutfit;
-  List<String> get unlockedClothing => _unlockedClothing;
+  Map<ClothingSlot, String?> get activeOutfit        => _activeOutfit;
+  List<String> get unlockedClothing       => _unlockedClothing;
+  List<String> get unlockedBadges         => _unlockedBadges;
   ClothingRequest? get currentClothingRequest => _currentClothingRequest;
   List<String> get favoriteClothing => _favoriteClothing;
   List<OutfitPreset> get outfitPresets => _outfitPresets;
   bool get canUndoOutfit => _outfitHistory.isNotEmpty;
+
+  // ── Badges ─────────────────────────────────────────────────────────────────
+
+  /// Checks if a badge trigger is met. If so, unlocks the badge and notifies.
+  /// Needs to be called with a callback to show the unlock dialog in the UI.
+  void checkBadgeTrigger(BadgeTrigger trigger, {void Function(UserBadge badge)? onUnlocked}) {
+    final badge = UserBadge.catalog.firstWhere((b) => b.trigger == trigger, orElse: () => throw Exception('Unknown badge'));
+    if (_unlockedBadges.contains(badge.id)) return; // Already unlocked
+
+    _unlockedBadges.add(badge.id);
+    AnalyticsService.log('badge_unlocked', {'badge_id': badge.id});
+    notifyListeners();
+    _saveData();
+
+    if (onUnlocked != null) {
+      onUnlocked(badge);
+    }
+  }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
   String _newId() => _uuid.v4();
@@ -447,6 +470,40 @@ class PigioAppState extends ChangeNotifier {
   String get _apiBaseUrl => _inviteApiBaseUrl;
 
   // ── Persistence ───────────────────────────────────────────────────────────
+
+  /// Bulk restore from a decrypted E2E backup.
+  /// Called by BackupService.deserializeIntoState().
+  void restoreFromBackup({
+    required List<ContactProfile> contacts,
+    required List<CircleGroup> groups,
+    required List<Wish> wishes,
+    required List<Event> events,
+    required List<SizeProfile> sizes,
+    required List<GiftPot> giftPots,
+    required List<GroupPoll> polls,
+    required List<PendingInvite> pendingInvites,
+    required List<ActivityLog> activityLogs,
+    required List<PigioNotification> notifications,
+    UserProfile? profile,
+  }) {
+    // Merge by ID so we don't lose any local data that isn't in the backup
+    _mergeById<ContactProfile>(_contacts, contacts, (c) => c.id);
+    _mergeById<CircleGroup>(_groups, groups, (g) => g.id);
+    _mergeById<Wish>(_wishes, wishes, (w) => w.id);
+    _mergeById<Event>(_events, events, (e) => e.id);
+    _mergeById<SizeProfile>(_sizes, sizes, (s) => '${s.contactId}_${s.categoryKey}');
+    _mergeById<GiftPot>(_giftPots, giftPots, (p) => p.id);
+    _mergeById<GroupPoll>(_polls, polls, (p) => p.id);
+    _mergeById<PendingInvite>(_pendingInvites, pendingInvites, (i) => i.id);
+    _mergeById<ActivityLog>(_activityLogs, activityLogs, (a) => a.id);
+    _mergeById<PigioNotification>(_notifications, notifications, (n) => n.id);
+
+    if (profile != null) _profile = profile;
+
+    _invalidateWishCache();
+    notifyListeners();
+    _saveData();
+  }
 
   /// Debounced save — coalesces rapid mutations into a single write after 500ms.
   void _saveData() {
@@ -522,6 +579,7 @@ class PigioAppState extends ChangeNotifier {
     await prefs.setString(_activeOutfitKey,      jsonEncode(outfitMap));
     await prefs.setStringList(_unlockedClothingKey, _unlockedClothing);
     await prefs.setStringList(_favoriteClothingKey, _favoriteClothing);
+    await prefs.setStringList(_unlockedBadgesKey, _unlockedBadges);
     await prefs.setString(_outfitColorsKey, jsonEncode(_outfitColors));
     await prefs.setString(_outfitPresetsKey, jsonEncode(_outfitPresets.map((p) => p.toMap()).toList()));
     // Sync / onboarding — sync key stored in secure storage (not SharedPreferences)
@@ -529,6 +587,13 @@ class PigioAppState extends ChangeNotifier {
       await _secureWrite(key: _syncKeyKey, value: _syncKey);
     }
     await prefs.setBool('pigio_sync_enabled', _syncEnabled);
+    // E2E Backup salt & lookup key (non-secret, stored in SharedPreferences)
+    if (_backupSalt.isNotEmpty) {
+      await prefs.setString(_backupSaltKey, _backupSalt);
+    }
+    if (_backupLookupKey.isNotEmpty) {
+      await prefs.setString(_backupLookupKeyKey, _backupLookupKey);
+    }
     await prefs.setBool(_onboardingCompletedKey, _onboardingCompleted);
     // Personality — encrypted (behavioural PII)
     if (_personalityProfile.isNotEmpty) {
@@ -539,18 +604,13 @@ class PigioAppState extends ChangeNotifier {
       await prefs.setString(_wizzKey, jsonEncode(_wizzHistory));
     }
     await prefs.setString(_wizzEffectModeKey, _wizzEffectMode.name);
-    // Monetization
-    await prefs.setInt(_plumesKey, _plumes);
-    await prefs.setInt(_occasionPassLevelKey, _occasionPassLevel);
-    if (_occasionPassSeason.isNotEmpty) {
-      await prefs.setString(_occasionPassSeasonKey, _occasionPassSeason);
-    }
-    if (_guardianTier.isNotEmpty) {
-      await prefs.setString(_guardianTierKey, _guardianTier);
-    }
     // Cloud push (fire-and-forget)
-    if (_syncEnabled && _syncKey.isNotEmpty) {
-      Future.microtask(() => _pushToCloud());
+    if (_syncEnabled) {
+      if (_backupLookupKey.isNotEmpty && _derivedKey != null) {
+        Future.microtask(() => _pushE2EBackup());
+      } else if (_syncKey.isNotEmpty) {
+        Future.microtask(() => _pushToCloud());
+      }
     }
   }
 
@@ -607,6 +667,7 @@ class PigioAppState extends ChangeNotifier {
     }
 
     _unlockedClothing = prefs.getStringList(_unlockedClothingKey) ?? [];
+    _unlockedBadges = prefs.getStringList(_unlockedBadgesKey) ?? [];
     _favoriteClothing = prefs.getStringList(_favoriteClothingKey) ?? [];
     final presetsRaw = prefs.getString(_outfitPresetsKey);
     if (presetsRaw != null && presetsRaw.isNotEmpty) {
@@ -883,6 +944,9 @@ class PigioAppState extends ChangeNotifier {
     }
     _syncEnabled       = prefs.getBool('pigio_sync_enabled') ?? false;
     _onboardingCompleted = prefs.getBool(_onboardingCompletedKey) ?? false;
+    // E2E Backup
+    _backupSalt      = prefs.getString(_backupSaltKey) ?? '';
+    _backupLookupKey = prefs.getString(_backupLookupKeyKey) ?? '';
 
     // Personality profile — read from secure storage; migrate from SharedPreferences on first run
     final securePersonalityRaw = secureValues[12];
@@ -937,11 +1001,7 @@ class PigioAppState extends ChangeNotifier {
       );
     }
 
-    // Monetization
-    _plumes = prefs.getInt(_plumesKey) ?? 0;
-    _occasionPassLevel = prefs.getInt(_occasionPassLevelKey) ?? 0;
-    _occasionPassSeason = prefs.getString(_occasionPassSeasonKey) ?? '';
-    _guardianTier = prefs.getString(_guardianTierKey) ?? '';
+
 
     _pruneOrphanedIds();
     notifyListeners();

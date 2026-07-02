@@ -8,6 +8,7 @@ import 'package:kindy/core/state/app_state.dart';
 import 'package:kindy/core/config/constants.dart';
 import 'package:kindy/core/theme/pigio_theme.dart';
 import 'package:kindy/screens/auth/auth_screen.dart';
+import 'package:kindy/screens/settings/sheets/restore_backup_sheet.dart';
 import 'package:kindy/services/analytics_service.dart';
 import '../../../app_shell/main_shell.dart';
 
@@ -139,6 +140,25 @@ class _OnboardingShellState extends State<OnboardingShell> {
                       label: const Text('Se connecter'),
                       style: TextButton.styleFrom(
                         foregroundColor: pt.primary,
+                        textStyle: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  // Restore from backup button
+                  if (_currentPage == 0)
+                    TextButton.icon(
+                      onPressed: () => showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => const RestoreBackupSheet(),
+                      ),
+                      icon: const Icon(Icons.restore, size: 18),
+                      label: const Text('Restaurer'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: pt.mid,
                         textStyle: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,

@@ -18,6 +18,7 @@ class HomeUpcomingSection extends StatelessWidget {
   final String lang;
   final PigioThemeData theme;
   final EventCountdownBuilder buildEventCountdown;
+  final void Function(Event e)? onEventTap;
 
   const HomeUpcomingSection({
     super.key,
@@ -25,6 +26,7 @@ class HomeUpcomingSection extends StatelessWidget {
     required this.lang,
     required this.theme,
     required this.buildEventCountdown,
+    this.onEventTap,
   });
 
   @override
@@ -73,59 +75,62 @@ class HomeUpcomingSection extends StatelessWidget {
                 final bool isToday = days == 0;
                 final bool isTomorrow = days == 1;
 
-                return Container(
-                  width: 160,
-                  margin: const EdgeInsets.only(right: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isFirst ? e.color : theme.card,
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isFirst ? e.color.withValues(alpha: 0.35) : theme.shadow,
-                        blurRadius: isToday ? 24 : 16,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                    border: isFirst
-                        ? (isToday ? Border.all(color: theme.onAccent.withValues(alpha: 0.35), width: 2) : null)
-                        : Border.all(color: isToday ? e.color.withValues(alpha: 0.45) : theme.divider, width: isToday ? 2 : 1),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      PigioBadge(
-                        label: lang == 'fr' ? e.typeFr : e.typeEn,
-                        color: isFirst ? theme.onAccent : e.color,
-                        bg: isFirst ? theme.onAccent.withValues(alpha: 0.22) : e.color.withValues(alpha: 0.1),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(e.emoji, style: const TextStyle(fontSize: 32)),
-                      const SizedBox(height: 8),
-                      Text(e.title, style: fw(size: 16, w: FontWeight.w800, color: isFirst ? theme.onAccent : theme.ink), overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 6),
-                      buildEventCountdown(days, isFirst, isToday, isTomorrow, e),
-                      const SizedBox(height: 10),
-                      if (isToday)
-                        Container(
-                          height: 8,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(4),
-                            color: isFirst ? theme.onAccent.withValues(alpha: 0.4) : e.color.withValues(alpha: 0.25),
-                          ),
-                          child: FractionallySizedBox(
-                            widthFactor: 1.0,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(4),
-                                color: isFirst ? theme.onAccent : e.color,
+                return GestureDetector(
+                  onTap: () => onEventTap?.call(e),
+                  child: Container(
+                    width: 160,
+                    margin: const EdgeInsets.only(right: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isFirst ? e.color : theme.card,
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: [
+                        BoxShadow(
+                          color: isFirst ? e.color.withValues(alpha: 0.35) : theme.shadow,
+                          blurRadius: isToday ? 24 : 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                      border: isFirst
+                          ? (isToday ? Border.all(color: theme.onAccent.withValues(alpha: 0.35), width: 2) : null)
+                          : Border.all(color: isToday ? e.color.withValues(alpha: 0.45) : theme.divider, width: isToday ? 2 : 1),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        PigioBadge(
+                          label: lang == 'fr' ? e.typeFr : e.typeEn,
+                          color: isFirst ? theme.onAccent : e.color,
+                          bg: isFirst ? theme.onAccent.withValues(alpha: 0.22) : e.color.withValues(alpha: 0.1),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(e.emoji, style: const TextStyle(fontSize: 32)),
+                        const SizedBox(height: 8),
+                        Text(e.title, style: fw(size: 16, w: FontWeight.w800, color: isFirst ? theme.onAccent : theme.ink), overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 6),
+                        buildEventCountdown(days, isFirst, isToday, isTomorrow, e),
+                        const SizedBox(height: 10),
+                        if (isToday)
+                          Container(
+                            height: 8,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(4),
+                              color: isFirst ? theme.onAccent.withValues(alpha: 0.4) : e.color.withValues(alpha: 0.25),
+                            ),
+                            child: FractionallySizedBox(
+                              widthFactor: 1.0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(4),
+                                  color: isFirst ? theme.onAccent : e.color,
+                                ),
                               ),
                             ),
-                          ),
-                        )
-                      else
-                        PigioProgressBar(pct: e.percent, color: isFirst ? theme.onAccent.withValues(alpha: 0.8) : e.color, height: 8),
-                    ],
+                          )
+                        else
+                          PigioProgressBar(pct: e.percent, color: isFirst ? theme.onAccent.withValues(alpha: 0.8) : e.color, height: 8),
+                      ],
+                    ),
                   ),
                 );
               }).toList(),

@@ -27,6 +27,14 @@ extension NotificationsExtension on PigioAppState {
     }
   }
 
+  void addNotification(PigioNotification notif) {
+    if (_notifications.any((n) => n.id == notif.id)) return;
+    _notifications.insert(0, notif);
+    _unseenNotificationsCount++;
+    notifyListeners();
+    _saveData();
+  }
+
   Future<void> _sendNotificationToContact(
     String contactId,
     String type,

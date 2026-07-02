@@ -146,6 +146,15 @@ Deno.serve(async (req) => {
         }
       }
 
+      // E2E encrypted backup: if profile_data contains __e2e marker,
+      // extract the encrypted blob and salt from it
+      let encryptedBlob = data.encrypted_blob;
+      let backupSalt = data.backup_salt;
+      if (!encryptedBlob && data.profile_data?.__e2e) {
+        encryptedBlob = data.profile_data.encrypted_blob;
+        backupSalt = data.profile_data.backup_salt;
+      }
+
       return json({
         found: true,
         contacts: data.contacts_data,
@@ -157,6 +166,9 @@ Deno.serve(async (req) => {
         sizes: data.sizes_data,
         giftPots: data.gift_pots_data,
         updatedAt: data.updated_at,
+        // E2E fields
+        encrypted_blob: encryptedBlob ?? null,
+        backup_salt: backupSalt ?? null,
       });
     }
 
@@ -209,6 +221,12 @@ Deno.serve(async (req) => {
       if (body.events !== undefined)   row.events_data = body.events;
       if (body.sizes !== undefined)    row.sizes_data = body.sizes;
       if (body.giftPots !== undefined) row.gift_pots_data = body.giftPots;
+
+      // E2E encrypted backup: extract blob and salt from profile.__e2e pattern
+      if (body.profile?.__e2e === true) {
+        row.encrypted_blob = body.profile.encrypted_blob ?? null;
+        row.backup_salt = body.profile.backup_salt ?? null;
+      }
 
       const { error } = await admin
         .from('user_data')

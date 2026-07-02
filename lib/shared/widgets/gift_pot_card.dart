@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kindy/core/theme/pigio_theme.dart';
 import 'package:kindy/core/state/app_state.dart';
+import 'package:kindy/shared/widgets/pot_progress_bar.dart';
 
 // Paper tints matching WishCard style
 Color _getPotPaperColor(PigioThemeData theme, String id) {
@@ -58,9 +59,9 @@ class GiftPotCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tilt = _getPotTilt(pot.id);
     final paperColor = _getPotPaperColor(theme, pot.id);
+    final isFr = Localizations.localeOf(context).languageCode == 'fr';
     final washiColor =
         _potWashiColors[pot.id.hashCode.abs() % _potWashiColors.length];
-    final progress = pot.progressPercent;
 
     return GestureDetector(
       onTap: onTap,
@@ -153,48 +154,13 @@ class GiftPotCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    // Progress bar
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        backgroundColor: theme.divider,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(theme.accent2),
-                        minHeight: 6,
+                    if (pot.targetAmount != null)
+                      PotProgressBar(
+                        pot: pot,
+                        theme: theme,
+                        isFr: isFr,
+                        showLabel: true,
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    // Amount + contributors
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${pot.totalContributed.toStringAsFixed(0)}€ / ${pot.targetAmount.toStringAsFixed(0)}€',
-                          style: GoogleFonts.nunito(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: theme.ink,
-                          ),
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.people_outline,
-                                size: 14, color: theme.mid),
-                            const SizedBox(width: 3),
-                            Text(
-                              '${pot.contributorCount}',
-                              style: GoogleFonts.nunito(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: theme.mid,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
                     // Mode indicator
                     const SizedBox(height: 4),
                     Container(

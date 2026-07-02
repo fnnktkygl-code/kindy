@@ -143,20 +143,20 @@ class MascotOutfitEngine {
     const ClothingItem(id: 'hat_detective', name: 'Chapeau détective', emoji: '🔍', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_detective.png', rarity: ItemRarity.rare, isUnlocked: false, unlockHint: 'Atteins le niveau d\'amitié "BFF"', tags: ['mystère', 'spécial']),
     const ClothingItem(id: 'hat_ambassador', name: 'Couronne d\'ambassadeur', emoji: '🫅', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_ambassador.png', rarity: ItemRarity.legendary, isUnlocked: false, unlockHint: 'Fais accepter 5 invitations', tags: ['social', 'ambassadeur']),
     const ClothingItem(id: 'hat_heart', name: 'Serre-tête cœur', emoji: '💝', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_heart.png', rarity: ItemRarity.rare, isUnlocked: false, unlockHint: 'Partage tes tailles avec tes proches', tags: ['amour', 'social']),
-    const ClothingItem(id: 'hat_crown_diamond', name: 'Couronne de diamants', emoji: '💎', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_crown_diamond.png', rarity: ItemRarity.legendary, isUnlocked: false, plumeCost: 80, premiumOnly: true, tags: ['luxe', 'premium']),
-    const ClothingItem(id: 'hat_astronaut', name: 'Casque d\'astronaute', emoji: '🚀', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_astronaut.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 40, tags: ['espace', 'premium']),
+    const ClothingItem(id: 'hat_crown_diamond', name: 'Couronne de diamants', emoji: '💎', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_crown_diamond.png', rarity: ItemRarity.legendary, isUnlocked: false, condition: UnlockCondition.premium, tags: ['luxe', 'premium']),
+    const ClothingItem(id: 'hat_astronaut', name: 'Casque d\'astronaute', emoji: '🚀', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_astronaut.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['espace', 'premium']),
     // New hats
     const ClothingItem(id: 'hat_beret', name: 'Béret français', emoji: '🎨', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_beret.png', tags: ['france', 'artiste']),
     const ClothingItem(id: 'hat_baseball', name: 'Casquette', emoji: '🧢', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_baseball.png', tags: ['sport', 'casual']),
     const ClothingItem(id: 'hat_fedora', name: 'Fedora', emoji: '🎩', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_fedora.png', rarity: ItemRarity.uncommon, tags: ['chic', 'mystère']),
-    const ClothingItem(id: 'hat_pirate', name: 'Chapeau de pirate', emoji: '🏴‍☠️', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_pirate.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 35, tags: ['aventure', 'premium']),
+    const ClothingItem(id: 'hat_pirate', name: 'Chapeau de pirate', emoji: '🏴‍☠️', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_pirate.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['aventure', 'premium']),
     const ClothingItem(id: 'hat_chef', name: 'Toque de chef', emoji: '👨‍🍳', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_chef.png', rarity: ItemRarity.uncommon, tags: ['cuisine', 'fun']),
-    const ClothingItem(id: 'hat_viking', name: 'Casque viking', emoji: '⚔️', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_viking.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 45, premiumOnly: true, tags: ['aventure', 'premium']),
+    const ClothingItem(id: 'hat_viking', name: 'Casque viking', emoji: '⚔️', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_viking.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.premium, tags: ['aventure', 'premium']),
     const ClothingItem(id: 'hat_halo', name: 'Auréole', emoji: '😇', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_halo.png', rarity: ItemRarity.legendary, isUnlocked: false, unlockHint: 'Offre un Pigio+ à un proche', tags: ['ange', 'spécial']),
     const ClothingItem(id: 'hat_flower_crown', name: 'Couronne de fleurs', emoji: '🌺', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_flower_crown.png', rarity: ItemRarity.uncommon, season: 'spring', tags: ['printemps', 'nature']),
     const ClothingItem(id: 'hat_headband', name: 'Bandeau sport', emoji: '💪', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_headband.png', tags: ['sport', 'énergie']),
-    const ClothingItem(id: 'hat_turban', name: 'Turban festif', emoji: '🪶', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_turban.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 40, tags: ['chic', 'premium']),
-    const ClothingItem(id: 'hat_tiara', name: 'Diadème', emoji: '👸', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_tiara.png', rarity: ItemRarity.legendary, isUnlocked: false, plumeCost: 70, premiumOnly: true, tags: ['luxe', 'premium']),
+    const ClothingItem(id: 'hat_turban', name: 'Turban festif', emoji: '🪶', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_turban.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['chic', 'premium']),
+    const ClothingItem(id: 'hat_tiara', name: 'Diadème', emoji: '👸', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_tiara.png', rarity: ItemRarity.legendary, isUnlocked: false, condition: UnlockCondition.premium, tags: ['luxe', 'premium']),
     const ClothingItem(id: 'hat_earmuffs', name: 'Cache-oreilles', emoji: '🎧', slot: ClothingSlot.hat, imageAsset: 'assets/wardrobe/hats/hat_earmuffs.png', tags: ['hiver', 'cozy']),
 
     // ═══════════════════════════════════════════════════════════════════
@@ -166,26 +166,26 @@ class MascotOutfitEngine {
     const ClothingItem(id: 'glasses_heart', name: 'Lunettes cœur', emoji: '💕', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_heart.png', rarity: ItemRarity.uncommon, tags: ['amour', 'valentin']),
     const ClothingItem(id: 'glasses_reading', name: 'Lunettes lecture', emoji: '👓', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_reading.png', tags: ['calme', 'lecture']),
     const ClothingItem(id: 'glasses_star', name: 'Lunettes étoile', emoji: '⭐', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_star.png', rarity: ItemRarity.legendary, isUnlocked: false, unlockHint: 'Atteins 30 jours de suite', tags: ['magique', 'spécial']),
-    const ClothingItem(id: 'glasses_monocle', name: 'Monocle doré', emoji: '🧐', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_monocle.png', rarity: ItemRarity.legendary, isUnlocked: false, plumeCost: 60, premiumOnly: true, tags: ['chic', 'premium']),
-    const ClothingItem(id: 'glasses_vr', name: 'Casque VR', emoji: '🥽', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_vr.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 40, tags: ['tech', 'premium']),
+    const ClothingItem(id: 'glasses_monocle', name: 'Monocle doré', emoji: '🧐', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_monocle.png', rarity: ItemRarity.legendary, isUnlocked: false, condition: UnlockCondition.premium, tags: ['chic', 'premium']),
+    const ClothingItem(id: 'glasses_vr', name: 'Casque VR', emoji: '🥽', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_vr.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['tech', 'premium']),
     // New glasses
     const ClothingItem(id: 'glasses_round', name: 'Rondes vintage', emoji: '🔵', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_round.png', tags: ['rétro', 'chic']),
     const ClothingItem(id: 'glasses_cat_eye', name: 'Cat eye', emoji: '🐱', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_cat_eye.png', rarity: ItemRarity.uncommon, tags: ['chic', 'rétro']),
     const ClothingItem(id: 'glasses_ski', name: 'Masque de ski', emoji: '⛷️', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_ski.png', tags: ['hiver', 'sport']),
     const ClothingItem(id: 'glasses_3d', name: 'Lunettes 3D', emoji: '🎬', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_3d.png', rarity: ItemRarity.uncommon, tags: ['fun', 'cinéma']),
-    const ClothingItem(id: 'glasses_steampunk', name: 'Lunettes steampunk', emoji: '⚙️', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_steampunk.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 45, tags: ['steampunk', 'premium']),
+    const ClothingItem(id: 'glasses_steampunk', name: 'Lunettes steampunk', emoji: '⚙️', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_steampunk.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['steampunk', 'premium']),
     const ClothingItem(id: 'glasses_swim', name: 'Lunettes de piscine', emoji: '🏊', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_swim.png', tags: ['été', 'sport']),
-    const ClothingItem(id: 'glasses_neon', name: 'Néon LED', emoji: '💡', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_neon.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 35, tags: ['fête', 'premium']),
+    const ClothingItem(id: 'glasses_neon', name: 'Néon LED', emoji: '💡', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_neon.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['fête', 'premium']),
     const ClothingItem(id: 'glasses_pixel', name: 'Pixel deal-with-it', emoji: '🟩', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_pixel.png', rarity: ItemRarity.uncommon, tags: ['meme', 'fun']),
     const ClothingItem(id: 'glasses_rose', name: 'Teintées rose', emoji: '🌸', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_rose.png', tags: ['rétro', 'fun']),
     const ClothingItem(id: 'glasses_aviator', name: 'Aviateur', emoji: '✈️', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_aviator.png', rarity: ItemRarity.uncommon, tags: ['chic', 'voyage']),
     const ClothingItem(id: 'glasses_shield', name: 'Visière sport', emoji: '🏃', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_shield.png', tags: ['sport', 'énergie']),
-    const ClothingItem(id: 'glasses_opera', name: 'Masque vénitien', emoji: '🎭', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_opera.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 50, premiumOnly: true, tags: ['gala', 'premium']),
+    const ClothingItem(id: 'glasses_opera', name: 'Masque vénitien', emoji: '🎭', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_opera.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.premium, tags: ['gala', 'premium']),
     const ClothingItem(id: 'glasses_nerd', name: 'Lunettes nerd', emoji: '🤓', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_nerd.png', tags: ['geek', 'lecture']),
     const ClothingItem(id: 'glasses_half_moon', name: 'Demi-lune', emoji: '🌓', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_half_moon.png', rarity: ItemRarity.uncommon, tags: ['sagesse', 'mystère']),
     const ClothingItem(id: 'glasses_butterfly', name: 'Papillon XL', emoji: '🦋', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_butterfly.png', rarity: ItemRarity.uncommon, tags: ['chic', 'été']),
     const ClothingItem(id: 'glasses_eye_patch', name: 'Cache-œil', emoji: '🏴‍☠️', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_eye_patch.png', rarity: ItemRarity.uncommon, tags: ['pirate', 'aventure']),
-    const ClothingItem(id: 'glasses_cyberpunk', name: 'Visière cyber', emoji: '🤖', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_cyberpunk.png', rarity: ItemRarity.legendary, isUnlocked: false, plumeCost: 65, premiumOnly: true, tags: ['futur', 'premium']),
+    const ClothingItem(id: 'glasses_cyberpunk', name: 'Visière cyber', emoji: '🤖', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_cyberpunk.png', rarity: ItemRarity.legendary, isUnlocked: false, condition: UnlockCondition.premium, tags: ['futur', 'premium']),
     const ClothingItem(id: 'glasses_disco', name: 'Lunettes disco', emoji: '🪩', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_disco.png', rarity: ItemRarity.uncommon, tags: ['fête', 'rétro']),
     const ClothingItem(id: 'glasses_loupe', name: 'Loupe détective', emoji: '🔎', slot: ClothingSlot.glasses, imageAsset: 'assets/wardrobe/glasses/glasses_loupe.png', rarity: ItemRarity.rare, isUnlocked: false, unlockHint: 'Atteins le niveau d\'amitié "BFF"', tags: ['mystère', 'spécial']),
 
@@ -199,7 +199,7 @@ class MascotOutfitEngine {
     const ClothingItem(id: 'top_linen', name: 'Chemise de lin', emoji: '🌤️', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_linen.png', tags: ['été', 'respirant', 'soleil']),
     const ClothingItem(id: 'top_pyjama', name: 'Pyjama', emoji: '🥱', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_pyjama.png', tags: ['nuit', 'cozy']),
     const ClothingItem(id: 'top_golden', name: 'Veste dorée', emoji: '✨', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_golden.png', rarity: ItemRarity.legendary, isUnlocked: false, unlockHint: 'Ajoute des vœux pour 5 proches différents', tags: ['chic', 'or', 'spécial']),
-    const ClothingItem(id: 'top_tuxedo', name: 'Smoking', emoji: '🤵', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_tuxedo.png', rarity: ItemRarity.legendary, isUnlocked: false, plumeCost: 80, premiumOnly: true, tags: ['chic', 'gala', 'premium']),
+    const ClothingItem(id: 'top_tuxedo', name: 'Smoking', emoji: '🤵', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_tuxedo.png', rarity: ItemRarity.legendary, isUnlocked: false, condition: UnlockCondition.premium, tags: ['chic', 'gala', 'premium']),
     // New tops
     const ClothingItem(id: 'top_hoodie', name: 'Sweat à capuche', emoji: '🧥', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_hoodie.png', tags: ['casual', 'cozy']),
     const ClothingItem(id: 'top_vest', name: 'Gilet matelassé', emoji: '🦺', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_vest.png', tags: ['mi-saison', 'sport']),
@@ -209,13 +209,13 @@ class MascotOutfitEngine {
     const ClothingItem(id: 'top_overalls', name: 'Salopette', emoji: '👷', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_overalls.png', tags: ['casual', 'fun']),
     const ClothingItem(id: 'top_sweater', name: 'Pull tricoté', emoji: '🧶', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_sweater.png', tags: ['hiver', 'cozy']),
     const ClothingItem(id: 'top_poncho', name: 'Poncho', emoji: '🏔️', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_poncho.png', rarity: ItemRarity.uncommon, tags: ['voyage', 'pluie']),
-    const ClothingItem(id: 'top_kimono', name: 'Kimono', emoji: '🎎', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_kimono.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 45, tags: ['élégant', 'premium']),
+    const ClothingItem(id: 'top_kimono', name: 'Kimono', emoji: '🎎', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_kimono.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['élégant', 'premium']),
     const ClothingItem(id: 'top_lab_coat', name: 'Blouse de labo', emoji: '🔬', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_lab_coat.png', rarity: ItemRarity.uncommon, tags: ['science', 'fun']),
     const ClothingItem(id: 'top_apron', name: 'Tablier', emoji: '🍰', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_apron.png', tags: ['cuisine', 'fun']),
     const ClothingItem(id: 'top_sailor', name: 'Marinière', emoji: '⚓', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_sailor.png', tags: ['mer', 'france']),
     const ClothingItem(id: 'top_varsity', name: 'Blouson varsity', emoji: '🏈', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_varsity.png', rarity: ItemRarity.uncommon, tags: ['sport', 'casual']),
     const ClothingItem(id: 'top_denim', name: 'Veste en jean', emoji: '👖', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_denim.png', tags: ['casual', 'mi-saison']),
-    const ClothingItem(id: 'top_leather', name: 'Perfecto cuir', emoji: '🏍️', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_leather.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 50, premiumOnly: true, tags: ['rock', 'premium']),
+    const ClothingItem(id: 'top_leather', name: 'Perfecto cuir', emoji: '🏍️', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_leather.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.premium, tags: ['rock', 'premium']),
     const ClothingItem(id: 'top_cardigan', name: 'Cardigan', emoji: '🧵', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_cardigan.png', tags: ['cozy', 'automne']),
     const ClothingItem(id: 'top_jersey', name: 'Maillot de foot', emoji: '⚽', slot: ClothingSlot.top, imageAsset: 'assets/wardrobe/tops/top_jersey.png', rarity: ItemRarity.uncommon, tags: ['sport', 'fun']),
 
@@ -228,20 +228,20 @@ class MascotOutfitEngine {
     const ClothingItem(id: 'scarf_infinity', name: 'Snood', emoji: '♾️', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_infinity.png', tags: ['hiver', 'cozy']),
     const ClothingItem(id: 'scarf_bandana', name: 'Bandana', emoji: '🤠', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_bandana.png', tags: ['casual', 'aventure']),
     const ClothingItem(id: 'scarf_bow', name: 'Lavallière', emoji: '🎗️', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_bow.png', rarity: ItemRarity.uncommon, tags: ['chic', 'rétro']),
-    const ClothingItem(id: 'scarf_fur', name: 'Col en fausse fourrure', emoji: '🦊', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_fur.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 40, tags: ['luxe', 'premium']),
+    const ClothingItem(id: 'scarf_fur', name: 'Col en fausse fourrure', emoji: '🦊', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_fur.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['luxe', 'premium']),
     const ClothingItem(id: 'scarf_knit', name: 'Écharpe tricotée', emoji: '🧶', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_knit.png', tags: ['cozy', 'automne']),
-    const ClothingItem(id: 'scarf_chain', name: 'Chaîne dorée', emoji: '⛓️', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_chain.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 50, premiumOnly: true, tags: ['luxe', 'premium']),
+    const ClothingItem(id: 'scarf_chain', name: 'Chaîne dorée', emoji: '⛓️', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_chain.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.premium, tags: ['luxe', 'premium']),
     const ClothingItem(id: 'scarf_lei', name: 'Collier de fleurs', emoji: '🌺', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_lei.png', rarity: ItemRarity.uncommon, season: 'summer', tags: ['été', 'tropical']),
     const ClothingItem(id: 'scarf_medal', name: 'Médaille d\'or', emoji: '🏅', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_medal.png', rarity: ItemRarity.legendary, isUnlocked: false, unlockHint: 'Complète 10 défis quotidiens', tags: ['sport', 'spécial']),
-    const ClothingItem(id: 'scarf_pearls', name: 'Collier de perles', emoji: '📿', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_pearls.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 45, tags: ['chic', 'premium']),
+    const ClothingItem(id: 'scarf_pearls', name: 'Collier de perles', emoji: '📿', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_pearls.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['chic', 'premium']),
     const ClothingItem(id: 'scarf_tie', name: 'Cravate', emoji: '👔', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_tie.png', tags: ['bureau', 'chic']),
     const ClothingItem(id: 'scarf_garland', name: 'Guirlande lumineuse', emoji: '🎄', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_garland.png', rarity: ItemRarity.uncommon, season: 'winter', tags: ['noël', 'fête']),
-    const ClothingItem(id: 'scarf_pendant', name: 'Pendentif cristal', emoji: '💠', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_pendant.png', rarity: ItemRarity.legendary, isUnlocked: false, plumeCost: 60, premiumOnly: true, tags: ['luxe', 'premium']),
+    const ClothingItem(id: 'scarf_pendant', name: 'Pendentif cristal', emoji: '💠', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_pendant.png', rarity: ItemRarity.legendary, isUnlocked: false, condition: UnlockCondition.premium, tags: ['luxe', 'premium']),
     const ClothingItem(id: 'scarf_headphones', name: 'Casque audio', emoji: '🎧', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_headphones.png', tags: ['musique', 'casual']),
     const ClothingItem(id: 'scarf_whistle', name: 'Sifflet d\'arbitre', emoji: '📯', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_whistle.png', rarity: ItemRarity.uncommon, tags: ['sport', 'fun']),
     const ClothingItem(id: 'scarf_stethoscope', name: 'Stéthoscope', emoji: '🩺', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_stethoscope.png', rarity: ItemRarity.uncommon, tags: ['science', 'fun']),
     const ClothingItem(id: 'scarf_camera', name: 'Appareil photo', emoji: '📸', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_camera.png', tags: ['voyage', 'art']),
-    const ClothingItem(id: 'scarf_feather_boa', name: 'Boa à plumes', emoji: '🪶', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_feather_boa.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 35, tags: ['fête', 'premium']),
+    const ClothingItem(id: 'scarf_feather_boa', name: 'Boa à plumes', emoji: '🪶', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_feather_boa.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['fête', 'premium']),
     const ClothingItem(id: 'scarf_necklace_star', name: 'Pendentif étoile', emoji: '⭐', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_necklace_star.png', rarity: ItemRarity.uncommon, tags: ['magique', 'chic']),
     const ClothingItem(id: 'scarf_lanyard', name: 'Badge VIP', emoji: '🪪', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_lanyard.png', rarity: ItemRarity.rare, isUnlocked: false, unlockHint: 'Fais accepter 3 invitations', tags: ['social', 'spécial']),
     const ClothingItem(id: 'scarf_cape_mini', name: 'Mini-cape', emoji: '🦸', slot: ClothingSlot.scarf, imageAsset: 'assets/wardrobe/scarves/scarf_cape_mini.png', rarity: ItemRarity.uncommon, tags: ['héros', 'fun']),
@@ -256,7 +256,7 @@ class MascotOutfitEngine {
     const ClothingItem(id: 'shoes_sandals', name: 'Sandales', emoji: '👡', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_sandals.png', tags: ['été', 'soleil', 'ville']),
     const ClothingItem(id: 'shoes_slippers', name: 'Chaussons', emoji: '🧦', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_slippers.png', tags: ['cozy', 'nuit']),
     const ClothingItem(id: 'shoes_golden', name: 'Baskets dorées', emoji: '👟', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_golden.png', rarity: ItemRarity.legendary, isUnlocked: false, unlockHint: 'Atteins 50 vœux enregistrés', tags: ['or', 'spécial']),
-    const ClothingItem(id: 'shoes_crystal', name: 'Chaussures de cristal', emoji: '✨', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_crystal.png', rarity: ItemRarity.legendary, isUnlocked: false, plumeCost: 60, premiumOnly: true, tags: ['luxe', 'premium']),
+    const ClothingItem(id: 'shoes_crystal', name: 'Chaussures de cristal', emoji: '✨', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_crystal.png', rarity: ItemRarity.legendary, isUnlocked: false, condition: UnlockCondition.premium, tags: ['luxe', 'premium']),
     // New shoes
     const ClothingItem(id: 'shoes_sneakers', name: 'Sneakers', emoji: '👟', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_sneakers.png', tags: ['casual', 'sport']),
     const ClothingItem(id: 'shoes_heels', name: 'Talons hauts', emoji: '👠', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_heels.png', rarity: ItemRarity.uncommon, tags: ['chic', 'gala']),
@@ -266,7 +266,7 @@ class MascotOutfitEngine {
     const ClothingItem(id: 'shoes_ice_skates', name: 'Patins à glace', emoji: '⛸️', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_ice_skates.png', rarity: ItemRarity.uncommon, season: 'winter', tags: ['hiver', 'sport']),
     const ClothingItem(id: 'shoes_crocs', name: 'Sabots', emoji: '🐊', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_crocs.png', tags: ['casual', 'fun']),
     const ClothingItem(id: 'shoes_platform', name: 'Plateformes', emoji: '🏗️', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_platform.png', rarity: ItemRarity.uncommon, tags: ['rétro', 'fun']),
-    const ClothingItem(id: 'shoes_moon', name: 'Moon boots', emoji: '🌙', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_moon.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 40, tags: ['espace', 'premium']),
+    const ClothingItem(id: 'shoes_moon', name: 'Moon boots', emoji: '🌙', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_moon.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['espace', 'premium']),
     const ClothingItem(id: 'shoes_hiking', name: 'Chaussures de rando', emoji: '🏔️', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_hiking.png', tags: ['nature', 'sport']),
     const ClothingItem(id: 'shoes_loafers', name: 'Mocassins', emoji: '👞', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_loafers.png', tags: ['chic', 'bureau']),
     const ClothingItem(id: 'shoes_combat', name: 'Rangers', emoji: '🪖', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_combat.png', rarity: ItemRarity.uncommon, tags: ['tough', 'aventure']),
@@ -274,9 +274,9 @@ class MascotOutfitEngine {
     const ClothingItem(id: 'shoes_clogs', name: 'Sabots en bois', emoji: '🪵', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_clogs.png', rarity: ItemRarity.uncommon, tags: ['rétro', 'fun']),
     const ClothingItem(id: 'shoes_fuzzy', name: 'Chaussons peluche', emoji: '🧸', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_fuzzy.png', tags: ['cozy', 'mignon']),
     const ClothingItem(id: 'shoes_ski', name: 'Chaussures de ski', emoji: '⛷️', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_ski.png', rarity: ItemRarity.uncommon, season: 'winter', tags: ['hiver', 'sport']),
-    const ClothingItem(id: 'shoes_gladiator', name: 'Sandales gladiateur', emoji: '🏛️', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_gladiator.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 35, tags: ['chic', 'premium']),
-    const ClothingItem(id: 'shoes_rocket', name: 'Bottes à réaction', emoji: '🚀', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_rocket.png', rarity: ItemRarity.legendary, isUnlocked: false, plumeCost: 70, premiumOnly: true, tags: ['futur', 'premium']),
-    const ClothingItem(id: 'shoes_knight', name: 'Bottes de chevalier', emoji: '⚔️', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_knight.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 45, tags: ['aventure', 'premium']),
+    const ClothingItem(id: 'shoes_gladiator', name: 'Sandales gladiateur', emoji: '🏛️', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_gladiator.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['chic', 'premium']),
+    const ClothingItem(id: 'shoes_rocket', name: 'Bottes à réaction', emoji: '🚀', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_rocket.png', rarity: ItemRarity.legendary, isUnlocked: false, condition: UnlockCondition.premium, tags: ['futur', 'premium']),
+    const ClothingItem(id: 'shoes_knight', name: 'Bottes de chevalier', emoji: '⚔️', slot: ClothingSlot.shoes, imageAsset: 'assets/wardrobe/shoes/shoes_knight.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['aventure', 'premium']),
 
     // ═══════════════════════════════════════════════════════════════════
     // ACCESSORIES (25 items)
@@ -292,20 +292,20 @@ class MascotOutfitEngine {
     const ClothingItem(id: 'acc_friendship', name: 'Bracelet d\'amitié', emoji: '🤝', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_friendship.png', rarity: ItemRarity.rare, isUnlocked: false, unlockHint: 'Fais accepter ta première invitation', tags: ['amitié', 'social']),
     const ClothingItem(id: 'acc_trophy', name: 'Trophée doré', emoji: '🏆', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_trophy.png', rarity: ItemRarity.legendary, isUnlocked: false, unlockHint: 'Atteins 7 jours de suite', tags: ['spécial', 'fête']),
     const ClothingItem(id: 'acc_gift', name: 'Paquet cadeau', emoji: '🎁', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_gift.png', rarity: ItemRarity.rare, isUnlocked: false, unlockHint: 'Crée ta première cagnotte cadeau', tags: ['cadeau', 'social']),
-    const ClothingItem(id: 'acc_wand', name: 'Baguette magique', emoji: '🪄', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_wand.png', rarity: ItemRarity.legendary, isUnlocked: false, plumeCost: 50, premiumOnly: true, tags: ['magique', 'premium']),
-    const ClothingItem(id: 'acc_guitar', name: 'Guitare', emoji: '🎸', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_guitar.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 35, tags: ['musique', 'premium']),
+    const ClothingItem(id: 'acc_wand', name: 'Baguette magique', emoji: '🪄', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_wand.png', rarity: ItemRarity.legendary, isUnlocked: false, condition: UnlockCondition.premium, tags: ['magique', 'premium']),
+    const ClothingItem(id: 'acc_guitar', name: 'Guitare', emoji: '🎸', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_guitar.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['musique', 'premium']),
     // New accessories
     const ClothingItem(id: 'acc_backpack', name: 'Sac à dos', emoji: '🎒', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_backpack.png', tags: ['voyage', 'casual']),
     const ClothingItem(id: 'acc_skateboard', name: 'Skateboard', emoji: '🛹', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_skateboard.png', rarity: ItemRarity.uncommon, tags: ['sport', 'fun']),
     const ClothingItem(id: 'acc_teddy', name: 'Nounours', emoji: '🧸', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_teddy.png', tags: ['cozy', 'mignon']),
     const ClothingItem(id: 'acc_balloon', name: 'Ballon cœur', emoji: '🎈', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_balloon.png', rarity: ItemRarity.uncommon, tags: ['fête', 'amour']),
     const ClothingItem(id: 'acc_lantern', name: 'Lanterne', emoji: '🏮', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_lantern.png', rarity: ItemRarity.uncommon, tags: ['nuit', 'magique']),
-    const ClothingItem(id: 'acc_shield', name: 'Bouclier', emoji: '🛡️', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_shield.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 40, tags: ['héros', 'premium']),
-    const ClothingItem(id: 'acc_book', name: 'Grimoire', emoji: '📖', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_book.png', rarity: ItemRarity.rare, isUnlocked: false, plumeCost: 35, tags: ['magique', 'premium']),
-    const ClothingItem(id: 'acc_crystal_ball', name: 'Boule de cristal', emoji: '🔮', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_crystal_ball.png', rarity: ItemRarity.legendary, isUnlocked: false, plumeCost: 55, premiumOnly: true, tags: ['magique', 'premium']),
+    const ClothingItem(id: 'acc_shield', name: 'Bouclier', emoji: '🛡️', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_shield.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['héros', 'premium']),
+    const ClothingItem(id: 'acc_book', name: 'Grimoire', emoji: '📖', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_book.png', rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.actionBased, actionKey: "legacy_plume", tags: ['magique', 'premium']),
+    const ClothingItem(id: 'acc_crystal_ball', name: 'Boule de cristal', emoji: '🔮', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_crystal_ball.png', rarity: ItemRarity.legendary, isUnlocked: false, condition: UnlockCondition.premium, tags: ['magique', 'premium']),
     const ClothingItem(id: 'acc_fishing_rod', name: 'Canne à pêche', emoji: '🎣', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_fishing_rod.png', tags: ['nature', 'calme']),
     const ClothingItem(id: 'acc_paint_palette', name: 'Palette de peintre', emoji: '🎨', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_paint_palette.png', rarity: ItemRarity.uncommon, tags: ['art', 'créatif']),
-    const ClothingItem(id: 'acc_sword', name: 'Épée lumineuse', emoji: '⚔️', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_sword.png', rarity: ItemRarity.legendary, isUnlocked: false, plumeCost: 65, premiumOnly: true, tags: ['héros', 'premium']),
+    const ClothingItem(id: 'acc_sword', name: 'Épée lumineuse', emoji: '⚔️', slot: ClothingSlot.accessory, imageAsset: 'assets/wardrobe/accessories/acc_sword.png', rarity: ItemRarity.legendary, isUnlocked: false, condition: UnlockCondition.premium, tags: ['héros', 'premium']),
 
     // Limited-time seasonal drops (computed dynamically per year)
     ..._seasonalItems(),
@@ -739,18 +739,28 @@ class MascotOutfitEngine {
   static bool isItemUnlocked(String itemId, PigioAppState state) {
     final item = getItem(itemId);
     if (item == null) return false;
-    // E9: Expired limited-time items are no longer available
+    // Expired limited-time items are no longer available
     if (!item.isAvailable) return false;
     if (item.isUnlocked) return true;
+    if (item.condition == UnlockCondition.premium && state.isPremium) return true;
     if (state.unlockedClothing.contains(itemId)) return true;
     return false;
   }
 
   /// Get the unlock hint for a locked item (localized).
   static String? getUnlockHint(String itemId, String lang) {
+    final item = getItem(itemId);
+    if (item?.condition == UnlockCondition.premium) {
+      return lang == 'fr' ? 'Exclusif Pigio+' : 'Pigio+ Exclusive';
+    }
     final achievement = achievements.where((a) => a.unlockItemId == itemId).firstOrNull;
-    if (achievement == null) return null;
-    return lang == 'fr' ? achievement.hintFr : achievement.hintEn;
+    if (achievement != null) {
+      return lang == 'fr' ? achievement.hintFr : achievement.hintEn;
+    }
+    if (item?.condition == UnlockCondition.actionBased) {
+      return lang == 'fr' ? 'Complétez des actions pour débloquer' : 'Complete actions to unlock';
+    }
+    return null;
   }
 
   /// Check all achievements and auto-unlock any newly earned items.
@@ -1360,36 +1370,15 @@ class MascotOutfitEngine {
     return DateTime(year, month, day);
   }
 
-  // ─── OCCASION PASS (Battle Pass) ──────────────────────────────────────────
+  // ─── LEGACY OCCASION PASS ITEMS ─────────────────────────────────────────
 
-  /// Returns the current season identifier (e.g. '2026-Q1').
-  static String currentSeason() {
-    final now = DateTime.now();
-    final q = ((now.month - 1) ~/ 3) + 1;
-    return '${now.year}-Q$q';
-  }
-
-  /// The reward tiers for the current Occasion Pass season.
-  /// 10 tiers: alternating Plumes (free track) and wardrobe items (premium track).
-  static const List<OccasionPassTier> occasionPassTiers = [
-    OccasionPassTier(level: 1, emoji: '💎', nameFr: '10 Plumes', nameEn: '10 Plumes', plumes: 10),
-    OccasionPassTier(level: 2, emoji: '🎩', nameFr: 'Haut-de-forme', nameEn: 'Top hat', unlockItemId: 'hat_tophat_pass', premiumTrack: true),
-    OccasionPassTier(level: 3, emoji: '💎', nameFr: '15 Plumes', nameEn: '15 Plumes', plumes: 15),
-    OccasionPassTier(level: 4, emoji: '🕶️', nameFr: 'Lunettes aviateur', nameEn: 'Aviator shades', unlockItemId: 'glasses_aviator_pass', premiumTrack: true),
-    OccasionPassTier(level: 5, emoji: '💎', nameFr: '20 Plumes', nameEn: '20 Plumes', plumes: 20),
-    OccasionPassTier(level: 6, emoji: '🧣', nameFr: 'Écharpe festive', nameEn: 'Festive scarf', unlockItemId: 'scarf_festive_pass', premiumTrack: true),
-    OccasionPassTier(level: 7, emoji: '💎', nameFr: '25 Plumes', nameEn: '25 Plumes', plumes: 25),
-    OccasionPassTier(level: 8, emoji: '👟', nameFr: 'Baskets néon', nameEn: 'Neon sneakers', unlockItemId: 'shoes_neon_pass', premiumTrack: true),
-    OccasionPassTier(level: 9, emoji: '💎', nameFr: '30 Plumes', nameEn: '30 Plumes', plumes: 30),
-    OccasionPassTier(level: 10, emoji: '🦋', nameFr: 'Ailes de papillon', nameEn: 'Butterfly wings', unlockItemId: 'acc_butterfly_pass', premiumTrack: true),
-  ];
-
-  /// Season-exclusive wardrobe items unlocked through the premium Occasion Pass track.
+  /// Former season-exclusive wardrobe items unlocked through the premium Occasion Pass track.
+  /// Now converted to Pigio+ exclusive items.
   static const List<ClothingItem> occasionPassItems = [
-    ClothingItem(id: 'hat_tophat_pass', name: 'Haut-de-forme', emoji: '🎩', slot: ClothingSlot.hat, rarity: ItemRarity.rare, isUnlocked: false, premiumOnly: true, tags: ['pass', 'chic']),
-    ClothingItem(id: 'glasses_aviator_pass', name: 'Lunettes aviateur', emoji: '🕶️', slot: ClothingSlot.glasses, rarity: ItemRarity.rare, isUnlocked: false, premiumOnly: true, tags: ['pass', 'cool']),
-    ClothingItem(id: 'scarf_festive_pass', name: 'Écharpe festive', emoji: '🧣', slot: ClothingSlot.scarf, rarity: ItemRarity.rare, isUnlocked: false, premiumOnly: true, tags: ['pass', 'fête']),
-    ClothingItem(id: 'shoes_neon_pass', name: 'Baskets néon', emoji: '👟', slot: ClothingSlot.shoes, rarity: ItemRarity.rare, isUnlocked: false, premiumOnly: true, tags: ['pass', 'fun']),
-    ClothingItem(id: 'acc_butterfly_pass', name: 'Ailes de papillon', emoji: '🦋', slot: ClothingSlot.accessory, rarity: ItemRarity.legendary, isUnlocked: false, premiumOnly: true, tags: ['pass', 'magique']),
+    ClothingItem(id: 'hat_tophat_pass', name: 'Haut-de-forme', emoji: '🎩', slot: ClothingSlot.hat, rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.premium, tags: ['pass', 'chic']),
+    ClothingItem(id: 'glasses_aviator_pass', name: 'Lunettes aviateur', emoji: '🕶️', slot: ClothingSlot.glasses, rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.premium, tags: ['pass', 'cool']),
+    ClothingItem(id: 'scarf_festive_pass', name: 'Écharpe festive', emoji: '🧣', slot: ClothingSlot.scarf, rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.premium, tags: ['pass', 'fête']),
+    ClothingItem(id: 'shoes_neon_pass', name: 'Baskets néon', emoji: '👟', slot: ClothingSlot.shoes, rarity: ItemRarity.rare, isUnlocked: false, condition: UnlockCondition.premium, tags: ['pass', 'fun']),
+    ClothingItem(id: 'acc_butterfly_pass', name: 'Ailes de papillon', emoji: '🦋', slot: ClothingSlot.accessory, rarity: ItemRarity.legendary, isUnlocked: false, condition: UnlockCondition.premium, tags: ['pass', 'magique']),
   ];
 }

@@ -77,8 +77,6 @@ extension AccountExtension on PigioAppState {
 
     // Identify user with RevenueCat for subscription management
     await identifySubscription(userId);
-    // Claim monthly Plumes stipend if applicable
-    Future.microtask(() => claimMonthlyPlumeStipend());
 
     notifyListeners();
   }
@@ -130,10 +128,7 @@ extension AccountExtension on PigioAppState {
 
     _activeOutfit.clear();
     _unlockedClothing.clear();
-    _plumes = 0;
-    _occasionPassLevel = 0;
-    _occasionPassSeason = '';
-    _guardianTier = '';
+
     _syncEnabled = false;
     _syncKey = '';
     _onboardingCompleted = false;

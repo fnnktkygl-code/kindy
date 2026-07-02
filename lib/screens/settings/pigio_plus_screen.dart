@@ -5,8 +5,6 @@ import 'package:kindy/core/config/constants.dart';
 import 'package:kindy/core/state/app_state.dart';
 import 'package:kindy/core/theme/pigio_theme.dart';
 import 'package:kindy/services/subscription_service.dart';
-import 'package:kindy/screens/settings/plumes_shop_screen.dart';
-import 'package:kindy/screens/settings/occasion_pass_screen.dart';
 import 'package:kindy/shared/widgets/ui_widgets.dart';
 
 class PigioPlusScreen extends StatefulWidget {
@@ -137,12 +135,12 @@ class _PigioPlusScreenState extends State<PigioPlusScreen> {
                     theme: theme,
                   ),
                   _FeatureRow(
-                    icon: Icons.diamond_outlined,
+                    icon: Icons.cloud_outlined,
                     color: const Color(0xFF7C3AED),
-                    title: isFr ? '50 Plumes / mois' : '50 Plumes / month',
+                    title: isFr ? 'Sauvegarde Cloud E2E' : 'E2E Cloud Backup',
                     subtitle: isFr
-                        ? 'Monnaie premium pour personnaliser votre Pigio'
-                        : 'Premium currency to customize your Pigio',
+                        ? 'Sauvegarde chiffrée de vos données avec restauration'
+                        : 'Encrypted data backup with recovery',
                     theme: theme,
                   ),
                   _FeatureRow(
@@ -234,8 +232,6 @@ class _PigioPlusScreenState extends State<PigioPlusScreen> {
                               if (!mounted) return;
                               setState(() => _purchasing = false);
                               if (ok) {
-                                // Claim monthly stipend immediately
-                                state.claimMonthlyPlumeStipend();
                                 if (!context.mounted) return;
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -288,16 +284,11 @@ class _PigioPlusScreenState extends State<PigioPlusScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.diamond, color: const Color(0xFF7C3AED), size: 20),
+                          Icon(Icons.check_circle, color: theme.success, size: 20),
                           const SizedBox(width: 8),
                           Text(
-                            isFr ? 'Vos Plumes' : 'Your Plumes',
+                            isFr ? 'Abonnement actif' : 'Active subscription',
                             style: fw(size: 16, w: FontWeight.w700, color: theme.ink),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '${state.plumes}',
-                            style: fw(size: 20, w: FontWeight.w800, color: const Color(0xFF7C3AED)),
                           ),
                         ],
                       ),
@@ -316,58 +307,6 @@ class _PigioPlusScreenState extends State<PigioPlusScreen> {
                           ],
                         ),
                       ],
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PlumesShopScreen())),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF7C3AED).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Text('💎', style: TextStyle(fontSize: 16)),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      isFr ? 'Boutique' : 'Shop',
-                                      style: fw(size: 14, w: FontWeight.w700, color: const Color(0xFF7C3AED)),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OccasionPassScreen())),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFF6B35).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Text('🎫', style: TextStyle(fontSize: 16)),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'Occasion Pass',
-                                      style: fw(size: 14, w: FontWeight.w700, color: const Color(0xFFFF6B35)),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),
