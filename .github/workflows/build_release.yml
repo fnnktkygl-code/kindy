@@ -59,11 +59,11 @@ jobs:
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
             cat << 'EOF' > android/key.properties
-            storePassword=kindy2026
-            keyPassword=kindy2026
-            keyAlias=upload
-            storeFile=upload-keystore.jks
-            EOF
+          storePassword=kindy2026
+          keyPassword=kindy2026
+          keyAlias=upload
+          storeFile=upload-keystore.jks
+EOF
           else
             echo "KEYSTORE_BASE64 secret is empty. Building with debug signature."
           fi
